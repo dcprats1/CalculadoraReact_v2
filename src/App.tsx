@@ -14,6 +14,18 @@ const ENABLE_AUTH = true;
 function AppContent() {
   const { isAuthenticated, isLoading, userData } = useAuth();
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showPricingForUnregistered, setShowPricingForUnregistered] = useState(false);
+  const [unregisteredEmail, setUnregisteredEmail] = useState<string>('');
+
+  const handleShowPricing = (email: string) => {
+    setUnregisteredEmail(email);
+    setShowPricingForUnregistered(true);
+  };
+
+  const handleBackToLogin = () => {
+    setShowPricingForUnregistered(false);
+    setUnregisteredEmail('');
+  };
 
   if (isLoading) {
     return (
@@ -27,7 +39,10 @@ function AppContent() {
   }
 
   if (!isAuthenticated) {
-    return <LoginContainer />;
+    if (showPricingForUnregistered) {
+      return <PricingPage onBack={handleBackToLogin} />;
+    }
+    return <LoginContainer onShowPricing={handleShowPricing} />;
   }
 
   if (!canAccessCalculator(userData)) {

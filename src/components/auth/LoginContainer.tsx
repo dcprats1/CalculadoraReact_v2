@@ -2,15 +2,25 @@ import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { EmailInputForm } from './EmailInputForm';
 import { CodeVerificationForm } from './CodeVerificationForm';
+import { UnregisteredUserView } from './UnregisteredUserView';
 import { Calculator } from 'lucide-react';
 
-type LoginStep = 'email' | 'code';
+type LoginStep = 'email' | 'code' | 'unregistered';
 
-export function LoginContainer() {
+interface UnregisteredUserData {
+  email: string;
+}
+
+interface LoginContainerProps {
+  onShowPricing?: (email: string) => void;
+}
+
+export function LoginContainer({ onShowPricing }: LoginContainerProps = {}) {
   const { sendLoginCode, verifyCode } = useAuth();
   const [currentStep, setCurrentStep] = useState<LoginStep>('email');
   const [email, setEmail] = useState('');
   const [devCode, setDevCode] = useState<string | undefined>();
+  const [unregisteredUser, setUnregisteredUser] = useState<UnregisteredUserData | null>(null);
 
   const handleEmailSubmit = async (submittedEmail: string) => {
     setEmail(submittedEmail);
@@ -22,7 +32,12 @@ export function LoginContainer() {
       }
       setCurrentStep('code');
     } else {
-      throw new Error(result.error || 'Error al enviar código');
+      if (result.errorCode === 'USER_NOT_FOUND') {
+        setUnregisteredUser({ email: result.email || submittedEmail });
+        setCurrentStep('unregistered');
+      } else {
+        throw new Error(result.error || 'Error al enviar código');
+      }
     }
   };
 
@@ -37,7 +52,24 @@ export function LoginContainer() {
   const handleBack = () => {
     setCurrentStep('email');
     setDevCode(undefined);
+    setUnregisteredUser(null);
   };
+
+  const handleViewPricing = () => {
+    if (onShowPricing && unregisteredUser) {
+      onShowPricing(unregisteredUser.email);
+    }
+  };
+
+  if (currentStep === 'unregistered' && unregisteredUser) {
+    return (
+      <UnregisteredUserView
+        email={unregisteredUser.email}
+        onViewPricing={handleViewPricing}
+        onBackToLogin={handleBack}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center p-4">

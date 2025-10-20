@@ -18,7 +18,7 @@ interface AuthContextType {
   userData: UserData | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  sendLoginCode: (email: string) => Promise<{ success: boolean; error?: string }>;
+  sendLoginCode: (email: string) => Promise<{ success: boolean; error?: string; errorCode?: string; email?: string }>;
   verifyCode: (email: string, code: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
 }
@@ -98,7 +98,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = await response.json();
 
     if (!response.ok) {
-      return { success: false, error: data.error || 'Error al enviar código' };
+      return {
+        success: false,
+        error: data.error || 'Error al enviar código',
+        errorCode: data.errorCode,
+        email: data.email
+      };
     }
 
     // En desarrollo, mostrar código en consola

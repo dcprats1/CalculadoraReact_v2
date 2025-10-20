@@ -72,7 +72,11 @@ Deno.serve(async (req: Request) => {
 
     if (!userProfile) {
       return new Response(
-        JSON.stringify({ error: 'Usuario no encontrado. Contacta al administrador para obtener acceso.' }),
+        JSON.stringify({
+          error: 'Usuario no encontrado. Contacta al administrador para obtener acceso.',
+          errorCode: 'USER_NOT_FOUND',
+          email: normalizedEmail
+        }),
         {
           status: 404,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
