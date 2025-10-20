@@ -52,15 +52,19 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Verificar que el email existe en user_profiles
-    const { data: userProfile, error: userError } = await supabaseAdmin
+    // Verificar/crear usuario en auth.users y user_profiles
+    let userId: string;
+    let userProfile;
+
+    // Primero intentar encontrar el usuario en user_profiles
+    const { data: existingProfile, error: profileError } = await supabaseAdmin
       .from('user_profiles')
       .select('id, email, subscription_status, subscription_end_date')
       .eq('email', normalizedEmail)
       .maybeSingle();
 
-    if (userError) {
-      console.error('Error checking user:', userError);
+    if (profileError) {
+      console.error('Error checking user:', profileError);
       return new Response(
         JSON.stringify({ error: 'Error al verificar usuario' }),
         {
@@ -70,19 +74,62 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (!userProfile) {
-      return new Response(
-        JSON.stringify({ error: 'Usuario no encontrado. Contacta al administrador.' }),
-        {
-          status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+    if (existingProfile) {
+      userId = existingProfile.id;
+      userProfile = existingProfile;
+    } else {
+      // Si no existe, crear usuario en auth.users (sin password, solo email)
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: normalizedEmail,
+        email_confirm: true,
+      });
+
+      if (authError || !authData.user) {
+        console.error('Error creating auth user:', authError);
+        return new Response(
+          JSON.stringify({ error: 'Error al crear usuario' }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+      userId = authData.user.id;
+
+      // Crear perfil en user_profiles con trial de 7 días
+      const { data: newProfile, error: insertProfileError } = await supabaseAdmin
+        .from('user_profiles')
+        .insert({
+          id: userId,
+          email: normalizedEmail,
+          subscription_status: 'trial',
+          subscription_tier: 1,
+          max_devices: 1,
+          payment_method: 'trial',
+          subscription_start_date: new Date().toISOString(),
+          subscription_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        })
+        .select()
+        .single();
+
+      if (insertProfileError || !newProfile) {
+        console.error('Error creating user profile:', insertProfileError);
+        return new Response(
+          JSON.stringify({ error: 'Error al crear perfil de usuario' }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+      userProfile = newProfile;
     }
 
     // Log event: code_sent
     await supabaseAdmin.from('auth_logs').insert({
-      user_id: userProfile.id,
+      user_id: userId,
       email: normalizedEmail,
       event_type: 'code_sent',
       ip_address: req.headers.get('x-forwarded-for') || 'unknown',

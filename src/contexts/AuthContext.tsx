@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 interface UserData {
   id: string;
   email: string;
+  full_name: string;
   subscription_status: 'trial' | 'active' | 'past_due' | 'cancelled';
   subscription_tier: number;
   max_devices: number;
@@ -54,9 +55,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
 
       if (data) {
+        const fullName = data.email.split('@')[0]
+          .split('.')
+          .map((part: string) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(' ');
+
         setUserData({
           id: data.id,
           email: data.email,
+          full_name: fullName,
           subscription_status: data.subscription_status,
           subscription_tier: data.subscription_tier,
           max_devices: data.max_devices,

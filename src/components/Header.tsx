@@ -37,7 +37,7 @@ export function Header() {
                 >
                   <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
                     <span className="text-sm font-bold text-white">
-                      {userData?.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                      {userData?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || userData?.email.charAt(0).toUpperCase()}
                     </span>
                   </div>
                 </button>
