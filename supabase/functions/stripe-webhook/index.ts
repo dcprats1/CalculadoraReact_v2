@@ -84,6 +84,7 @@ Deno.serve(async (req: Request) => {
         const customerId = session.customer as string;
         const subscriptionId = session.subscription as string;
         const tier = session.metadata?.tier ? parseInt(session.metadata.tier) : 1;
+        const paymentType = session.metadata?.payment_type || 'monthly';
         const maxDevices = TIER_TO_DEVICES[tier] || 1;
 
         if (!email) {
@@ -92,6 +93,9 @@ Deno.serve(async (req: Request) => {
         }
 
         const normalizedEmail = email.toLowerCase().trim();
+
+        const daysToAdd = paymentType === 'annual' ? 365 : 30;
+        const subscriptionEndDate = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000).toISOString();
 
         const { data: existingProfile } = await supabaseAdmin
           .from('user_profiles')
@@ -107,7 +111,7 @@ Deno.serve(async (req: Request) => {
               subscription_tier: tier,
               max_devices: maxDevices,
               subscription_start_date: new Date().toISOString(),
-              subscription_end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+              subscription_end_date: subscriptionEndDate,
               stripe_customer_id: customerId,
               stripe_subscription_id: subscriptionId,
               payment_method: 'stripe',
@@ -131,36 +135,44 @@ Deno.serve(async (req: Request) => {
             subscription_tier: tier,
             max_devices: maxDevices,
             subscription_start_date: new Date().toISOString(),
-            subscription_end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            subscription_end_date: subscriptionEndDate,
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
             payment_method: 'stripe',
           });
         }
 
-        console.log(`Subscription activated for ${normalizedEmail} - Tier ${tier}`);
+        console.log(`Subscription activated for ${normalizedEmail} - Tier ${tier} (${paymentType})`);
         break;
       }
 
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
         const customerId = invoice.customer as string;
+        const subscriptionObj = invoice.subscription;
 
-        const { data: userProfile } = await supabaseAdmin
-          .from('user_profiles')
-          .select('id, email')
-          .eq('stripe_customer_id', customerId)
-          .maybeSingle();
+        if (subscriptionObj) {
+          const subscription = await stripe.subscriptions.retrieve(subscriptionObj as string);
+          const interval = subscription.items.data[0]?.plan.interval;
+          const daysToAdd = interval === 'year' ? 365 : 30;
 
-        if (userProfile) {
-          await supabaseAdmin
+          const { data: userProfile } = await supabaseAdmin
             .from('user_profiles')
-            .update({
-              subscription_end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            })
-            .eq('id', userProfile.id);
+            .select('id, email')
+            .eq('stripe_customer_id', customerId)
+            .maybeSingle();
 
-          console.log(`Payment succeeded for ${userProfile.email} - Extended 30 days`);
+          if (userProfile) {
+            await supabaseAdmin
+              .from('user_profiles')
+              .update({
+                subscription_status: 'active',
+                subscription_end_date: new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000).toISOString(),
+              })
+              .eq('id', userProfile.id);
+
+            console.log(`Payment succeeded for ${userProfile.email} - Extended ${daysToAdd} days`);
+          }
         }
 
         break;

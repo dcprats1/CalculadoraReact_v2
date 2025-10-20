@@ -5,6 +5,8 @@ import { LoginContainer } from './components/auth/LoginContainer';
 import { Header } from './components/Header';
 import TariffCalculator from './components/TariffCalculator';
 import { AdminPanel } from './components/admin/AdminPanel';
+import { PricingPage } from './components/pricing/PricingPage';
+import { canAccessCalculator } from './utils/subscriptionHelpers';
 import { Loader2, Settings } from 'lucide-react';
 
 const ENABLE_AUTH = true;
@@ -26,6 +28,10 @@ function AppContent() {
 
   if (!isAuthenticated) {
     return <LoginContainer />;
+  }
+
+  if (!canAccessCalculator(userData)) {
+    return <PricingPage />;
   }
 
   const isAdmin = userData?.is_admin || false;
