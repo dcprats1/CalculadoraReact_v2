@@ -1,0 +1,185 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
+
+interface UserData {
+  id: string;
+  email: string;
+  subscription_status: 'trial' | 'active' | 'past_due' | 'cancelled';
+  subscription_tier: number;
+  max_devices: number;
+  subscription_end_date: string;
+  payment_method: 'stripe' | 'manual' | 'promo' | 'trial';
+  is_admin: boolean;
+}
+
+interface AuthContextType {
+  user: { id: string; email: string } | null;
+  userData: UserData | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  sendLoginCode: (email: string) => Promise<{ success: boolean; error?: string }>;
+  verifyCode: (email: string, code: string) => Promise<{ success: boolean; error?: string }>;
+  signOut: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const sessionData = localStorage.getItem('user_session');
+    if (sessionData) {
+      try {
+        const parsed = JSON.parse(sessionData);
+        setUser({ id: parsed.id, email: parsed.email });
+        loadUserProfile(parsed.id);
+      } catch (error) {
+        localStorage.removeItem('user_session');
+      }
+    }
+    setIsLoading(false);
+  }, []);
+
+  async function loadUserProfile(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setUserData({
+          id: data.id,
+          email: data.email,
+          subscription_status: data.subscription_status,
+          subscription_tier: data.subscription_tier,
+          max_devices: data.max_devices,
+          subscription_end_date: data.subscription_end_date,
+          payment_method: data.payment_method,
+          is_admin: data.email === 'dcprats@gmail.com',
+        });
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+    }
+  }
+
+ async function sendLoginCode(email: string) {
+  try {
+    if (!email.endsWith('@gls-spain.es') && email !== 'dcprats@gmail.com') {
+      return { success: false, error: 'Solo usuarios @gls-spain.es pueden iniciar sesión' };
+    }
+
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-login-code`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ email: email.toLowerCase().trim() }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return { success: false, error: data.error || 'Error al enviar código' };
+    }
+
+    // En desarrollo, mostrar código en consola
+    if (data.code) {
+      console.log(`Código de inicio de sesión para ${email}: ${data.code}`);
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending code:', error);
+    return { success: false, error: 'Error de conexión' };
+  }
+}
+
+
+ async function verifyCode(email: string, code: string) {
+  try {
+    // Generar device fingerprint simple
+    const deviceFingerprint = `${navigator.userAgent}-${screen.width}x${screen.height}`;
+    const deviceName = `${navigator.platform} - ${navigator.userAgent.substring(0, 50)}`;
+
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-login-code`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          email: email.toLowerCase().trim(),
+          code,
+          deviceFingerprint,
+          deviceName,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return { success: false, error: data.error || 'Código incorrecto' };
+    }
+
+    // Guardar sesión en localStorage
+    const sessionData = {
+      id: data.user.id,
+      email: data.user.email,
+      sessionToken: data.sessionToken,
+    };
+
+    localStorage.setItem('user_session', JSON.stringify(sessionData));
+    setUser({ id: data.user.id, email: data.user.email });
+
+    // Cargar perfil completo
+    await loadUserProfile(data.user.id);
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error verifying code:', error);
+    return { success: false, error: 'Error de conexión' };
+  }
+}
+
+
+  async function signOut() {
+    localStorage.removeItem('user_session');
+    setUser(null);
+    setUserData(null);
+  }
+
+  const value = {
+    user,
+    userData,
+    isAuthenticated: !!user,
+    isLoading,
+    sendLoginCode,
+    verifyCode,
+    signOut,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
