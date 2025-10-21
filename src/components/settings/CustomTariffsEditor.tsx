@@ -217,6 +217,25 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
     setHasUnsavedChanges(true);
   };
 
+  const isCustomValue = (cellKey: CellKey): boolean => {
+    const [weight_from, weight_to, field] = cellKey.split('_');
+    const currentValue = editData[cellKey];
+
+    const officialTariff = officialTariffs.find(
+      t => t.service_name === selectedService &&
+           t.weight_from.toString() === weight_from &&
+           (t.weight_to === null ? weight_to === '999' : t.weight_to.toString() === weight_to)
+    );
+
+    if (!officialTariff) return false;
+
+    const officialValue = officialTariff[field as keyof typeof officialTariff] as number | null | undefined;
+    const normalizedOfficialValue = officialValue !== undefined && officialValue !== null ? Number(officialValue) : null;
+    const normalizedCurrentValue = currentValue !== undefined && currentValue !== null ? Number(currentValue) : null;
+
+    return normalizedCurrentValue !== normalizedOfficialValue;
+  };
+
   const buildEditSequence = (): CellKey[] => {
     const sequence: CellKey[] = [];
     DESTINATIONS.forEach(dest => {
@@ -299,15 +318,11 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
 
     try {
       const tariffsToUpsert: Partial<CustomTariff>[] = [];
+      let totalModifiedFields = 0;
 
       WEIGHT_RANGES.forEach(range => {
+        const modifiedFields: Partial<CustomTariff> = {};
         let hasModifications = false;
-        const tariffRow: Partial<CustomTariff> = {
-          user_id: userData.id,
-          service_name: selectedService,
-          weight_from: range.from,
-          weight_to: range.to
-        };
 
         const officialTariff = officialTariffs.find(
           t => t.service_name === selectedService &&
@@ -332,15 +347,21 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
               : null;
 
             if (normalizedEditedValue !== normalizedOfficialValue) {
+              modifiedFields[col.field] = normalizedEditedValue;
               hasModifications = true;
+              totalModifiedFields++;
             }
-
-            tariffRow[col.field] = normalizedEditedValue;
           });
         });
 
         if (hasModifications) {
-          tariffsToUpsert.push(tariffRow);
+          tariffsToUpsert.push({
+            user_id: userData.id,
+            service_name: selectedService,
+            weight_from: range.from,
+            weight_to: range.to,
+            ...modifiedFields
+          });
         }
       });
 
@@ -389,7 +410,7 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
 
       await refetchCustomTariffs();
       setHasUnsavedChanges(false);
-      setSaveMessage(`Guardadas ${tariffsToUpsert.length} fila(s) con modificaciones`);
+      setSaveMessage(`Guardados ${totalModifiedFields} campo(s) modificado(s) en ${tariffsToUpsert.length} rango(s) de peso`);
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (error: any) {
       console.error('Error saving custom tariffs:', error);
@@ -592,6 +613,7 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
                             const isEditing = activeCell === cellKey;
                             const value = getCellValue(cellKey);
                             const isArrColumn = col.label === 'Arr';
+                            const isPersonalized = isCustomValue(cellKey);
 
                             return (
                               <td key={col.field} className={`px-1 py-1 border-r border-gray-200 ${isArrColumn ? 'bg-red-50' : ''}`}>
@@ -604,7 +626,7 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
                                   onBlur={handleCellBlur}
                                   onChange={(e) => isEditing && setDraftValue(e.target.value)}
                                   onKeyDown={(e) => handleCellKeyDown(e, cellKey)}
-                                  className={`w-full px-1 py-1 text-right text-xs border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors ${isArrColumn ? 'text-red-700 font-semibold' : ''}`}
+                                  className={`w-full px-1 py-1 text-right text-xs border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors ${isArrColumn ? 'text-red-700 font-semibold' : ''} ${isPersonalized ? 'bg-amber-50 font-medium' : 'bg-white'}`}
                                   style={{ minWidth: '60px' }}
                                 />
                               </td>
