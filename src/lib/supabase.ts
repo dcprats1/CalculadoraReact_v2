@@ -154,5 +154,84 @@ export interface SimulationDetail {
   created_at: string;
 }
 
+export interface CustomTariff {
+  id: string;
+  user_id: string;
+  service_name: string;
+  weight_from: string;
+  weight_to: string | null;
+  provincial_sal: number | null;
+  provincial_rec: number | null;
+  provincial_int: number | null;
+  regional_sal: number | null;
+  regional_rec: number | null;
+  regional_int: number | null;
+  nacional_sal: number | null;
+  nacional_rec: number | null;
+  nacional_int: number | null;
+  portugal_sal: number | null;
+  portugal_rec: number | null;
+  portugal_int: number | null;
+  andorra_sal: number | null;
+  andorra_rec: number | null;
+  andorra_int: number | null;
+  gibraltar_sal: number | null;
+  gibraltar_rec: number | null;
+  gibraltar_int: number | null;
+  canarias_mayores_sal: number | null;
+  canarias_mayores_rec: number | null;
+  canarias_mayores_int: number | null;
+  canarias_menores_sal: number | null;
+  canarias_menores_rec: number | null;
+  canarias_menores_int: number | null;
+  baleares_mayores_sal: number | null;
+  baleares_mayores_rec: number | null;
+  baleares_mayores_int: number | null;
+  baleares_menores_sal: number | null;
+  baleares_menores_rec: number | null;
+  baleares_menores_int: number | null;
+  ceuta_sal: number | null;
+  ceuta_rec: number | null;
+  ceuta_int: number | null;
+  melilla_sal: number | null;
+  melilla_rec: number | null;
+  melilla_int: number | null;
+  azores_mayores_sal: number | null;
+  azores_mayores_rec: number | null;
+  azores_mayores_int: number | null;
+  azores_menores_sal: number | null;
+  azores_menores_rec: number | null;
+  azores_menores_int: number | null;
+  madeira_mayores_sal: number | null;
+  madeira_mayores_rec: number | null;
+  madeira_mayores_int: number | null;
+  madeira_menores_sal: number | null;
+  madeira_menores_rec: number | null;
+  madeira_menores_int: number | null;
+  andorra_arr: number | null;
+  baleares_mayores_arr: number | null;
+  baleares_menores_arr: number | null;
+  canarias_mayores_arr: number | null;
+  canarias_menores_arr: number | null;
+  ceuta_arr: number | null;
+  gibraltar_arr: number | null;
+  melilla_arr: number | null;
+  nacional_arr: number | null;
+  portugal_arr: number | null;
+  provincial_arr: number | null;
+  regional_arr: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomTariffActive {
+  id: string;
+  user_id: string;
+  service_name: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // Legacy type for backward compatibility
 export type DestinationZone = 'provincial' | 'regional' | 'national';

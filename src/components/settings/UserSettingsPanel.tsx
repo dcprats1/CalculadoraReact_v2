@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { X, User, Settings as SettingsIcon, CreditCard } from 'lucide-react';
+import { X, User, Settings as SettingsIcon, CreditCard, Table } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { PreferencesTab } from './PreferencesTab';
 import { ProfileTab } from './ProfileTab';
 import { SubscriptionTab } from './SubscriptionTab';
+import { CustomTariffsEditor } from './CustomTariffsEditor';
 
 interface UserSettingsPanelProps {
   onClose: () => void;
 }
 
-type Tab = 'profile' | 'preferences' | 'subscription';
+type Tab = 'profile' | 'preferences' | 'subscription' | 'custom_tariffs';
 
 export function UserSettingsPanel({ onClose }: UserSettingsPanelProps) {
   const { userData } = useAuth();
@@ -17,6 +18,7 @@ export function UserSettingsPanel({ onClose }: UserSettingsPanelProps) {
 
   const tabs = [
     { id: 'preferences' as Tab, label: 'Preferencias', icon: SettingsIcon },
+    { id: 'custom_tariffs' as Tab, label: 'Tarifas Personalizadas', icon: Table },
     { id: 'profile' as Tab, label: 'Perfil', icon: User },
     { id: 'subscription' as Tab, label: 'Suscripción', icon: CreditCard },
   ];
@@ -62,6 +64,7 @@ export function UserSettingsPanel({ onClose }: UserSettingsPanelProps) {
 
           <div className="flex-1 overflow-y-auto p-6">
             {activeTab === 'preferences' && <PreferencesTab />}
+            {activeTab === 'custom_tariffs' && <CustomTariffsEditor />}
             {activeTab === 'profile' && <ProfileTab />}
             {activeTab === 'subscription' && <SubscriptionTab />}
           </div>

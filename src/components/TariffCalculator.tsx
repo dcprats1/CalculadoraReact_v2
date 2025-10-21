@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useViewMode } from '../contexts/ViewModeContext';
 import { UserSettingsPanel } from './settings/UserSettingsPanel';
 import { AdminPanel } from './admin/AdminPanel';
-import { useTariffs, useDiscountPlans } from '../hooks/useSupabaseData';
+import { useTariffs, useDiscountPlans, useCustomTariffsActive } from '../hooks/useSupabaseData';
 import {
   PackageData,
   DESTINATION_ZONES,
@@ -307,13 +307,15 @@ const TariffCalculator: React.FC = () => {
     tariffs = [],
     loading: tariffsLoading = true,
     error: tariffsError = null
-  } = useTariffs() ?? {};
+  } = useTariffs(undefined, false, true) ?? {};
 
   const {
     discountPlans: remoteDiscountPlans = [],
     loading: discountLoading = true,
     error: discountError = null
   } = useDiscountPlans() ?? {};
+
+  const { activeStates: customTariffsActiveStates = [] } = useCustomTariffsActive() ?? {};
 
   const [selectedService, setSelectedService] = useState<string>(STATIC_SERVICES[0]);
   const [marginPercentage, setMarginPercentage] = useState<number>(40);
@@ -1670,6 +1672,33 @@ const TariffCalculator: React.FC = () => {
           </div>
         </div>
       </header>
+
+      {/* Custom Tariffs Active Indicator */}
+      {customTariffsActiveStates.length > 0 && customTariffsActiveStates.some(s => s.service_name === selectedService && s.is_active) && (
+        <div className="bg-green-50 border-b border-green-200 px-4 sm:px-6 lg:px-8 py-2">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-2 h-2 bg-green-600 rounded-full animate-pulse"></span>
+              <span className="text-sm font-medium text-green-900">
+                Usando tabla personalizada para {selectedService}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {customTariffsActiveStates.length === 0 || !customTariffsActiveStates.some(s => s.service_name === selectedService && s.is_active) ? (
+        <div className="bg-gray-50 border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-2">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-2 h-2 bg-gray-400 rounded-full"></span>
+              <span className="text-sm font-medium text-gray-700">
+                Usando tabla oficial para {selectedService}
+              </span>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {showSettings && (
         <UserSettingsPanel onClose={() => setShowSettings(false)} />
