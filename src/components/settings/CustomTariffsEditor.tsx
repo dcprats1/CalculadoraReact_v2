@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Save, RotateCcw, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Save, RotateCcw, Trash2, X } from 'lucide-react';
 import { supabase, CustomTariff } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCustomTariffs, useCustomTariffsActive, useTariffs } from '../../hooks/useSupabaseData';
@@ -129,10 +129,10 @@ const DESTINATIONS: Destination[] = [
 type CellKey = `${string}_${string}_${string}`;
 
 interface CustomTariffsEditorProps {
-  onClose?: () => void;
+  onClose: () => void;
 }
 
-export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = () => {
+export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClose }) => {
   const { userData } = useAuth();
   const { customTariffs, refetch: refetchCustomTariffs } = useCustomTariffs();
   const { activeStates, refetch: refetchActiveStates } = useCustomTariffsActive();
@@ -167,7 +167,18 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = () => {
           if (customTariff && customTariff[col.field] !== undefined) {
             data[cellKey] = customTariff[col.field] as number | null;
           } else {
-            data[cellKey] = null;
+            const officialTariff = officialTariffs.find(
+              t => t.service_name === selectedService &&
+                   t.weight_from.toString() === range.from &&
+                   (t.weight_to === null ? range.to === '999' : t.weight_to.toString() === range.to)
+            );
+
+            if (officialTariff) {
+              const fieldValue = officialTariff[col.field as keyof typeof officialTariff];
+              data[cellKey] = fieldValue !== undefined && fieldValue !== null ? Number(fieldValue) : null;
+            } else {
+              data[cellKey] = null;
+            }
           }
         });
       });
@@ -175,7 +186,7 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = () => {
 
     setEditData(data);
     setHasUnsavedChanges(false);
-  }, [customTariffs, selectedService]);
+  }, [customTariffs, selectedService, officialTariffs]);
 
   useEffect(() => {
     loadServiceData();
@@ -432,158 +443,172 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = () => {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-3">
-          <label className="text-sm font-medium text-gray-700">
-            Servicio a editar
-          </label>
-          <select
-            value={selectedService}
-            onChange={(e) => {
-              if (hasUnsavedChanges) {
-                if (!window.confirm('Tienes cambios sin guardar. ¿Deseas cambiar de servicio de todas formas?')) {
-                  return;
-                }
-              }
-              setSelectedService(e.target.value);
-            }}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-          >
-            {STATIC_SERVICES.map(service => (
-              <option key={service} value={service}>
-                {service}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex items-center gap-2">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-2xl font-bold text-gray-900">Tabla de Costes Personalizada</h2>
           <button
-            onClick={handleToggleActive}
-            className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-              isActive
-                ? 'bg-green-600 text-white hover:bg-green-700'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            {isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-            {isActive ? 'Tabla Personalizada Activa' : 'Tabla Oficial Activa'}
+            <X className="h-6 w-6 text-gray-500" />
           </button>
         </div>
-      </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-        <p className="text-sm text-blue-900">
-          <strong>Estado actual:</strong> {isActive ? 'Usando tabla personalizada' : 'Usando tabla oficial'}
-        </p>
-      </div>
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-blue-900 text-center leading-relaxed">
+                Costes de Salida (Sal), Recogida (Rec) e Interciudad (Int) son costes totales.<br />
+                Arrastres (Arr) solo se tendrá en cuenta para la aplicación de planes comerciales<br />
+                aplicados sobre esta tabla de costes personalizada.
+              </p>
+            </div>
 
-      {saveMessage && (
-        <div className={`rounded-lg p-3 text-sm font-medium ${
-          saveMessage.includes('Error') ? 'bg-red-50 text-red-900 border border-red-200' : 'bg-green-50 text-green-900 border border-green-200'
-        }`}>
-          {saveMessage}
-        </div>
-      )}
-
-      <div className="overflow-x-auto border border-gray-200 rounded-lg">
-        <table className="min-w-full text-xs">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="sticky left-0 z-10 bg-gray-100 px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-300">
-                Peso
-              </th>
-              {DESTINATIONS.map(dest => (
-                <th key={dest.key} colSpan={dest.columns.length} className="px-2 py-2 text-center font-semibold text-gray-700 border-r border-gray-300">
-                  {dest.label}
-                </th>
-              ))}
-            </tr>
-            <tr className="bg-gray-50">
-              <th className="sticky left-0 z-10 bg-gray-50 px-3 py-2 border-r border-gray-300"></th>
-              {DESTINATIONS.map(dest => (
-                <React.Fragment key={dest.key}>
-                  {dest.columns.map(col => (
-                    <th key={col.field} className="px-1 py-1 text-center text-xs font-medium text-gray-600 border-r border-gray-200">
-                      {col.label}
-                    </th>
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-medium text-gray-700">
+                  Servicio a editar
+                </label>
+                <select
+                  value={selectedService}
+                  onChange={(e) => {
+                    if (hasUnsavedChanges) {
+                      if (!window.confirm('Tienes cambios sin guardar. ¿Deseas cambiar de servicio de todas formas?')) {
+                        return;
+                      }
+                    }
+                    setSelectedService(e.target.value);
+                  }}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                >
+                  {STATIC_SERVICES.map(service => (
+                    <option key={service} value={service}>
+                      {service}
+                    </option>
                   ))}
-                </React.Fragment>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {WEIGHT_RANGES.map(range => (
-              <tr key={`${range.from}_${range.to}`} className="hover:bg-gray-50">
-                <td className="sticky left-0 z-10 bg-white px-3 py-2 font-medium text-gray-700 border-r border-gray-300">
-                  {range.label}
-                </td>
-                {DESTINATIONS.map(dest => (
-                  <React.Fragment key={dest.key}>
-                    {dest.columns.map(col => {
-                      const cellKey: CellKey = `${range.from}_${range.to}_${col.field}`;
-                      const isEditing = activeCell === cellKey;
-                      const value = getCellValue(cellKey);
+                </select>
+              </div>
+            </div>
 
-                      return (
-                        <td key={col.field} className="px-1 py-1 border-r border-gray-200">
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            data-cell-key={cellKey}
-                            value={isEditing ? draftValue : formatValue(value)}
-                            onFocus={() => handleCellFocus(cellKey)}
-                            onBlur={handleCellBlur}
-                            onChange={(e) => isEditing && setDraftValue(e.target.value)}
-                            onKeyDown={(e) => handleCellKeyDown(e, cellKey)}
-                            className="w-full px-1 py-1 text-right text-xs border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                            style={{ minWidth: '60px' }}
-                          />
-                        </td>
-                      );
-                    })}
-                  </React.Fragment>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            {saveMessage && (
+              <div className={`rounded-lg p-3 text-sm font-medium ${
+                saveMessage.includes('Error') ? 'bg-red-50 text-red-900 border border-red-200' : 'bg-green-50 text-green-900 border border-green-200'
+              }`}>
+                {saveMessage}
+              </div>
+            )}
 
-      <div className="flex items-center justify-between gap-3 flex-wrap border-t pt-4">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleSave}
-            disabled={!hasUnsavedChanges || isSaving}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <Save className="h-4 w-4" />
-            {isSaving ? 'Guardando...' : 'Grabar'}
-          </button>
+            <div className="overflow-x-auto border border-gray-200 rounded-lg">
+              <table className="min-w-full text-xs">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="sticky left-0 z-10 bg-gray-100 px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-300">
+                      Peso
+                    </th>
+                    {DESTINATIONS.map(dest => (
+                      <th key={dest.key} colSpan={dest.columns.length} className="px-2 py-2 text-center font-semibold text-gray-700 border-r border-gray-300">
+                        {dest.label}
+                      </th>
+                    ))}
+                  </tr>
+                  <tr className="bg-gray-50">
+                    <th className="sticky left-0 z-10 bg-gray-50 px-3 py-2 border-r border-gray-300"></th>
+                    {DESTINATIONS.map(dest => (
+                      <React.Fragment key={dest.key}>
+                        {dest.columns.map(col => (
+                          <th key={col.field} className={`px-1 py-1 text-center text-xs font-medium border-r border-gray-200 ${col.label === 'Arr' ? 'text-red-700 bg-red-50' : 'text-gray-600'}`}>
+                            {col.label}
+                          </th>
+                        ))}
+                      </React.Fragment>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {WEIGHT_RANGES.map(range => (
+                    <tr key={`${range.from}_${range.to}`} className="hover:bg-gray-50">
+                      <td className="sticky left-0 z-10 bg-white px-3 py-2 font-medium text-gray-700 border-r border-gray-300">
+                        {range.label}
+                      </td>
+                      {DESTINATIONS.map(dest => (
+                        <React.Fragment key={dest.key}>
+                          {dest.columns.map(col => {
+                            const cellKey: CellKey = `${range.from}_${range.to}_${col.field}`;
+                            const isEditing = activeCell === cellKey;
+                            const value = getCellValue(cellKey);
+                            const isArrColumn = col.label === 'Arr';
 
-          <button
-            onClick={handleRestoreOfficial}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            <RotateCcw className="h-4 w-4" />
-            Restaurar Oficial
-          </button>
-
-          <button
-            onClick={handleClear}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
-          >
-            <Trash2 className="h-4 w-4" />
-            Limpiar
-          </button>
+                            return (
+                              <td key={col.field} className={`px-1 py-1 border-r border-gray-200 ${isArrColumn ? 'bg-red-50' : ''}`}>
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  data-cell-key={cellKey}
+                                  value={isEditing ? draftValue : formatValue(value)}
+                                  onFocus={() => handleCellFocus(cellKey)}
+                                  onBlur={handleCellBlur}
+                                  onChange={(e) => isEditing && setDraftValue(e.target.value)}
+                                  onKeyDown={(e) => handleCellKeyDown(e, cellKey)}
+                                  className={`w-full px-1 py-1 text-right text-xs border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors ${isArrColumn ? 'text-red-700 font-semibold' : ''}`}
+                                  style={{ minWidth: '60px' }}
+                                />
+                              </td>
+                            );
+                          })}
+                        </React.Fragment>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
-        {hasUnsavedChanges && (
-          <span className="text-sm text-orange-600 font-medium">
-            Cambios pendientes sin guardar
-          </span>
-        )}
+        <div className="flex items-center justify-between gap-3 flex-wrap border-t p-6 bg-gray-50">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRestoreOfficial}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Restaurar Oficial
+            </button>
+
+            <button
+              onClick={handleClear}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+            >
+              <Trash2 className="h-4 w-4" />
+              Limpiar
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {hasUnsavedChanges && (
+              <span className="text-sm text-orange-600 font-medium">
+                Cambios pendientes sin guardar
+              </span>
+            )}
+
+            <button
+              onClick={handleSave}
+              disabled={!hasUnsavedChanges || isSaving}
+              className="inline-flex items-center gap-2 px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <Save className="h-4 w-4" />
+              {isSaving ? 'Guardando...' : 'GRABAR'}
+            </button>
+
+            <button
+              onClick={onClose}
+              className="inline-flex items-center gap-2 px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              CERRAR
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

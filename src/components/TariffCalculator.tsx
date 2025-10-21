@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Package, AlertCircle, Calculator, ArrowUp, MapPin, Settings, LogOut, User, Eye } from 'lucide-react';
+import { Package, AlertCircle, Calculator, ArrowUp, MapPin, Settings, LogOut, User, Eye, EyeOff } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useViewMode } from '../contexts/ViewModeContext';
 import { UserSettingsPanel } from './settings/UserSettingsPanel';
@@ -315,7 +316,11 @@ const TariffCalculator: React.FC = () => {
     error: discountError = null
   } = useDiscountPlans() ?? {};
 
-  const { activeStates: customTariffsActiveStates = [] } = useCustomTariffsActive() ?? {};
+  const { activeStates: customTariffsActiveStates = [], refetch: refetchActiveStates } = useCustomTariffsActive() ?? {};
+
+  const isCustomTariffActive = useMemo(() => {
+    return customTariffsActiveStates.some(s => s.service_name === selectedService && s.is_active);
+  }, [customTariffsActiveStates, selectedService]);
 
   const [selectedService, setSelectedService] = useState<string>(STATIC_SERVICES[0]);
   const [marginPercentage, setMarginPercentage] = useState<number>(40);
@@ -1308,6 +1313,33 @@ const TariffCalculator: React.FC = () => {
     setShowMenu(false);
   };
 
+  const handleToggleCustomTariff = async () => {
+    if (!userData) return;
+
+    try {
+      const existingState = customTariffsActiveStates.find(s => s.service_name === selectedService);
+
+      if (existingState) {
+        await supabase
+          .from('custom_tariffs_active')
+          .update({ is_active: !existingState.is_active })
+          .eq('id', existingState.id);
+      } else {
+        await supabase
+          .from('custom_tariffs_active')
+          .insert([{
+            user_id: userData.id,
+            service_name: selectedService,
+            is_active: true
+          }]);
+      }
+
+      await refetchActiveStates();
+    } catch (error) {
+      console.error('Error toggling custom tariff state:', error);
+    }
+  };
+
   const isAdmin = userData?.is_admin || false;
 
   useEffect(() => {
@@ -1674,31 +1706,25 @@ const TariffCalculator: React.FC = () => {
       </header>
 
       {/* Custom Tariffs Active Indicator */}
-      {customTariffsActiveStates.length > 0 && customTariffsActiveStates.some(s => s.service_name === selectedService && s.is_active) && (
+      {isCustomTariffActive ? (
         <div className="bg-green-50 border-b border-green-200 px-4 sm:px-6 lg:px-8 py-2">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="inline-block w-2 h-2 bg-green-600 rounded-full animate-pulse"></span>
-              <span className="text-sm font-medium text-green-900">
-                Usando tabla personalizada para {selectedService}
-              </span>
-            </div>
+          <div className="max-w-7xl mx-auto flex items-center gap-2">
+            <span className="inline-block w-2 h-2 bg-green-600 rounded-full animate-pulse"></span>
+            <span className="text-sm font-medium text-green-900">
+              Estado actual: Usando tabla personalizada para {selectedService}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-gray-50 border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-2">
+          <div className="max-w-7xl mx-auto flex items-center gap-2">
+            <span className="inline-block w-2 h-2 bg-gray-400 rounded-full"></span>
+            <span className="text-sm font-medium text-gray-700">
+              Estado actual: Usando tabla oficial para {selectedService}
+            </span>
           </div>
         </div>
       )}
-
-      {customTariffsActiveStates.length === 0 || !customTariffsActiveStates.some(s => s.service_name === selectedService && s.is_active) ? (
-        <div className="bg-gray-50 border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-2">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="inline-block w-2 h-2 bg-gray-400 rounded-full"></span>
-              <span className="text-sm font-medium text-gray-700">
-                Usando tabla oficial para {selectedService}
-              </span>
-            </div>
-          </div>
-        </div>
-      ) : null}
 
       {showSettings && (
         <UserSettingsPanel onClose={() => setShowSettings(false)} />
@@ -1839,6 +1865,18 @@ const TariffCalculator: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleToggleCustomTariff}
+                  className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full transition-colors ${
+                    isCustomTariffActive
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  {isCustomTariffActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                  {isCustomTariffActive ? 'Tabla Personalizada Activa' : 'Tabla Oficial Activa'}
+                </button>
                 <button
                   type="button"
                   onClick={toggleCostsPanel}
