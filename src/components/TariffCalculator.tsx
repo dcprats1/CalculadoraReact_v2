@@ -318,11 +318,11 @@ const TariffCalculator: React.FC = () => {
 
   const { activeStates: customTariffsActiveStates = [], refetch: refetchActiveStates } = useCustomTariffsActive() ?? {};
 
+  const [selectedService, setSelectedService] = useState<string>(STATIC_SERVICES[0]);
+
   const isCustomTariffActive = useMemo(() => {
     return customTariffsActiveStates.some(s => s.service_name === selectedService && s.is_active);
   }, [customTariffsActiveStates, selectedService]);
-
-  const [selectedService, setSelectedService] = useState<string>(STATIC_SERVICES[0]);
   const [marginPercentage, setMarginPercentage] = useState<number>(40);
   const [selectedDiscountPlan, setSelectedDiscountPlan] = useState<string>('');
   const [selectedPlanGroup, setSelectedPlanGroup] = useState<string>('');
