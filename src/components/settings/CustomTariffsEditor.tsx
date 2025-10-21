@@ -330,7 +330,9 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
       );
 
       const tariffsToUpsert: Partial<CustomTariff>[] = [];
+      const recordIdsToDelete: string[] = [];
       let totalModifiedFields = 0;
+      let totalRestoredRanges = 0;
 
       // Paso 2: Para cada rango de peso, construir objeto completo
       WEIGHT_RANGES.forEach(range => {
@@ -354,6 +356,7 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
 
         let hasModificationsInThisRange = false;
         let modifiedFieldsCount = 0;
+        let allFieldsMatchOfficial = true;
 
         DESTINATIONS.forEach(dest => {
           dest.columns.forEach(col => {
@@ -378,6 +381,11 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
               ? existingRecord[col.field] as number | null
               : null;
 
+            // Verificar si este campo coincide con el oficial
+            if (normalizedEditedValue !== normalizedOfficialValue) {
+              allFieldsMatchOfficial = false;
+            }
+
             // Decidir qué valor guardar:
             // 1. Si el valor actual en editor difiere del oficial → usar el del editor
             // 2. Si el valor ya estaba personalizado en DB → preservarlo
@@ -399,8 +407,17 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
           });
         });
 
-        // Solo guardar si hay al menos un campo personalizado en este rango
-        if (hasModificationsInThisRange) {
+        // Determinar acción para este rango:
+        // - Si todos los campos coinciden con oficial Y existe un registro en DB → ELIMINAR
+        // - Si hay modificaciones → GUARDAR/ACTUALIZAR
+        // - Si no hay modificaciones ni registro existente → NO HACER NADA
+
+        if (allFieldsMatchOfficial && existingRecord) {
+          // Usuario restauró valores oficiales: eliminar el registro personalizado
+          recordIdsToDelete.push(existingRecord.id);
+          totalRestoredRanges++;
+        } else if (hasModificationsInThisRange) {
+          // Hay personalizaciones: guardar/actualizar
           if (existingRecord) {
             completeTariff.id = existingRecord.id;
           }
@@ -409,14 +426,28 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
         }
       });
 
-      if (tariffsToUpsert.length === 0) {
+      // Verificar si hay cambios para aplicar
+      if (tariffsToUpsert.length === 0 && recordIdsToDelete.length === 0) {
         setSaveMessage('No hay cambios para guardar');
         setTimeout(() => setSaveMessage(null), 3000);
         setIsSaving(false);
         return;
       }
 
-      // Paso 3: Guardar registros (UPDATE o INSERT según corresponda)
+      // Paso 3: Eliminar registros restaurados a oficial
+      if (recordIdsToDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('custom_tariffs')
+          .delete()
+          .in('id', recordIdsToDelete);
+
+        if (deleteError) {
+          console.error('Error deleting restored tariff rows:', deleteError);
+          throw deleteError;
+        }
+      }
+
+      // Paso 4: Guardar registros personalizados (UPDATE o INSERT según corresponda)
       for (const tariff of tariffsToUpsert) {
         if (tariff.id) {
           // UPDATE: registro ya existe
@@ -445,7 +476,17 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
 
       await refetchCustomTariffs();
       setHasUnsavedChanges(false);
-      setSaveMessage(`Guardados ${totalModifiedFields} campo(s) modificado(s) en ${tariffsToUpsert.length} rango(s) de peso`);
+
+      // Construir mensaje de éxito informativo
+      const messages: string[] = [];
+      if (totalModifiedFields > 0) {
+        messages.push(`${totalModifiedFields} campo(s) modificado(s) en ${tariffsToUpsert.length} rango(s)`);
+      }
+      if (totalRestoredRanges > 0) {
+        messages.push(`${totalRestoredRanges} rango(s) restaurado(s) a oficial`);
+      }
+
+      setSaveMessage(messages.join(' • '));
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (error: any) {
       console.error('Error saving custom tariffs:', error);
