@@ -3,6 +3,7 @@ import { Package, AlertCircle, Calculator, ArrowUp, MapPin, Settings, LogOut, Us
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useViewMode } from '../contexts/ViewModeContext';
+import { usePreferences } from '../contexts/PreferencesContext';
 import { UserSettingsPanel } from './settings/UserSettingsPanel';
 import { AdminPanel } from './admin/AdminPanel';
 import { useTariffs, useDiscountPlans, useCustomTariffsActive } from '../hooks/useSupabaseData';
@@ -303,12 +304,13 @@ const TariffCalculator: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [tariffRefetchTrigger, setTariffRefetchTrigger] = useState(0);
 
   const {
     tariffs = [],
     loading: tariffsLoading = true,
     error: tariffsError = null
-  } = useTariffs(undefined, false, true) ?? {};
+  } = useTariffs(undefined, false, true, tariffRefetchTrigger) ?? {};
 
   const {
     discountPlans: remoteDiscountPlans = [],
@@ -317,6 +319,8 @@ const TariffCalculator: React.FC = () => {
   } = useDiscountPlans() ?? {};
 
   const { activeStates: customTariffsActiveStates = [], refetch: refetchActiveStates } = useCustomTariffsActive() ?? {};
+
+  const { preferences } = usePreferences();
 
   const [selectedService, setSelectedService] = useState<string>(STATIC_SERVICES[0]);
 
@@ -1335,6 +1339,8 @@ const TariffCalculator: React.FC = () => {
       }
 
       await refetchActiveStates();
+      // Forzar recarga de tarifas para aplicar cambios
+      setTariffRefetchTrigger(prev => prev + 1);
     } catch (error) {
       console.error('Error toggling custom tariff state:', error);
     }
@@ -1576,6 +1582,20 @@ const TariffCalculator: React.FC = () => {
     provincialCostOverride,
     mileageCostTotal
   ]);
+
+  // Cargar valores de preferencias solo al inicio si los valores actuales son 0
+  useEffect(() => {
+    if (!preferences) return;
+
+    // Solo aplicar si los valores actuales son 0 (valores por defecto)
+    if (spc === 0 && preferences.fixed_spc !== null && preferences.fixed_spc > 0) {
+      setSpc(preferences.fixed_spc);
+    }
+
+    if (linearDiscount === 0 && preferences.fixed_linear_discount !== null && preferences.fixed_linear_discount > 0) {
+      setLinearDiscount(preferences.fixed_linear_discount);
+    }
+  }, [preferences]); // Solo depende de preferences, se ejecuta una vez al cargar
 
   return (
     <div className="min-h-screen bg-gray-50">

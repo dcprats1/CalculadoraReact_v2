@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, Tariff, DiscountPlan, ConstantByService, CustomTariff, CustomTariffActive } from '../lib/supabase';
 
-export function useTariffs(clientId?: string, useCustomOverrides: boolean = false, applyUserCustomTariffs: boolean = false) {
+export function useTariffs(clientId?: string, useCustomOverrides: boolean = false, applyUserCustomTariffs: boolean = false, refetchTrigger?: number) {
   const [tariffs, setTariffs] = useState<Tariff[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +64,7 @@ export function useTariffs(clientId?: string, useCustomOverrides: boolean = fals
     };
 
     fetchTariffs();
-  }, [clientId, useCustomOverrides, applyUserCustomTariffs]);
+  }, [clientId, useCustomOverrides, applyUserCustomTariffs, refetchTrigger]);
 
   return { tariffs, loading, error };
 }

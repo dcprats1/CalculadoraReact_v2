@@ -104,6 +104,19 @@ VITE_SUPABASE_ANON_KEY=<key>
 | `npm run build` | Genera la build de producción.     |
 | `npm run preview` | Previsualiza la build estática. |
 
+## 🆕 Nuevas Funcionalidades (2025-10-21)
+
+### Propagación Automática de Preferencias
+- Los valores de **SPC** y **Descuento Lineal** configurados en Preferencias se cargan automáticamente al inicio
+- Los valores se pueden modificar durante la sesión sin restricciones
+- Ver [INSTRUCCIONES_USUARIO.md](./INSTRUCCIONES_USUARIO.md) para guía completa de uso
+- Ver [RESUMEN_IMPLEMENTACION.md](./RESUMEN_IMPLEMENTACION.md) para detalles técnicos
+
+### Tabla de Costes Personalizada Mejorada
+- El botón "Tabla Oficial Activa / Tabla Personalizada Activa" ahora recarga automáticamente las tarifas
+- Los cambios se aplican inmediatamente sin necesidad de recargar la página
+- Ver [CAMBIOS_PREFERENCIAS.md](./CAMBIOS_PREFERENCIAS.md) para documentación técnica completa
+
 ## Próximos pasos sugeridos
 - Activar la comparativa multioperador (`ServiceComparison`).
 - Persistir simulaciones y configuraciones en Supabase.
