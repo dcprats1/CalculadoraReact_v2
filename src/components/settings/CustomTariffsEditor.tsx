@@ -301,6 +301,7 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
       const tariffsToUpsert: Partial<CustomTariff>[] = [];
 
       WEIGHT_RANGES.forEach(range => {
+        let hasModifications = false;
         const tariffRow: Partial<CustomTariff> = {
           user_id: userData.id,
           service_name: selectedService,
@@ -308,16 +309,47 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
           weight_to: range.to
         };
 
+        const officialTariff = officialTariffs.find(
+          t => t.service_name === selectedService &&
+               t.weight_from.toString() === range.from &&
+               (t.weight_to === null ? range.to === '999' : t.weight_to.toString() === range.to)
+        );
+
         DESTINATIONS.forEach(dest => {
           dest.columns.forEach(col => {
             const cellKey: CellKey = `${range.from}_${range.to}_${col.field}`;
-            const value = editData[cellKey];
-            tariffRow[col.field] = value as number | null;
+            const editedValue = editData[cellKey];
+
+            const officialValue = officialTariff
+              ? (officialTariff[col.field as keyof typeof officialTariff] as number | null | undefined)
+              : null;
+            const normalizedOfficialValue = officialValue !== undefined && officialValue !== null
+              ? Number(officialValue)
+              : null;
+
+            const normalizedEditedValue = editedValue !== undefined && editedValue !== null
+              ? Number(editedValue)
+              : null;
+
+            if (normalizedEditedValue !== normalizedOfficialValue) {
+              hasModifications = true;
+            }
+
+            tariffRow[col.field] = normalizedEditedValue;
           });
         });
 
-        tariffsToUpsert.push(tariffRow);
+        if (hasModifications) {
+          tariffsToUpsert.push(tariffRow);
+        }
       });
+
+      if (tariffsToUpsert.length === 0) {
+        setSaveMessage('No hay cambios para guardar');
+        setTimeout(() => setSaveMessage(null), 3000);
+        setIsSaving(false);
+        return;
+      }
 
       const { data: existing } = await supabase
         .from('custom_tariffs')
@@ -334,24 +366,46 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
         const existingId = existingMap.get(key);
 
         if (existingId) {
-          await supabase
+          const { error: updateError } = await supabase
             .from('custom_tariffs')
             .update(tariff)
             .eq('id', existingId);
+
+          if (updateError) {
+            console.error('Error updating tariff row:', updateError);
+            throw updateError;
+          }
         } else {
-          await supabase
+          const { error: insertError } = await supabase
             .from('custom_tariffs')
             .insert([tariff]);
+
+          if (insertError) {
+            console.error('Error inserting tariff row:', insertError);
+            throw insertError;
+          }
         }
       }
 
       await refetchCustomTariffs();
       setHasUnsavedChanges(false);
-      setSaveMessage('Tarifas guardadas correctamente');
+      setSaveMessage(`Guardadas ${tariffsToUpsert.length} fila(s) con modificaciones`);
       setTimeout(() => setSaveMessage(null), 3000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving custom tariffs:', error);
-      setSaveMessage('Error al guardar las tarifas');
+
+      let errorMessage = 'Error al guardar las tarifas';
+      if (error?.message) {
+        if (error.message.includes('row-level security')) {
+          errorMessage = 'Error de permisos. Por favor, cierra sesi\u00f3n y vuelve a iniciar.';
+        } else if (error.message.includes('duplicate key')) {
+          errorMessage = 'Ya existe una tarifa personalizada para este rango de peso.';
+        } else {
+          errorMessage = `Error: ${error.message}`;
+        }
+      }
+
+      setSaveMessage(errorMessage);
       setTimeout(() => setSaveMessage(null), 5000);
     } finally {
       setIsSaving(false);
