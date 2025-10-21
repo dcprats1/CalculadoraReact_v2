@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { isAllowedEmail, INVALID_EMAIL_ERROR } from '../config/allowedEmails';
 
 interface UserData {
   id: string;
@@ -80,8 +79,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
  async function sendLoginCode(email: string) {
   try {
-    if (!isAllowedEmail(email)) {
-      return { success: false, error: INVALID_EMAIL_ERROR };
+    if (!email.endsWith('@gls-spain.es') && email !== 'dcprats@gmail.com') {
+      return { success: false, error: 'Solo usuarios @gls-spain.es pueden iniciar sesión' };
     }
 
     const response = await fetch(

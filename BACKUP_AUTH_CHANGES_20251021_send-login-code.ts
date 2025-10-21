@@ -12,8 +12,6 @@ interface RequestBody {
 
 const ALLOWED_DOMAIN = '@gls-spain.es';
 const ADMIN_EMAIL = 'dcprats@gmail.com';
-const TEST_USER_EMAIL = 'damaso.prats@logicalogistica.com';
-const ALLOWED_EXCEPTIONS = [ADMIN_EMAIL, TEST_USER_EMAIL];
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -38,10 +36,8 @@ Deno.serve(async (req: Request) => {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Validar dominio @gls-spain.es o excepciones (admin, test user)
-    const isAllowed = ALLOWED_EXCEPTIONS.includes(normalizedEmail) || normalizedEmail.endsWith(ALLOWED_DOMAIN);
-
-    if (!isAllowed) {
+    // Validar dominio @gls-spain.es (excepto admin)
+    if (normalizedEmail !== ADMIN_EMAIL && !normalizedEmail.endsWith(ALLOWED_DOMAIN)) {
       return new Response(
         JSON.stringify({ error: 'Solo usuarios @gls-spain.es pueden acceder' }),
         {
