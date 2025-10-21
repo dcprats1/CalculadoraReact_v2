@@ -8,7 +8,7 @@ import React, {
 } from 'react';
 import type { DiscountPlan } from '../lib/supabase';
 import { roundUp } from '../utils/calculations';
-import { ComparatorMiniSOPGenerator } from './sop/ComparatorMiniSOPGenerator';
+// import { ComparatorMiniSOPGenerator } from './sop/ComparatorMiniSOPGenerator';
 
 export const COMPARATOR_ZONES = [
   'Prov.',
@@ -637,10 +637,10 @@ const moveFocusFromCell = (
                         >
                           Ajustar a la competencia
                         </button>
-                        <ComparatorMiniSOPGenerator
+                        {/* <ComparatorMiniSOPGenerator
                           serviceName={selectedService}
                           offerTable={tables.offer}
-                        />
+                        /> */}
                       </div>
                     )}
                   </div>

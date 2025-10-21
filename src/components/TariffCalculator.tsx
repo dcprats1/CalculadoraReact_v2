@@ -4,8 +4,6 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useViewMode } from '../contexts/ViewModeContext';
 import { usePreferences } from '../contexts/PreferencesContext';
-import { UserSettingsPanel } from './settings/UserSettingsPanel';
-import { AdminPanel } from './admin/AdminPanel';
 import { useTariffs, useDiscountPlans, useCustomTariffsActive } from '../hooks/useSupabaseData';
 import {
   PackageData,
@@ -28,8 +26,7 @@ import {
 } from '../utils/calculations';
 import PackageManager from './PackageManager';
 import CostBreakdownTable from './CostBreakdownTable';
-import SOPGenerator from './sop/SOPGenerator';
-import MiniSOPLauncher from './sop/MiniSOPLauncher';
+import SOPGenerator from './SopGenerator';
 import CommercialComparatorPanel, {
   COMPARATOR_COLUMNS,
   COMPARATOR_ZONES,
@@ -302,9 +299,7 @@ const TariffCalculator: React.FC = () => {
   const { userData, signOut } = useAuth();
   const { viewMode, setViewMode, isAdminView } = useViewMode();
   const { preferences, isLoading: preferencesLoading } = usePreferences();
-  const [showSettings, setShowSettings] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const [showAdmin, setShowAdmin] = useState(false);
 
   const {
     tariffs = [],
@@ -1763,33 +1758,6 @@ const TariffCalculator: React.FC = () => {
                         <p className="text-xs text-gray-500">{userData?.email}</p>
                       </div>
 
-                      <button
-                        onClick={() => {
-                          setShowSettings(true);
-                          setShowMenu(false);
-                        }}
-                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                      >
-                        <Settings className="h-4 w-4 mr-3 text-gray-400" />
-                        Configuración
-                      </button>
-
-                      {isAdmin && isAdminView && (
-                        <>
-                          <div className="border-t border-gray-200 my-1" />
-                          <button
-                            onClick={() => {
-                              setShowAdmin(true);
-                              setShowMenu(false);
-                            }}
-                            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                          >
-                            <Settings className="h-4 w-4 mr-3 text-gray-400" />
-                            Panel de Administración
-                          </button>
-                        </>
-                      )}
-
                       {isAdmin && (
                         <>
                           <div className="border-t border-gray-200 my-1" />
@@ -1855,30 +1823,6 @@ const TariffCalculator: React.FC = () => {
         </div>
       )}
 
-      {showSettings && (
-        <UserSettingsPanel onClose={() => setShowSettings(false)} />
-      )}
-
-      {isAdmin && isAdminView && showAdmin && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900">Panel de Administración</h2>
-              <button
-                onClick={() => setShowAdmin(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <svg className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-6">
-              <AdminPanel />
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
