@@ -32,17 +32,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('user_session');
-    if (sessionData) {
-      try {
-        const parsed = JSON.parse(sessionData);
-        setUser({ id: parsed.id, email: parsed.email });
-        loadUserProfile(parsed.id);
-      } catch (error) {
-        localStorage.removeItem('user_session');
+    async function initializeAuth() {
+      const sessionData = localStorage.getItem('user_session');
+      if (sessionData) {
+        try {
+          const parsed = JSON.parse(sessionData);
+          setUser({ id: parsed.id, email: parsed.email });
+          await loadUserProfile(parsed.id);
+        } catch (error) {
+          localStorage.removeItem('user_session');
+        }
       }
+      setIsLoading(false);
     }
-    setIsLoading(false);
+
+    initializeAuth();
   }, []);
 
   async function loadUserProfile(userId: string) {

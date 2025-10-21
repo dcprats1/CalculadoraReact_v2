@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { CreditCard, Calendar, AlertCircle, CheckCircle, Loader2, Smartphone, Shield, Users } from 'lucide-react';
+import { CreditCard, Calendar, AlertCircle, CheckCircle, Loader2, Smartphone, Shield, Users, Eye } from 'lucide-react';
 import { getPlanByTier, TIER_TO_DEVICES } from '../../data/plans.data';
+import { PlanViewModal } from '../pricing/PlanViewModal';
 
 interface ActiveSession {
   id: string;
@@ -14,6 +15,7 @@ export function SubscriptionTab() {
   const { userData } = useAuth();
   const [activeSessions, setActiveSessions] = useState<ActiveSession[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
+  const [showPlanModal, setShowPlanModal] = useState(false);
 
   useEffect(() => {
     if (userData?.id) {
@@ -278,11 +280,28 @@ export function SubscriptionTab() {
 
       {!isAdmin && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-800">
-            <strong>Gestión de facturación:</strong> Para modificar tu plan, actualizar métodos de pago o consultar facturas, contacta con el departamento comercial.
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <p className="text-sm text-blue-800">
+                <strong>Gestión de facturación:</strong> Para modificar tu plan, actualizar métodos de pago o consultar facturas, contacta con el departamento comercial.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowPlanModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+            >
+              <Eye className="h-4 w-4" />
+              Ver planes
+            </button>
+          </div>
         </div>
       )}
+
+      <PlanViewModal
+        isOpen={showPlanModal}
+        onClose={() => setShowPlanModal(false)}
+        currentTier={userData?.subscription_tier}
+      />
 
       {!isAdmin && plan && (
         <div className="bg-white border border-gray-200 rounded-lg p-6">
