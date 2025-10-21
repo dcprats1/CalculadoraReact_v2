@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Package, AlertCircle, Calculator, ArrowUp, MapPin } from 'lucide-react';
+import { Package, AlertCircle, Calculator, ArrowUp, MapPin, Settings, LogOut, User, Eye } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { useViewMode } from '../contexts/ViewModeContext';
+import { UserSettingsPanel } from './settings/UserSettingsPanel';
+import { AdminPanel } from './admin/AdminPanel';
 import { useTariffs, useDiscountPlans } from '../hooks/useSupabaseData';
 import {
   PackageData,
@@ -293,6 +297,12 @@ const getMaxIncrement2025ForService = (service: string): number => {
 };
 
 const TariffCalculator: React.FC = () => {
+  const { userData, signOut } = useAuth();
+  const { viewMode, setViewMode, isAdminView } = useViewMode();
+  const [showSettings, setShowSettings] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
+
   const {
     tariffs = [],
     loading: tariffsLoading = true,
@@ -1286,6 +1296,18 @@ const TariffCalculator: React.FC = () => {
     setShowMileageWarning(false);
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+    setShowMenu(false);
+  };
+
+  const toggleViewMode = () => {
+    setViewMode(viewMode === 'admin' ? 'user' : 'admin');
+    setShowMenu(false);
+  };
+
+  const isAdmin = userData?.is_admin || false;
+
   useEffect(() => {
     if (!selectedPlanGroup) {
       if (selectedDiscountPlan !== '') {
@@ -1530,6 +1552,11 @@ const TariffCalculator: React.FC = () => {
             <div className="flex items-center space-x-3">
               <Calculator className="h-8 w-8 text-blue-600" />
               <h1 className="text-2xl font-bold text-gray-900">Calculadora de Tarifas</h1>
+              {isAdmin && !isAdminView && (
+                <span className="ml-3 px-2 py-1 text-xs font-semibold bg-orange-100 text-orange-800 rounded-full">
+                  Modo Usuario
+                </span>
+              )}
             </div>
             <div className="flex items-center space-x-3">
               <span className="text-sm text-gray-500 hidden sm:inline">
@@ -1543,10 +1570,131 @@ const TariffCalculator: React.FC = () => {
                 linearDiscount={planForSelectedService ? 0 : linearDiscount}
                 disabled={!tariffs.length}
               />
+
+              <div className="hidden sm:flex items-center text-sm text-gray-700">
+                <User className="h-4 w-4 mr-2 text-gray-400" />
+                <span className="font-medium">{userData?.full_name}</span>
+              </div>
+
+              <div className="relative">
+                <button
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                    <span className="text-sm font-bold text-white">
+                      {userData?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || userData?.email.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                </button>
+
+                {showMenu && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setShowMenu(false)}
+                    />
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                      <div className="px-4 py-3 border-b border-gray-200">
+                        <p className="text-sm font-medium text-gray-900">{userData?.full_name}</p>
+                        <p className="text-xs text-gray-500">{userData?.email}</p>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setShowSettings(true);
+                          setShowMenu(false);
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                      >
+                        <Settings className="h-4 w-4 mr-3 text-gray-400" />
+                        Configuración
+                      </button>
+
+                      {isAdmin && isAdminView && (
+                        <>
+                          <div className="border-t border-gray-200 my-1" />
+                          <button
+                            onClick={() => {
+                              setShowAdmin(true);
+                              setShowMenu(false);
+                            }}
+                            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          >
+                            <Settings className="h-4 w-4 mr-3 text-gray-400" />
+                            Panel de Administración
+                          </button>
+                        </>
+                      )}
+
+                      {isAdmin && (
+                        <>
+                          <div className="border-t border-gray-200 my-1" />
+                          <div className="px-4 py-2">
+                            <label className="flex items-center justify-between cursor-pointer">
+                              <div className="flex items-center">
+                                <Eye className="h-4 w-4 mr-3 text-gray-400" />
+                                <span className="text-sm text-gray-700">Ver como Usuario</span>
+                              </div>
+                              <button
+                                onClick={toggleViewMode}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                                  !isAdminView ? 'bg-blue-600' : 'bg-gray-200'
+                                }`}
+                              >
+                                <span
+                                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                    !isAdminView ? 'translate-x-6' : 'translate-x-1'
+                                  }`}
+                                />
+                              </button>
+                            </label>
+                          </div>
+                        </>
+                      )}
+
+                      <div className="border-t border-gray-200 mt-1 pt-1">
+                        <button
+                          onClick={handleSignOut}
+                          className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <LogOut className="h-4 w-4 mr-3" />
+                          Cerrar sesión
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </header>
+
+      {showSettings && (
+        <UserSettingsPanel onClose={() => setShowSettings(false)} />
+      )}
+
+      {isAdmin && isAdminView && showAdmin && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">Panel de Administración</h2>
+              <button
+                onClick={() => setShowAdmin(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <svg className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <AdminPanel />
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
