@@ -3,7 +3,8 @@ import { Package, AlertCircle, Calculator, ArrowUp, MapPin, Settings, LogOut, Us
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useViewMode } from '../contexts/ViewModeContext';
-import { usePreferences } from '../contexts/PreferencesContext';
+import { UserSettingsPanel } from './settings/UserSettingsPanel';
+import { AdminPanel } from './admin/AdminPanel';
 import { useTariffs, useDiscountPlans, useCustomTariffsActive } from '../hooks/useSupabaseData';
 import {
   PackageData,
@@ -26,7 +27,8 @@ import {
 } from '../utils/calculations';
 import PackageManager from './PackageManager';
 import CostBreakdownTable from './CostBreakdownTable';
-import SOPGenerator from './SopGenerator';
+import SOPGenerator from './sop/SOPGenerator';
+import MiniSOPLauncher from './sop/MiniSOPLauncher';
 import CommercialComparatorPanel, {
   COMPARATOR_COLUMNS,
   COMPARATOR_ZONES,
@@ -298,8 +300,9 @@ const getMaxIncrement2025ForService = (service: string): number => {
 const TariffCalculator: React.FC = () => {
   const { userData, signOut } = useAuth();
   const { viewMode, setViewMode, isAdminView } = useViewMode();
-  const { preferences, isLoading: preferencesLoading } = usePreferences();
+  const [showSettings, setShowSettings] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
 
   const {
     tariffs = [],
@@ -333,11 +336,6 @@ const TariffCalculator: React.FC = () => {
   const [suplementos, setSuplementos] = useState<number>(0);
   const [irregular, setIrregular] = useState<number>(0);
   const [linearDiscount, setLinearDiscount] = useState<number>(0);
-
-  // Track if user has manually edited values during current session
-  const [spcManuallyEdited, setSpcManuallyEdited] = useState<boolean>(false);
-  const [linearDiscountManuallyEdited, setLinearDiscountManuallyEdited] = useState<boolean>(false);
-  const preferencesLoadedRef = useRef<boolean>(false);
   const [mileageKm, setMileageKm] = useState<number>(0);
   const [mileagePvpPerKm, setMileagePvpPerKm] = useState<number>(0);
   const [dismissedMileageServices, setDismissedMileageServices] = useState<Record<string, boolean>>({});
@@ -934,23 +932,9 @@ const TariffCalculator: React.FC = () => {
 
     return (
       <div className={`bg-white rounded-lg shadow-md p-4 ${wrapperClass}`}>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-base font-semibold text-gray-900">
-            Ajustes de Coste
-          </h3>
-          {hasPreferencesDifference && (
-            <button
-              onClick={handleResetToPreferences}
-              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors"
-              title="Restaurar valores desde configuración"
-            >
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Restaurar valores de configuración
-            </button>
-          )}
-        </div>
+        <h3 className="text-base font-semibold text-gray-900 mb-3">
+          Ajustes de Coste
+        </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wide">
@@ -989,17 +973,13 @@ const TariffCalculator: React.FC = () => {
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wide">
               SPC (€)
-              {!spcManuallyEdited && preferences?.fixed_spc_value !== null && preferences?.fixed_spc_value !== undefined && (
-                <span className="ml-1 text-[10px] text-blue-600 font-normal normal-case">(Desde config.)</span>
-              )}
             </label>
             <input
               type="number"
               value={spc}
-              onChange={(e) => handleSpcChange(Number(e.target.value))}
+              onChange={(e) => setSpc(Number(e.target.value))}
               step="0.01"
               className="w-full px-2 py-1.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              placeholder={preferences?.fixed_spc_value !== null && preferences?.fixed_spc_value !== undefined ? `Configurado: ${preferences.fixed_spc_value}` : '0.00'}
             />
           </div>
           <div>
@@ -1031,19 +1011,15 @@ const TariffCalculator: React.FC = () => {
           <div className="col-span-2 sm:col-span-1">
             <label className="block text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wide">
               Descuento lineal (%)
-              {!linearDiscountManuallyEdited && !planActive && preferences?.fixed_discount_percentage !== null && preferences?.fixed_discount_percentage !== undefined && (
-                <span className="ml-1 text-[10px] text-blue-600 font-normal normal-case">(Desde config.)</span>
-              )}
             </label>
             <input
               type="number"
               value={planActive ? 0 : linearDiscount}
-              onChange={(e) => handleLinearDiscountChange(Number(e.target.value))}
+              onChange={(e) => setLinearDiscount(Number(e.target.value))}
               min="0"
               step="0.1"
               disabled={planActive}
               className={`w-full px-2 py-1.5 border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent ${planActive ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed' : 'border-gray-300'}`}
-              placeholder={!planActive && preferences?.fixed_discount_percentage !== null && preferences?.fixed_discount_percentage !== undefined ? `Configurado: ${preferences.fixed_discount_percentage}` : '0.0'}
             />
             <p className="text-xs text-gray-500 mt-1">
               {planActive
@@ -1150,12 +1126,10 @@ const TariffCalculator: React.FC = () => {
     setSelectedPlanGroup('');
     setShippingMode('salida');
     setIncr2026(0);
-    // Reset to preference values instead of 0
-    setSpc(getPreferencesSpcValue());
+    setSpc(0);
     setSuplementos(0);
     setIrregular(0);
-    // Reset to preference values instead of 0
-    setLinearDiscount(getPreferencesDiscountValue());
+    setLinearDiscount(0);
     setMileageKm(0);
     setMileagePvpPerKm(0);
     setDismissedMileageServices({});
@@ -1172,9 +1146,6 @@ const TariffCalculator: React.FC = () => {
     setComparatorOfferManualFlags(createEmptyComparatorManualFlags());
     setComparatorOfferMargin(40);
     setComparatorServiceSelection(STATIC_SERVICES[0]);
-    // Reset manual edit flags
-    setSpcManuallyEdited(false);
-    setLinearDiscountManuallyEdited(false);
   };
 
   const toggleCostsPanel = () => {
@@ -1347,13 +1318,11 @@ const TariffCalculator: React.FC = () => {
 
     try {
       const existingState = customTariffsActiveStates.find(s => s.service_name === selectedService);
-      const newActiveState = existingState ? !existingState.is_active : true;
 
-      // Update custom_tariffs_active table
       if (existingState) {
         await supabase
           .from('custom_tariffs_active')
-          .update({ is_active: newActiveState })
+          .update({ is_active: !existingState.is_active })
           .eq('id', existingState.id);
       } else {
         await supabase
@@ -1365,16 +1334,6 @@ const TariffCalculator: React.FC = () => {
           }]);
       }
 
-      // Also update user_preferences.uses_custom_cost_table
-      await supabase
-        .from('user_preferences')
-        .upsert({
-          user_id: userData.id,
-          uses_custom_cost_table: newActiveState
-        }, {
-          onConflict: 'user_id'
-        });
-
       await refetchActiveStates();
     } catch (error) {
       console.error('Error toggling custom tariff state:', error);
@@ -1382,89 +1341,6 @@ const TariffCalculator: React.FC = () => {
   };
 
   const isAdmin = userData?.is_admin || false;
-
-  // Load preferences initially when component mounts or when preferences change
-  useEffect(() => {
-    if (!preferencesLoading && preferences && !preferencesLoadedRef.current) {
-      // Only load preferences once on mount
-      const prefSpc = preferences.fixed_spc_value;
-      const prefDiscount = preferences.fixed_discount_percentage;
-
-      if (prefSpc !== null && prefSpc !== undefined && !isNaN(prefSpc)) {
-        setSpc(prefSpc);
-      }
-
-      if (prefDiscount !== null && prefDiscount !== undefined && !isNaN(prefDiscount)) {
-        setLinearDiscount(prefDiscount);
-      }
-
-      preferencesLoadedRef.current = true;
-    }
-  }, [preferences, preferencesLoading]);
-
-  // Sync custom tariff state with preferences when available
-  // Note: This is primarily for UI display consistency. The actual data loading
-  // is handled by useTariffs hook based on isCustomTariffActive state
-  useEffect(() => {
-    if (preferences?.uses_custom_cost_table !== undefined && userData) {
-      // Ensure custom_tariffs_active table is in sync with user preferences
-      // This helps maintain consistency across sessions
-      const existingState = customTariffsActiveStates.find(s => s.service_name === selectedService);
-      const prefState = preferences.uses_custom_cost_table;
-
-      // Only update if there's a mismatch and we have a valid existing state
-      if (existingState && existingState.is_active !== prefState) {
-        // Silent sync without triggering a full update
-        supabase
-          .from('custom_tariffs_active')
-          .update({ is_active: prefState })
-          .eq('id', existingState.id)
-          .then(() => refetchActiveStates())
-          .catch(err => console.error('Error syncing custom tariff state:', err));
-      }
-    }
-  }, [preferences?.uses_custom_cost_table, selectedService, customTariffsActiveStates, userData]);
-
-  // Helper function to get preference values
-  const getPreferencesSpcValue = (): number => {
-    if (preferences?.fixed_spc_value !== null && preferences?.fixed_spc_value !== undefined) {
-      return preferences.fixed_spc_value;
-    }
-    return 0;
-  };
-
-  const getPreferencesDiscountValue = (): number => {
-    if (preferences?.fixed_discount_percentage !== null && preferences?.fixed_discount_percentage !== undefined) {
-      return preferences.fixed_discount_percentage;
-    }
-    return 0;
-  };
-
-  // Check if current values differ from preferences
-  const hasPreferencesDifference = useMemo(() => {
-    const prefSpc = getPreferencesSpcValue();
-    const prefDiscount = getPreferencesDiscountValue();
-    return spc !== prefSpc || linearDiscount !== prefDiscount;
-  }, [spc, linearDiscount, preferences]);
-
-  // Function to reset to preference values
-  const handleResetToPreferences = () => {
-    setSpc(getPreferencesSpcValue());
-    setLinearDiscount(getPreferencesDiscountValue());
-    setSpcManuallyEdited(false);
-    setLinearDiscountManuallyEdited(false);
-  };
-
-  // Wrapper functions for setSpc and setLinearDiscount that track manual edits
-  const handleSpcChange = (value: number) => {
-    setSpc(value);
-    setSpcManuallyEdited(true);
-  };
-
-  const handleLinearDiscountChange = (value: number) => {
-    setLinearDiscount(value);
-    setLinearDiscountManuallyEdited(true);
-  };
 
   useEffect(() => {
     if (!selectedPlanGroup) {
@@ -1758,6 +1634,33 @@ const TariffCalculator: React.FC = () => {
                         <p className="text-xs text-gray-500">{userData?.email}</p>
                       </div>
 
+                      <button
+                        onClick={() => {
+                          setShowSettings(true);
+                          setShowMenu(false);
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                      >
+                        <Settings className="h-4 w-4 mr-3 text-gray-400" />
+                        Configuración
+                      </button>
+
+                      {isAdmin && isAdminView && (
+                        <>
+                          <div className="border-t border-gray-200 my-1" />
+                          <button
+                            onClick={() => {
+                              setShowAdmin(true);
+                              setShowMenu(false);
+                            }}
+                            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          >
+                            <Settings className="h-4 w-4 mr-3 text-gray-400" />
+                            Panel de Administración
+                          </button>
+                        </>
+                      )}
+
                       {isAdmin && (
                         <>
                           <div className="border-t border-gray-200 my-1" />
@@ -1823,6 +1726,30 @@ const TariffCalculator: React.FC = () => {
         </div>
       )}
 
+      {showSettings && (
+        <UserSettingsPanel onClose={() => setShowSettings(false)} />
+      )}
+
+      {isAdmin && isAdminView && showAdmin && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">Panel de Administración</h2>
+              <button
+                onClick={() => setShowAdmin(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <svg className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <AdminPanel />
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
