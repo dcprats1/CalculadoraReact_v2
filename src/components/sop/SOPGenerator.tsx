@@ -4,6 +4,9 @@ import { Workbook } from 'exceljs';
 import { Tariff, DiscountPlan } from '../../lib/supabase';
 import { buildVirtualTariffTable } from '../../utils/calculations';
 import { getPlanGroupKey, getCustomPlanMessage } from '../../utils/customPlans';
+import { usePreferences } from '../../contexts/PreferencesContext';
+import { trackSOPDownload } from '../../utils/tracking';
+import { useAuth } from '../../contexts/AuthContext';
 
 const SOP_LOG_ENABLED =
   typeof import.meta !== 'undefined' &&
@@ -281,6 +284,8 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
   provincialCostOverride,
   disabled
 }) => {
+  const { user } = useAuth();
+  const { preferences } = usePreferences();
   const safeTariffs = Array.isArray(tariffs) ? tariffs : [];
   const safeDiscountPlans = useMemo(
     () => (Array.isArray(discountPlans) ? discountPlans : []),
@@ -295,6 +300,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
   const [workbookBuffer, setWorkbookBuffer] = useState<ArrayBuffer | null>(null);
   const [localPlanGroup, setLocalPlanGroup] = useState<string>(selectedPlanGroup);
   const [planMessage, setPlanMessage] = useState<string | null>(null);
+  const [isPreloaded, setIsPreloaded] = useState(false);
 
   const isReady = !!workbookBuffer;
 
@@ -351,6 +357,29 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
 
   const handleOpen = () => {
     if (computedDisabled) return;
+
+    if (preferences) {
+      const preloadedData: FormState = {
+        ...DEFAULT_FORM,
+        agencyNameNumber: preferences.agency_name_number || '',
+        agencyAddress: preferences.agency_address || '',
+        agencyPostalTown: preferences.agency_postal_town || '',
+        agencyProvince: preferences.agency_province || '',
+        agencyEmail: preferences.agency_email || '',
+      };
+
+      const hasPreloadedData = !!(
+        preferences.agency_name_number ||
+        preferences.agency_address ||
+        preferences.agency_postal_town ||
+        preferences.agency_province ||
+        preferences.agency_email
+      );
+
+      setForm(preloadedData);
+      setIsPreloaded(hasPreloadedData);
+    }
+
     setIsOpen(true);
   };
 
@@ -363,6 +392,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
     setLoadingBase(false);
     setLocalPlanGroup(selectedPlanGroup);
     setPlanMessage(null);
+    setIsPreloaded(false);
   };
 
   useEffect(() => {
@@ -895,6 +925,8 @@ if (businessTransit) {
 
       const buffer = await workbook.xlsx.writeBuffer();
       downloadBuffer(buffer, `SOP_${Date.now()}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+      trackSOPDownload(user?.id);
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : 'No se pudo generar el Excel de SOP.');
@@ -940,6 +972,15 @@ if (businessTransit) {
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+              {isPreloaded && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2">
+                  <div className="flex-shrink-0 w-2 h-2 bg-green-500 rounded-full"></div>
+                  <p className="text-sm text-green-800">
+                    <strong>Datos precargados desde tu perfil.</strong> Puedes editarlos si es necesario.
+                  </p>
+                </div>
+              )}
+
               {loadingBase && (
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   <Loader2 className="h-4 w-4 animate-spin" />

@@ -10,6 +10,11 @@ interface UserPreferences {
   fixed_discount_percentage: number | null;
   default_service_packages: any[];
   ui_theme: 'light' | 'dark';
+  agency_name_number: string | null;
+  agency_address: string | null;
+  agency_postal_town: string | null;
+  agency_province: string | null;
+  agency_email: string | null;
 }
 
 interface PreferencesContextType {

@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useViewMode } from '../contexts/ViewModeContext';
 import { usePreferences } from '../contexts/PreferencesContext';
+import { trackPackageCalculation } from '../utils/tracking';
 import { UserSettingsPanel } from './settings/UserSettingsPanel';
 import { AdminPanel } from './admin/AdminPanel';
 import { useTariffs, useDiscountPlans, useCustomTariffsActive } from '../hooks/useSupabaseData';
@@ -1100,6 +1101,7 @@ const TariffCalculator: React.FC = () => {
 
   const handlePackagesChange = (updatedPackages: PackageData[]) => {
     setPackages(sanitizePackages(updatedPackages));
+    trackPackageCalculation(userData?.id);
   };
 
   const handleProvincialCostChange = (value: number | null) => {

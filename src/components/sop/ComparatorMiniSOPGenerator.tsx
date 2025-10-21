@@ -27,6 +27,8 @@ import {
   normalizeRangeName,
   type ModeSuffix
 } from '../../utils/sopHelpers';
+import { trackMiniSOPDownload } from '../../utils/tracking';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface ComparatorMiniSOPGeneratorProps {
   serviceName: string;
@@ -270,6 +272,7 @@ export const ComparatorMiniSOPGenerator: React.FC<ComparatorMiniSOPGeneratorProp
   serviceName,
   offerTable
 }) => {
+  const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -367,6 +370,8 @@ export const ComparatorMiniSOPGenerator: React.FC<ComparatorMiniSOPGeneratorProp
       anchor.download = fileName;
       anchor.click();
       URL.revokeObjectURL(url);
+
+      trackMiniSOPDownload(user?.id);
 
       sopLog('=== MiniSOP generation complete ===');
       setIsModalOpen(false);
