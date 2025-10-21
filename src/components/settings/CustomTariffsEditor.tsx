@@ -317,24 +317,50 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
     setSaveMessage(null);
 
     try {
+      // Paso 1: Cargar TODOS los registros existentes de custom_tariffs para este servicio
+      const { data: existingRecords } = await supabase
+        .from('custom_tariffs')
+        .select('*')
+        .eq('user_id', userData.id)
+        .eq('service_name', selectedService);
+
+      // Crear mapa de registros existentes por rango de peso
+      const existingMap = new Map(
+        existingRecords?.map(e => [`${e.weight_from}_${e.weight_to}`, e]) || []
+      );
+
       const tariffsToUpsert: Partial<CustomTariff>[] = [];
       let totalModifiedFields = 0;
 
+      // Paso 2: Para cada rango de peso, construir objeto completo
       WEIGHT_RANGES.forEach(range => {
-        const modifiedFields: Partial<CustomTariff> = {};
-        let hasModifications = false;
-
         const officialTariff = officialTariffs.find(
           t => t.service_name === selectedService &&
                t.weight_from.toString() === range.from &&
                (t.weight_to === null ? range.to === '999' : t.weight_to.toString() === range.to)
         );
 
+        // Obtener el registro existente (si existe)
+        const rangeKey = `${range.from}_${range.to}`;
+        const existingRecord = existingMap.get(rangeKey);
+
+        // Construir objeto completo: base oficial + valores ya personalizados + cambios actuales
+        const completeTariff: Partial<CustomTariff> = {
+          user_id: userData.id,
+          service_name: selectedService,
+          weight_from: range.from,
+          weight_to: range.to
+        };
+
+        let hasModificationsInThisRange = false;
+        let modifiedFieldsCount = 0;
+
         DESTINATIONS.forEach(dest => {
           dest.columns.forEach(col => {
             const cellKey: CellKey = `${range.from}_${range.to}_${col.field}`;
             const editedValue = editData[cellKey];
 
+            // Valor oficial
             const officialValue = officialTariff
               ? (officialTariff[col.field as keyof typeof officialTariff] as number | null | undefined)
               : null;
@@ -342,26 +368,44 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
               ? Number(officialValue)
               : null;
 
+            // Valor editado actual (en memoria)
             const normalizedEditedValue = editedValue !== undefined && editedValue !== null
               ? Number(editedValue)
               : null;
 
+            // Valor que ya estaba personalizado en DB
+            const existingValue = existingRecord && existingRecord[col.field] !== undefined
+              ? existingRecord[col.field] as number | null
+              : null;
+
+            // Decidir qué valor guardar:
+            // 1. Si el valor actual en editor difiere del oficial → usar el del editor
+            // 2. Si el valor ya estaba personalizado en DB → preservarlo
+            // 3. Si no hay personalización → usar oficial (o null si no existe oficial)
+
             if (normalizedEditedValue !== normalizedOfficialValue) {
-              modifiedFields[col.field] = normalizedEditedValue;
-              hasModifications = true;
-              totalModifiedFields++;
+              // Caso 1: Usuario modificó este campo (difiere del oficial)
+              completeTariff[col.field] = normalizedEditedValue;
+              hasModificationsInThisRange = true;
+              modifiedFieldsCount++;
+            } else if (existingValue !== null && existingValue !== normalizedOfficialValue) {
+              // Caso 2: Campo ya estaba personalizado en DB (preservar)
+              completeTariff[col.field] = existingValue;
+              hasModificationsInThisRange = true;
+            } else {
+              // Caso 3: Campo coincide con oficial o no tiene valor
+              completeTariff[col.field] = normalizedOfficialValue;
             }
           });
         });
 
-        if (hasModifications) {
-          tariffsToUpsert.push({
-            user_id: userData.id,
-            service_name: selectedService,
-            weight_from: range.from,
-            weight_to: range.to,
-            ...modifiedFields
-          });
+        // Solo guardar si hay al menos un campo personalizado en este rango
+        if (hasModificationsInThisRange) {
+          if (existingRecord) {
+            completeTariff.id = existingRecord.id;
+          }
+          tariffsToUpsert.push(completeTariff);
+          totalModifiedFields += modifiedFieldsCount;
         }
       });
 
@@ -372,31 +416,22 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
         return;
       }
 
-      const { data: existing } = await supabase
-        .from('custom_tariffs')
-        .select('id, weight_from, weight_to')
-        .eq('user_id', userData.id)
-        .eq('service_name', selectedService);
-
-      const existingMap = new Map(
-        existing?.map(e => [`${e.weight_from}_${e.weight_to}`, e.id]) || []
-      );
-
+      // Paso 3: Guardar registros (UPDATE o INSERT según corresponda)
       for (const tariff of tariffsToUpsert) {
-        const key = `${tariff.weight_from}_${tariff.weight_to}`;
-        const existingId = existingMap.get(key);
-
-        if (existingId) {
+        if (tariff.id) {
+          // UPDATE: registro ya existe
+          const { id, ...updateData } = tariff;
           const { error: updateError } = await supabase
             .from('custom_tariffs')
-            .update(tariff)
-            .eq('id', existingId);
+            .update(updateData)
+            .eq('id', id);
 
           if (updateError) {
             console.error('Error updating tariff row:', updateError);
             throw updateError;
           }
         } else {
+          // INSERT: registro nuevo
           const { error: insertError } = await supabase
             .from('custom_tariffs')
             .insert([tariff]);
