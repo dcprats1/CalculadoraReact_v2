@@ -1321,6 +1321,26 @@ const TariffCalculator: React.FC = () => {
     if (!userData) return;
 
     try {
+      // Si intenta activar la tabla personalizada, verificamos que existan datos
+      if (!isCustomTariffActive) {
+        // Verificar si existen tarifas personalizadas para este servicio
+        const { data: existingCustomTariffs } = await supabase
+          .from('custom_tariffs')
+          .select('id')
+          .eq('user_id', userData.id)
+          .eq('service_name', selectedService)
+          .limit(1);
+
+        if (!existingCustomTariffs || existingCustomTariffs.length === 0) {
+          window.alert(
+            'No tienes una tabla de costes personalizada creada para este servicio.\n\n' +
+            'Para crear tu tabla personalizada ve a:\n' +
+            'Usuario → Configuración → Tarifas Personalizadas'
+          );
+          return;
+        }
+      }
+
       const existingState = customTariffsActiveStates.find(s => s.service_name === selectedService);
 
       if (existingState) {
@@ -1343,6 +1363,7 @@ const TariffCalculator: React.FC = () => {
       setTariffRefetchTrigger(prev => prev + 1);
     } catch (error) {
       console.error('Error toggling custom tariff state:', error);
+      window.alert('Error al cambiar el estado de la tabla personalizada');
     }
   };
 
@@ -1583,19 +1604,20 @@ const TariffCalculator: React.FC = () => {
     mileageCostTotal
   ]);
 
-  // Cargar valores de preferencias solo al inicio si los valores actuales son 0
+  // Cargar valores de preferencias al montar el componente o cuando cambien las preferencias
   useEffect(() => {
     if (!preferences) return;
 
-    // Solo aplicar si los valores actuales son 0 (valores por defecto)
-    if (spc === 0 && preferences.fixed_spc !== null && preferences.fixed_spc > 0) {
-      setSpc(preferences.fixed_spc);
+    // Aplicar SPC fijo si está configurado (puede ser positivo o negativo)
+    if (preferences.fixed_spc_value !== null && preferences.fixed_spc_value !== undefined) {
+      setSpc(preferences.fixed_spc_value);
     }
 
-    if (linearDiscount === 0 && preferences.fixed_linear_discount !== null && preferences.fixed_linear_discount > 0) {
-      setLinearDiscount(preferences.fixed_linear_discount);
+    // Aplicar descuento lineal fijo si está configurado (debe ser positivo)
+    if (preferences.fixed_discount_percentage !== null && preferences.fixed_discount_percentage !== undefined && preferences.fixed_discount_percentage > 0) {
+      setLinearDiscount(preferences.fixed_discount_percentage);
     }
-  }, [preferences]); // Solo depende de preferences, se ejecuta una vez al cargar
+  }, [preferences]); // Se ejecuta cuando cambian las preferencias
 
   return (
     <div className="min-h-screen bg-gray-50">

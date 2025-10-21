@@ -73,21 +73,11 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    if (updates.fixedSPC !== undefined && updates.fixedSPC !== null) {
-      if (updates.fixedSPC < 0) {
-        return new Response(
-          JSON.stringify({ error: 'SPC debe ser positivo' }),
-          {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          }
-        );
-      }
-    }
+    // SPC puede ser positivo o negativo, no validamos rango
 
     const dbUpdates = {
-      fixed_spc: updates.fixedSPC,
-      fixed_linear_discount: updates.fixedLinearDiscount,
+      fixed_spc_value: updates.fixedSPC,
+      fixed_discount_percentage: updates.fixedLinearDiscount,
       agency_name: updates.agencyName,
       agency_address: updates.agencyAddress,
       agency_postal_code: updates.agencyPostalCode,

@@ -6,8 +6,8 @@ export function PreferencesTab() {
   const { preferences, updatePreferences, isLoading } = usePreferences();
   const [formData, setFormData] = useState({
     uses_custom_cost_table: false,
-    fixed_spc: '',
-    fixed_linear_discount: '',
+    fixed_spc_value: '',
+    fixed_discount_percentage: '',
   });
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -16,8 +16,8 @@ export function PreferencesTab() {
     if (preferences) {
       setFormData({
         uses_custom_cost_table: preferences.uses_custom_cost_table,
-        fixed_spc: preferences.fixed_spc?.toString() || '',
-        fixed_linear_discount: preferences.fixed_linear_discount?.toString() || '',
+        fixed_spc_value: preferences.fixed_spc_value?.toString() || '',
+        fixed_discount_percentage: preferences.fixed_discount_percentage?.toString() || '',
       });
     }
   }, [preferences]);
@@ -28,8 +28,8 @@ export function PreferencesTab() {
 
     const updates = {
       uses_custom_cost_table: formData.uses_custom_cost_table,
-      fixed_spc: formData.fixed_spc ? parseFloat(formData.fixed_spc) : null,
-      fixed_linear_discount: formData.fixed_linear_discount ? parseFloat(formData.fixed_linear_discount) : null,
+      fixed_spc_value: formData.fixed_spc_value ? parseFloat(formData.fixed_spc_value) : null,
+      fixed_discount_percentage: formData.fixed_discount_percentage ? parseFloat(formData.fixed_discount_percentage) : null,
     };
 
     const success = await updatePreferences(updates);
@@ -76,40 +76,40 @@ export function PreferencesTab() {
           </div>
 
           <div>
-            <label htmlFor="fixed_spc" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="fixed_spc_value" className="block text-sm font-medium text-gray-700 mb-2">
               Valor SPC fijo (opcional)
             </label>
             <input
               type="number"
-              id="fixed_spc"
+              id="fixed_spc_value"
               step="0.01"
-              value={formData.fixed_spc}
-              onChange={(e) => setFormData({ ...formData, fixed_spc: e.target.value })}
+              value={formData.fixed_spc_value}
+              onChange={(e) => setFormData({ ...formData, fixed_spc_value: e.target.value })}
               placeholder="Ej: 1.50"
               className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Si estableces un valor, los cálculos usarán este SPC automáticamente
+              Si estableces un valor (positivo o negativo), los cálculos usarán este SPC automáticamente
             </p>
           </div>
 
           <div>
-            <label htmlFor="fixed_linear_discount" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="fixed_discount_percentage" className="block text-sm font-medium text-gray-700 mb-2">
               Descuento lineal fijo % (opcional)
             </label>
             <input
               type="number"
-              id="fixed_linear_discount"
+              id="fixed_discount_percentage"
               step="0.1"
               min="0"
               max="100"
-              value={formData.fixed_linear_discount}
-              onChange={(e) => setFormData({ ...formData, fixed_linear_discount: e.target.value })}
+              value={formData.fixed_discount_percentage}
+              onChange={(e) => setFormData({ ...formData, fixed_discount_percentage: e.target.value })}
               placeholder="Ej: 5.0"
               className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Si estableces un valor, los cálculos aplicarán este descuento automáticamente
+              Si estableces un valor, los cálculos aplicarán este descuento automáticamente (debe ser positivo)
             </p>
           </div>
         </div>

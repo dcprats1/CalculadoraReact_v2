@@ -6,8 +6,8 @@ interface UserPreferences {
   id: string;
   user_id: string;
   uses_custom_cost_table: boolean;
-  fixed_spc: number | null;
-  fixed_linear_discount: number | null;
+  fixed_spc_value: number | null;
+  fixed_discount_percentage: number | null;
   default_service_packages: any[];
   ui_theme: 'light' | 'dark';
 }
@@ -55,8 +55,8 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
           .insert({
             user_id: user.id,
             uses_custom_cost_table: false,
-            fixed_spc: null,
-            fixed_linear_discount: null,
+            fixed_spc_value: null,
+            fixed_discount_percentage: null,
             default_service_packages: [],
             ui_theme: 'light',
           })

@@ -2,6 +2,8 @@
 
 Aplicación React + TypeScript que replica el tarifario corporativo para calcular costes, márgenes y precios de venta de envíos en función de las tarifas almacenadas en Supabase. La herramienta permite analizar combinaciones servicio/zona/peso, detectar bultos irregulares y generar documentación SOP directamente desde el navegador.
 
+> **📝 Cambios Recientes (21/10/2025):** Se ha corregido la propagación y persistencia de preferencias de usuario (SPC y descuento lineal). Los valores configurados ahora se cargan automáticamente al iniciar sesión. Ver documentación completa en [`CHANGELOG_PROPAGACION_PREFERENCIAS.md`](./CHANGELOG_PROPAGACION_PREFERENCIAS.md) e instrucciones de uso en [`INSTRUCCIONES_CAMBIOS_PREFERENCIAS.md`](./INSTRUCCIONES_CAMBIOS_PREFERENCIAS.md).
+
 ## Funcionalidades principales
 
 ### Dashboard interactivo
