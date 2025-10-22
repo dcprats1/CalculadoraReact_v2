@@ -273,11 +273,30 @@ export function SubscriptionTab() {
             </div>
           )}
 
-          {deviceUsagePercentage >= 90 && !isAdmin && (
+          {deviceUsagePercentage === 100 && !isAdmin && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-4">
+              <p className="text-sm text-red-800">
+                <strong>Capacidad completa:</strong> {userData.max_devices === 1
+                  ? 'Tu único dispositivo está en uso. Actualiza tu suscripción para permitir más sesiones simultáneas.'
+                  : `Todos tus ${userData.max_devices} dispositivos disponibles están en uso. Actualiza tu suscripción si necesitas más dispositivos simultáneos.`
+                }
+              </p>
+            </div>
+          )}
+
+          {deviceUsagePercentage >= 90 && deviceUsagePercentage < 100 && !isAdmin && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4">
               <p className="text-sm text-yellow-800">
                 <strong>Cerca del límite:</strong> Estás usando casi todos tus dispositivos disponibles.
                 Considera actualizar tu plan si necesitas más dispositivos simultáneos.
+              </p>
+            </div>
+          )}
+
+          {deviceUsagePercentage >= 70 && deviceUsagePercentage < 90 && !isAdmin && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
+              <p className="text-sm text-blue-800">
+                <strong>Alto uso:</strong> Estás utilizando la mayor parte de tus dispositivos disponibles.
               </p>
             </div>
           )}
