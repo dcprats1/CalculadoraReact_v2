@@ -7,8 +7,8 @@ import { PlanViewModal } from '../pricing/PlanViewModal';
 
 interface ActiveSession {
   id: string;
-  device_name: string | null;
-  last_authenticated_at: string;
+  device_info: string | null;
+  last_activity: string;
 }
 
 export function SubscriptionTab() {
@@ -27,10 +27,10 @@ export function SubscriptionTab() {
     try {
       const { data, error } = await supabase
         .from('user_sessions')
-        .select('id, device_name, last_authenticated_at')
+        .select('id, device_info, last_activity')
         .eq('user_id', userData!.id)
         .gt('expires_at', new Date().toISOString())
-        .order('last_authenticated_at', { ascending: false });
+        .order('last_activity', { ascending: false });
 
       if (error) {
         console.error('Error loading sessions:', error);
@@ -251,10 +251,10 @@ export function SubscriptionTab() {
                     <Smartphone className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm font-medium text-gray-900">
-                        {session.device_name || 'Dispositivo desconocido'}
+                        {session.device_info || 'Dispositivo desconocido'}
                       </p>
                       <p className="text-xs text-gray-500">
-                        Última actividad: {new Date(session.last_authenticated_at).toLocaleString('es-ES')}
+                        Última actividad: {new Date(session.last_activity).toLocaleString('es-ES')}
                       </p>
                     </div>
                   </div>
