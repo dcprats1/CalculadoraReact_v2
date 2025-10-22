@@ -3,10 +3,11 @@ import { Mail, Loader2 } from 'lucide-react';
 
 interface EmailInputFormProps {
   onSubmit: (email: string) => Promise<void>;
+  initialEmail?: string;
 }
 
-export function EmailInputForm({ onSubmit }: EmailInputFormProps) {
-  const [email, setEmail] = useState('');
+export function EmailInputForm({ onSubmit, initialEmail = '' }: EmailInputFormProps) {
+  const [email, setEmail] = useState(initialEmail);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 

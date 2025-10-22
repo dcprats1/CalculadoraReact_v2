@@ -198,7 +198,7 @@ Deno.serve(async (req: Request) => {
         email: normalizedEmail,
         payment_type: paymentType,
       },
-      success_url: `${origin}${basePath}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${origin}${basePath}/payment-success?session_id={CHECKOUT_SESSION_ID}&email=${encodeURIComponent(normalizedEmail)}`,
       cancel_url: `${origin}${basePath}/pricing?cancelled=true`,
       allow_promotion_codes: true,
       billing_address_collection: 'required',
