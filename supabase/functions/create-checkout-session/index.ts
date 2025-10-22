@@ -153,6 +153,7 @@ Deno.serve(async (req: Request) => {
     const interval = paymentType === 'annual' ? 'year' : 'month';
 
     const origin = req.headers.get('origin') || 'https://yourapp.com';
+    const basePath = '/area-privada2/calculadora';
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -187,8 +188,8 @@ Deno.serve(async (req: Request) => {
         email: normalizedEmail,
         payment_type: paymentType,
       },
-      success_url: `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/pricing?cancelled=true`,
+      success_url: `${origin}${basePath}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}${basePath}/pricing?cancelled=true`,
       allow_promotion_codes: true,
       billing_address_collection: 'required',
       customer_update: {

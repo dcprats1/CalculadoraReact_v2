@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CheckCircle, Loader2, Home } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -24,8 +25,10 @@ export function PaymentSuccess() {
     return () => clearTimeout(timer);
   }, []);
 
+  const navigate = useNavigate();
+
   const handleGoToApp = () => {
-    window.location.href = '/';
+    navigate('/');
   };
 
   if (isVerifying) {

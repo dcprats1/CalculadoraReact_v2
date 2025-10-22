@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PreferencesProvider } from './contexts/PreferencesContext';
 import { ViewModeProvider } from './contexts/ViewModeContext';
 import { LoginContainer } from './components/auth/LoginContainer';
 import TariffCalculator from './components/TariffCalculator';
 import { PricingPage } from './components/pricing/PricingPage';
+import { PaymentSuccess } from './components/PaymentSuccess';
 import { canAccessCalculator } from './utils/subscriptionHelpers';
 import { Loader2 } from 'lucide-react';
 
 const ENABLE_AUTH = true;
 
-function AppContent() {
+function MainContent() {
   const { isAuthenticated, isLoading, userData } = useAuth();
   const [showPricingForUnregistered, setShowPricingForUnregistered] = useState(false);
   const [unregisteredEmail, setUnregisteredEmail] = useState<string>('');
@@ -54,25 +56,39 @@ function AppContent() {
   );
 }
 
+function AppContent() {
+  return (
+    <Routes>
+      <Route path="/" element={<MainContent />} />
+      <Route path="/payment-success" element={<PaymentSuccess />} />
+      <Route path="/pricing" element={<PricingPage />} />
+    </Routes>
+  );
+}
+
 function App() {
   if (!ENABLE_AUTH) {
     return (
-      <ViewModeProvider>
-        <div className="App">
-          <TariffCalculator />
-        </div>
-      </ViewModeProvider>
+      <BrowserRouter basename="/area-privada2/calculadora">
+        <ViewModeProvider>
+          <div className="App">
+            <TariffCalculator />
+          </div>
+        </ViewModeProvider>
+      </BrowserRouter>
     );
   }
 
   return (
-    <AuthProvider>
-      <PreferencesProvider>
-        <ViewModeProvider>
-          <AppContent />
-        </ViewModeProvider>
-      </PreferencesProvider>
-    </AuthProvider>
+    <BrowserRouter basename="/area-privada2/calculadora">
+      <AuthProvider>
+        <PreferencesProvider>
+          <ViewModeProvider>
+            <AppContent />
+          </ViewModeProvider>
+        </PreferencesProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 
