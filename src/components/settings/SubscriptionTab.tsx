@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
 import { CreditCard, Calendar, AlertCircle, CheckCircle, Loader2, Smartphone, Shield, Users, Eye } from 'lucide-react';
 import { getPlanByTier, TIER_TO_DEVICES } from '../../data/plans.data';
 import { PlanViewModal } from '../pricing/PlanViewModal';
@@ -25,19 +24,26 @@ export function SubscriptionTab() {
 
   async function loadActiveSessions() {
     try {
-      const { data, error } = await supabase
-        .from('user_sessions')
-        .select('id, device_name, last_authenticated_at')
-        .eq('user_id', userData!.id)
-        .gt('expires_at', new Date().toISOString())
-        .order('last_authenticated_at', { ascending: false });
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-active-sessions`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ userId: userData!.id }),
+        }
+      );
 
-      if (error) {
-        console.error('Error loading sessions:', error);
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error('Error loading sessions:', result.error);
         return;
       }
 
-      setActiveSessions(data || []);
+      setActiveSessions(result.sessions || []);
     } catch (error) {
       console.error('Error:', error);
     } finally {
