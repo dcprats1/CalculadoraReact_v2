@@ -57,7 +57,7 @@ Deno.serve(async (req: Request) => {
     let event: Stripe.Event;
 
     try {
-      event = stripe.webhooks.constructEvent(body, signature, STRIPE_WEBHOOK_SECRET);
+      event = await stripe.webhooks.constructEventAsync(body, signature, STRIPE_WEBHOOK_SECRET);
     } catch (err) {
       console.error('Webhook signature verification failed:', err);
       return new Response(
@@ -87,6 +87,15 @@ Deno.serve(async (req: Request) => {
         const paymentType = session.metadata?.payment_type || 'monthly';
         const maxDevices = TIER_TO_DEVICES[tier] || 1;
 
+        console.log('Checkout session data:', {
+          email,
+          customerId,
+          subscriptionId,
+          tier,
+          paymentType,
+          maxDevices
+        });
+
         if (!email) {
           console.error('No email in checkout session');
           break;
@@ -103,8 +112,10 @@ Deno.serve(async (req: Request) => {
           .eq('email', normalizedEmail)
           .maybeSingle();
 
+        console.log(`Profile lookup for ${normalizedEmail}:`, existingProfile ? 'Found' : 'Not found');
+
         if (existingProfile) {
-          await supabaseAdmin
+          const { error: updateError } = await supabaseAdmin
             .from('user_profiles')
             .update({
               subscription_status: 'active',
@@ -117,19 +128,43 @@ Deno.serve(async (req: Request) => {
               payment_method: 'stripe',
             })
             .eq('id', existingProfile.id);
-        } else {
-          const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-            email: normalizedEmail,
-            email_confirm: true,
-          });
 
-          if (authError || !authUser.user) {
-            console.error('Error creating auth user:', authError);
-            break;
+          if (updateError) {
+            console.error('Error updating profile:', updateError);
+            throw new Error(`Failed to update profile: ${updateError.message}`);
           }
 
-          await supabaseAdmin.from('user_profiles').insert({
-            id: authUser.user.id,
+          console.log(`Profile updated successfully for ${normalizedEmail}`);
+        } else {
+          // Check if user exists in auth.users
+          const { data: existingAuthUser } = await supabaseAdmin.auth.admin.listUsers();
+          const authUser = existingAuthUser.users.find(u => u.email?.toLowerCase() === normalizedEmail);
+
+          let userId: string;
+
+          if (authUser) {
+            // Usuario existe en auth pero no en user_profiles
+            userId = authUser.id;
+            console.log(`Using existing auth user: ${userId} for ${normalizedEmail}`);
+          } else {
+            // Crear nuevo usuario
+            const { data: newAuthUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+              email: normalizedEmail,
+              email_confirm: true,
+            });
+
+            if (authError || !newAuthUser.user) {
+              console.error('Error creating auth user:', authError);
+              throw new Error(`Failed to create auth user: ${authError?.message}`);
+            }
+
+            userId = newAuthUser.user.id;
+            console.log(`Created new auth user: ${userId} for ${normalizedEmail}`);
+          }
+
+          // Insertar perfil
+          const { error: insertError } = await supabaseAdmin.from('user_profiles').insert({
+            id: userId,
             email: normalizedEmail,
             subscription_status: 'active',
             subscription_tier: tier,
@@ -140,6 +175,13 @@ Deno.serve(async (req: Request) => {
             stripe_subscription_id: subscriptionId,
             payment_method: 'stripe',
           });
+
+          if (insertError) {
+            console.error('Error inserting profile:', insertError);
+            throw new Error(`Failed to insert profile: ${insertError.message}`);
+          }
+
+          console.log(`Profile created successfully for ${normalizedEmail}`);
         }
 
         console.log(`Subscription activated for ${normalizedEmail} - Tier ${tier} (${paymentType})`);
