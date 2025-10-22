@@ -70,7 +70,6 @@ Deno.serve(async (req: Request) => {
     if (!preferences) {
       const defaultPreferences = {
         user_id: user.id,
-        uses_custom_cost_table: false,
         fixed_spc_value: null,
         fixed_discount_percentage: null,
         default_service_packages: [],

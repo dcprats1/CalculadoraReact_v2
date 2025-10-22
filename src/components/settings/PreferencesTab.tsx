@@ -5,7 +5,6 @@ import { Save, Loader2, CheckCircle } from 'lucide-react';
 export function PreferencesTab() {
   const { preferences, updatePreferences, isLoading } = usePreferences();
   const [formData, setFormData] = useState({
-    uses_custom_cost_table: false,
     fixed_spc_value: '',
     fixed_discount_percentage: '',
   });
@@ -15,7 +14,6 @@ export function PreferencesTab() {
   useEffect(() => {
     if (preferences) {
       setFormData({
-        uses_custom_cost_table: preferences.uses_custom_cost_table,
         fixed_spc_value: preferences.fixed_spc_value?.toString() || '',
         fixed_discount_percentage: preferences.fixed_discount_percentage?.toString() || '',
       });
@@ -27,7 +25,6 @@ export function PreferencesTab() {
     setSaveSuccess(false);
 
     const updates = {
-      uses_custom_cost_table: formData.uses_custom_cost_table,
       fixed_spc_value: formData.fixed_spc_value ? parseFloat(formData.fixed_spc_value) : null,
       fixed_discount_percentage: formData.fixed_discount_percentage ? parseFloat(formData.fixed_discount_percentage) : null,
     };
@@ -57,24 +54,6 @@ export function PreferencesTab() {
         </h3>
 
         <div className="space-y-6 bg-gray-50 rounded-lg p-6">
-          <div className="flex items-start space-x-3">
-            <input
-              type="checkbox"
-              id="uses_custom_cost_table"
-              checked={formData.uses_custom_cost_table}
-              onChange={(e) => setFormData({ ...formData, uses_custom_cost_table: e.target.checked })}
-              className="mt-1 h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-            />
-            <div className="flex-1">
-              <label htmlFor="uses_custom_cost_table" className="font-medium text-gray-900 cursor-pointer">
-                Usar tabla de costes personalizada
-              </label>
-              <p className="text-sm text-gray-600 mt-1">
-                Si activas esta opción, se usarán los costes específicos configurados para tu empresa en lugar de la tabla estándar
-              </p>
-            </div>
-          </div>
-
           <div>
             <label htmlFor="fixed_spc_value" className="block text-sm font-medium text-gray-700 mb-2">
               Valor SPC fijo (opcional)

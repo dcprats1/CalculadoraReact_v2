@@ -5,7 +5,6 @@ import { supabase } from '../lib/supabase';
 interface UserPreferences {
   id: string;
   user_id: string;
-  uses_custom_cost_table: boolean;
   fixed_spc_value: number | null;
   fixed_discount_percentage: number | null;
   default_service_packages: any[];
@@ -59,7 +58,6 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
           .from('user_preferences')
           .insert({
             user_id: user.id,
-            uses_custom_cost_table: false,
             fixed_spc_value: null,
             fixed_discount_percentage: null,
             default_service_packages: [],
