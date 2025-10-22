@@ -17,14 +17,14 @@ const TIER_TO_DEVICES: Record<number, number> = {
 
 async function logToAuthLogs(
   supabaseAdmin: any,
-  action: string,
+  eventType: string,
   email: string,
   details: any,
   success: boolean
 ) {
   try {
     await supabaseAdmin.from('auth_logs').insert({
-      action,
+      event_type: eventType,
       email,
       ip_address: 'webhook',
       user_agent: 'stripe-webhook',

@@ -248,7 +248,7 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     await supabaseAdmin.from('auth_logs').insert({
-      action: 'force_sync_stripe_subscription',
+      event_type: 'force_sync_stripe_subscription',
       email: normalizedEmail,
       ip_address: 'manual-sync',
       user_agent: 'force-sync-function',
