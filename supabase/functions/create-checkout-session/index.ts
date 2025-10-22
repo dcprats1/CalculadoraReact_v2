@@ -90,7 +90,6 @@ Deno.serve(async (req: Request) => {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Validar dominio @gls-spain.es o excepciones (admin, test user)
     const isAllowed = ALLOWED_EXCEPTIONS.includes(normalizedEmail) || normalizedEmail.endsWith(ALLOWED_DOMAIN);
 
     if (!isAllowed) {
