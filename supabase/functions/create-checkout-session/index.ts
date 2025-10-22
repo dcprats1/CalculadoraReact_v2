@@ -79,8 +79,11 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!email) {
+      console.error('No email provided in request');
       return new Response(
-        JSON.stringify({ error: 'Email requerido' }),
+        JSON.stringify({
+          error: 'Email requerido. Por favor, introduce tu email corporativo.'
+        }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -90,11 +93,16 @@ Deno.serve(async (req: Request) => {
 
     const normalizedEmail = email.toLowerCase().trim();
 
+    console.log(`Processing checkout for email: ${normalizedEmail}`);
+
     const isAllowed = ALLOWED_EXCEPTIONS.includes(normalizedEmail) || normalizedEmail.endsWith(ALLOWED_DOMAIN);
 
     if (!isAllowed) {
+      console.error(`Email ${normalizedEmail} not authorized (must be @gls-spain.es)`);
       return new Response(
-        JSON.stringify({ error: 'Solo usuarios @gls-spain.es pueden suscribirse' }),
+        JSON.stringify({
+          error: `Solo usuarios @gls-spain.es pueden suscribirse. Email recibido: ${normalizedEmail}`
+        }),
         {
           status: 403,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -140,6 +148,9 @@ Deno.serve(async (req: Request) => {
         },
       });
       customerId = customer.id;
+      console.log(`Created new Stripe customer: ${customerId} for ${normalizedEmail}`);
+    } else {
+      console.log(`Using existing Stripe customer: ${customerId} for ${normalizedEmail}`);
     }
 
     const maxDevices = TIER_TO_DEVICES[tier];
@@ -197,6 +208,8 @@ Deno.serve(async (req: Request) => {
       },
     });
 
+    console.log(`Created checkout session: ${session.id} for ${normalizedEmail}`);
+
     await supabaseAdmin.from('auth_logs').insert({
       user_id: userProfile?.id,
       email: normalizedEmail,
@@ -208,6 +221,7 @@ Deno.serve(async (req: Request) => {
         tier,
         payment_type: paymentType,
         session_id: session.id,
+        customer_id: customerId,
       },
     });
 

@@ -40,13 +40,13 @@ function MainContent() {
 
   if (!isAuthenticated) {
     if (showPricingForUnregistered) {
-      return <PricingPage onBack={handleBackToLogin} />;
+      return <PricingPage onBack={handleBackToLogin} userEmail={unregisteredEmail} />;
     }
     return <LoginContainer onShowPricing={handleShowPricing} />;
   }
 
   if (!canAccessCalculator(userData)) {
-    return <PricingPage />;
+    return <PricingPage userEmail={userData?.email} />;
   }
 
   return (

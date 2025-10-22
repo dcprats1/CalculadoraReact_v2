@@ -7,14 +7,22 @@ import { useAuth } from '../../contexts/AuthContext';
 
 interface PricingPageProps {
   onBack?: () => void;
+  userEmail?: string;
 }
 
-export function PricingPage({ onBack }: PricingPageProps) {
+export function PricingPage({ onBack, userEmail }: PricingPageProps) {
   const { user } = useAuth();
   const [isAnnual, setIsAnnual] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
+  const effectiveEmail = userEmail || user?.email;
+
   const handleSelectPlan = async (tier: number, paymentType: 'monthly' | 'annual') => {
+    if (!effectiveEmail) {
+      alert('Email requerido. Por favor, inicia sesión o introduce tu email.');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -30,7 +38,7 @@ export function PricingPage({ onBack }: PricingPageProps) {
             tier,
             paymentType,
             userId: user?.id,
-            email: user?.email,
+            email: effectiveEmail,
           }),
         }
       );
@@ -68,6 +76,18 @@ export function PricingPage({ onBack }: PricingPageProps) {
             <ArrowLeft className="h-5 w-5" />
             Volver
           </button>
+        )}
+
+        {userEmail && !user && (
+          <div className="max-w-3xl mx-auto mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <p className="text-sm text-blue-900 text-center">
+              <span className="font-semibold">Comprando como:</span> {userEmail}
+              <br />
+              <span className="text-blue-700 text-xs">
+                Recibirás un código de acceso por email tras completar el pago
+              </span>
+            </p>
+          </div>
         )}
 
         <div className="text-center mb-4">
