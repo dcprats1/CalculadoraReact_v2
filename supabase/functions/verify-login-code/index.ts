@@ -242,7 +242,8 @@ Deno.serve(async (req: Request) => {
             email: userProfile.email,
             tier: userProfile.subscription_tier,
             maxDevices: userProfile.max_devices,
-            expiresAt: userProfile.subscription_end_date,
+            expiresAt: newExpiresAt,
+            subscriptionEndDate: userProfile.subscription_end_date,
           },
         }),
         {
@@ -344,7 +345,8 @@ Deno.serve(async (req: Request) => {
           email: userProfile.email,
           tier: userProfile.subscription_tier,
           maxDevices: userProfile.max_devices,
-          expiresAt: userProfile.subscription_end_date,
+          expiresAt: newExpiresAt,
+          subscriptionEndDate: userProfile.subscription_end_date,
         },
       }),
       {

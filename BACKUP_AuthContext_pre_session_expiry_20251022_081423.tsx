@@ -22,7 +22,6 @@ interface AuthContextType {
   sendLoginCode: (email: string) => Promise<{ success: boolean; error?: string; errorCode?: string; email?: string }>;
   verifyCode: (email: string, code: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
-  sessionExpiredMessage: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,7 +30,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null);
 
   useEffect(() => {
     async function initializeAuth() {
@@ -39,14 +37,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (sessionData) {
         try {
           const parsed = JSON.parse(sessionData);
-
-          if (parsed.expiresAt && new Date(parsed.expiresAt) < new Date()) {
-            localStorage.removeItem('user_session');
-            setSessionExpiredMessage('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
-            setIsLoading(false);
-            return;
-          }
-
           setUser({ id: parsed.id, email: parsed.email });
           await loadUserProfile(parsed.id);
         } catch (error) {
@@ -58,35 +48,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initializeAuth();
   }, []);
-
-  useEffect(() => {
-    let intervalId: number | null = null;
-
-    if (user) {
-      intervalId = window.setInterval(() => {
-        const sessionData = localStorage.getItem('user_session');
-        if (sessionData) {
-          try {
-            const parsed = JSON.parse(sessionData);
-            if (parsed.expiresAt && new Date(parsed.expiresAt) < new Date()) {
-              localStorage.removeItem('user_session');
-              setUser(null);
-              setUserData(null);
-              setSessionExpiredMessage('Tu sesión ha expirado después de 24 horas. Por favor, inicia sesión nuevamente.');
-            }
-          } catch (error) {
-            console.error('Error checking session expiry:', error);
-          }
-        }
-      }, 60000);
-    }
-
-    return () => {
-      if (intervalId !== null) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [user]);
 
   async function loadUserProfile(userId: string) {
     try {
@@ -192,16 +153,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { success: false, error: data.error || 'Código incorrecto' };
     }
 
+    // Guardar sesión en localStorage
     const sessionData = {
       id: data.user.id,
       email: data.user.email,
       sessionToken: data.sessionToken,
-      expiresAt: data.user.expiresAt,
     };
 
     localStorage.setItem('user_session', JSON.stringify(sessionData));
     setUser({ id: data.user.id, email: data.user.email });
-    setSessionExpiredMessage(null);
 
     // Cargar perfil completo
     await loadUserProfile(data.user.id);
@@ -218,7 +178,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('user_session');
     setUser(null);
     setUserData(null);
-    setSessionExpiredMessage(null);
   }
 
   const value = {
@@ -229,7 +188,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     sendLoginCode,
     verifyCode,
     signOut,
-    sessionExpiredMessage,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
