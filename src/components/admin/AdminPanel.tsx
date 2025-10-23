@@ -93,34 +93,34 @@ export function AdminPanel() {
 
     setLoading(true);
     try {
-      const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-        email: newUserEmail.toLowerCase().trim(),
-        email_confirm: true,
-      });
-
-      if (authError) throw authError;
-
-      if (!authUser.user) {
-        throw new Error('No se pudo crear el usuario en auth');
+      const sessionData = localStorage.getItem('user_session');
+      if (!sessionData) {
+        throw new Error('No hay sesión activa');
       }
 
-      const endDate = new Date();
-      endDate.setDate(endDate.getDate() + newUserDays);
+      const { sessionToken } = JSON.parse(sessionData);
 
-      const maxDevices = [1, 3, 5, 8, 12][newUserTier - 1];
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-create-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`,
+          },
+          body: JSON.stringify({
+            email: newUserEmail.toLowerCase().trim(),
+            tier: newUserTier,
+            durationDays: newUserDays,
+          }),
+        }
+      );
 
-      const { error: profileError } = await supabase.from('user_profiles').insert({
-        id: authUser.user.id,
-        email: newUserEmail.toLowerCase().trim(),
-        subscription_status: 'active',
-        subscription_tier: newUserTier,
-        max_devices: maxDevices,
-        subscription_start_date: new Date().toISOString(),
-        subscription_end_date: endDate.toISOString(),
-        payment_method: 'admin_grant',
-      });
+      const data = await response.json();
 
-      if (profileError) throw profileError;
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al crear usuario');
+      }
 
       showMessage('success', `Usuario ${newUserEmail} creado correctamente`);
       setNewUserEmail('');
