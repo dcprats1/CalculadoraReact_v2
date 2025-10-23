@@ -989,7 +989,7 @@ const TariffCalculator: React.FC = () => {
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wide">
-              Suplementos (€)
+              Otros (€)
             </label>
             <input
               type="number"
