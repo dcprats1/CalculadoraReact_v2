@@ -134,10 +134,8 @@ interface CustomTariffsEditorProps {
 
 export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClose }) => {
   const { userData } = useAuth();
-  // IMPORTANTE: Pasamos userData.id para filtrar por usuario actual
-  // Esto garantiza que solo se cargan las tarifas personalizadas del usuario autenticado
-  const { customTariffs, refetch: refetchCustomTariffs } = useCustomTariffs(userData?.id);
-  const { activeStates, refetch: refetchActiveStates } = useCustomTariffsActive(userData?.id);
+  const { customTariffs, refetch: refetchCustomTariffs } = useCustomTariffs();
+  const { activeStates, refetch: refetchActiveStates } = useCustomTariffsActive();
   const { tariffs: officialTariffs } = useTariffs();
 
   const [selectedService, setSelectedService] = useState<string>(STATIC_SERVICES[0]);

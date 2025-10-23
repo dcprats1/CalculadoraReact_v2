@@ -193,7 +193,7 @@ export function useConstants() {
   return { constants, loading, error };
 }
 
-export function useCustomTariffs(userId?: string) {
+export function useCustomTariffs() {
   const [customTariffs, setCustomTariffs] = useState<CustomTariff[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -201,18 +201,9 @@ export function useCustomTariffs(userId?: string) {
   useEffect(() => {
     const fetchCustomTariffs = async () => {
       try {
-        // IMPORTANTE: Filtrado explícito por user_id para seguridad
-        // Las políticas RLS también protegen, pero este filtro explícito
-        // asegura que solo se carguen datos del usuario actual
-        let query = supabase
+        const { data, error } = await supabase
           .from('custom_tariffs')
-          .select('*');
-
-        if (userId) {
-          query = query.eq('user_id', userId);
-        }
-
-        const { data, error } = await query
+          .select('*')
           .order('service_name', { ascending: true })
           .order('weight_from', { ascending: true });
 
@@ -226,21 +217,14 @@ export function useCustomTariffs(userId?: string) {
     };
 
     fetchCustomTariffs();
-  }, [userId]);
+  }, []);
 
   return { customTariffs, loading, error, refetch: async () => {
     setLoading(true);
     try {
-      // IMPORTANTE: Mismo filtro de seguridad en refetch
-      let query = supabase
+      const { data, error } = await supabase
         .from('custom_tariffs')
-        .select('*');
-
-      if (userId) {
-        query = query.eq('user_id', userId);
-      }
-
-      const { data, error } = await query
+        .select('*')
         .order('service_name', { ascending: true })
         .order('weight_from', { ascending: true });
 
@@ -255,7 +239,7 @@ export function useCustomTariffs(userId?: string) {
   }};
 }
 
-export function useCustomTariffsActive(userId?: string) {
+export function useCustomTariffsActive() {
   const [activeStates, setActiveStates] = useState<CustomTariffActive[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -263,18 +247,9 @@ export function useCustomTariffsActive(userId?: string) {
   useEffect(() => {
     const fetchActiveStates = async () => {
       try {
-        // IMPORTANTE: Filtrado explícito por user_id para seguridad
-        // Las políticas RLS también protegen, pero este filtro explícito
-        // asegura que solo se carguen datos del usuario actual
-        let query = supabase
+        const { data, error } = await supabase
           .from('custom_tariffs_active')
-          .select('*');
-
-        if (userId) {
-          query = query.eq('user_id', userId);
-        }
-
-        const { data, error } = await query
+          .select('*')
           .order('service_name', { ascending: true });
 
         if (error) throw error;
@@ -287,21 +262,14 @@ export function useCustomTariffsActive(userId?: string) {
     };
 
     fetchActiveStates();
-  }, [userId]);
+  }, []);
 
   return { activeStates, loading, error, refetch: async () => {
     setLoading(true);
     try {
-      // IMPORTANTE: Mismo filtro de seguridad en refetch
-      let query = supabase
+      const { data, error } = await supabase
         .from('custom_tariffs_active')
-        .select('*');
-
-      if (userId) {
-        query = query.eq('user_id', userId);
-      }
-
-      const { data, error } = await query
+        .select('*')
         .order('service_name', { ascending: true });
 
       if (error) throw error;

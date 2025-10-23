@@ -319,9 +319,7 @@ const TariffCalculator: React.FC = () => {
     error: discountError = null
   } = useDiscountPlans() ?? {};
 
-  // IMPORTANTE: Pasamos userData?.id para filtrar por usuario actual
-  // Esto garantiza que solo se cargan los estados de activación del usuario autenticado
-  const { activeStates: customTariffsActiveStates = [], refetch: refetchActiveStates } = useCustomTariffsActive(userData?.id) ?? {};
+  const { activeStates: customTariffsActiveStates = [], refetch: refetchActiveStates } = useCustomTariffsActive() ?? {};
 
   const { preferences } = usePreferences();
 
