@@ -55,14 +55,6 @@ export function LoginContainer({ onShowPricing }: LoginContainerProps = {}) {
     const result = await sendLoginCode(submittedEmail);
 
     if (result.success) {
-      // Si hubo AUTO-LOGIN, no mostrar formulario de código
-      if (result.autoLogin) {
-        // Usuario autenticado automáticamente, AuthContext ya manejó todo
-        // La app se redirigirá automáticamente
-        return;
-      }
-
-      // NO hay sesión activa, mostrar formulario de código OTP
       if (result.code) {
         setDevCode(result.code);
       }

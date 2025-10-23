@@ -19,7 +19,7 @@ interface AuthContextType {
   userData: UserData | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  sendLoginCode: (email: string) => Promise<{ success: boolean; error?: string; errorCode?: string; email?: string; autoLogin?: boolean }>;
+  sendLoginCode: (email: string) => Promise<{ success: boolean; error?: string; errorCode?: string; email?: string }>;
   verifyCode: (email: string, code: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   sessionExpiredMessage: string | null;
@@ -127,43 +127,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { success: false, error: INVALID_EMAIL_ERROR };
     }
 
-    // PASO 1: Verificar si hay sesión activa antes de enviar OTP
-    const deviceFingerprint = `${navigator.userAgent}-${screen.width}x${screen.height}`;
-
-    const sessionCheckResponse = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-active-session`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          email: email.toLowerCase().trim(),
-          deviceFingerprint
-        }),
-      }
-    );
-
-    const sessionData = await sessionCheckResponse.json();
-
-    // Si tiene sesión activa, hacer AUTO-LOGIN
-    if (sessionData.hasActiveSession) {
-      const sessionInfo = {
-        id: sessionData.user.id,
-        email: sessionData.user.email,
-        sessionToken: sessionData.sessionToken,
-        expiresAt: sessionData.user.expiresAt,
-      };
-
-      localStorage.setItem('user_session', JSON.stringify(sessionInfo));
-      setUser({ id: sessionData.user.id, email: sessionData.user.email });
-      await loadUserProfile(sessionData.user.id);
-
-      return { success: true, autoLogin: true };
-    }
-
-    // PASO 2: NO hay sesión activa, enviar código OTP normal
     const response = await fetch(
       `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-login-code`,
       {

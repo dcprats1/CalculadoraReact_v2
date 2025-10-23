@@ -209,16 +209,6 @@ Deno.serve(async (req: Request) => {
         })
         .eq('id', existingSession.id);
 
-      // SINCRONIZAR: Actualizar expires_at de TODAS las sesiones del usuario
-      await supabaseAdmin
-        .from('user_sessions')
-        .update({
-          expires_at: newExpiresAt,
-          is_active: true
-        })
-        .eq('user_id', userProfile.id)
-        .neq('id', existingSession.id);
-
       // Marcar código como usado
       await supabaseAdmin
         .from('verification_codes')
@@ -321,16 +311,6 @@ Deno.serve(async (req: Request) => {
         }
       );
     }
-
-    // SINCRONIZAR: Actualizar expires_at de TODAS las otras sesiones del usuario
-    await supabaseAdmin
-      .from('user_sessions')
-      .update({
-        expires_at: newExpiresAt,
-        is_active: true
-      })
-      .eq('user_id', userProfile.id)
-      .neq('id', newSession.id);
 
     // 9. Marcar código como usado
     await supabaseAdmin
