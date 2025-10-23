@@ -10,7 +10,6 @@ interface UserData {
   subscription_tier: number;
   max_devices: number;
   subscription_end_date: string;
-  subscription_interval: 'monthly' | 'annual' | 'trial';
   payment_method: 'stripe' | 'manual' | 'promo' | 'trial';
   is_admin: boolean;
 }
@@ -113,7 +112,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           subscription_tier: data.subscription_tier,
           max_devices: data.max_devices,
           subscription_end_date: data.subscription_end_date,
-          subscription_interval: data.subscription_interval || 'monthly',
           payment_method: data.payment_method,
           is_admin: data.email === 'dcprats@gmail.com',
         });

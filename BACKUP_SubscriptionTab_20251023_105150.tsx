@@ -124,19 +124,9 @@ export function SubscriptionTab() {
                   {isAdmin ? 'Plan Administrador' : (plan?.name || `Tier ${userData.subscription_tier}`)}
                 </p>
                 {plan && !isAdmin && (
-                  <>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {userData.subscription_interval === 'annual'
-                        ? `${plan.annualPrice}€/año (Plan Anual)`
-                        : `${plan.monthlyPrice}€/mes (Plan Mensual)`
-                      }
-                    </p>
-                    {userData.subscription_interval === 'annual' && (
-                      <p className="text-xs text-green-600 mt-0.5 font-medium">
-                        Ahorro: {plan.monthlyPrice * 12 - plan.annualPrice}€/año
-                      </p>
-                    )}
-                  </>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {plan.monthlyPrice}€/mes · {plan.annualPrice}€/año
+                  </p>
                 )}
                 {isAdmin && (
                   <p className="text-sm text-blue-600 mt-1 font-medium">
@@ -174,10 +164,7 @@ export function SubscriptionTab() {
                 <Calendar className="h-5 w-5 text-gray-400 mt-1" />
                 <div>
                   <p className="text-xs text-gray-500">
-                    {daysUntilExpiration && daysUntilExpiration > 0
-                      ? (userData.subscription_interval === 'annual' ? 'Renovación anual' : 'Renovación mensual')
-                      : 'Fecha de expiración'
-                    }
+                    {daysUntilExpiration && daysUntilExpiration > 0 ? 'Próxima renovación' : 'Fecha de expiración'}
                   </p>
                   <p className="text-lg font-semibold text-gray-900">
                     {subscriptionEndDate.toLocaleDateString('es-ES', {

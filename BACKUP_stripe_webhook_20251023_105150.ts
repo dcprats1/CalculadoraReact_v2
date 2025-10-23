@@ -199,27 +199,8 @@ Deno.serve(async (req: Request) => {
         const customerId = session.customer as string;
         const subscriptionId = session.subscription as string;
         const tier = session.metadata?.tier ? parseInt(session.metadata.tier) : 1;
+        const paymentType = session.metadata?.payment_type || 'monthly';
         const maxDevices = TIER_TO_DEVICES[tier] || 1;
-
-        let paymentType = session.metadata?.payment_type || 'monthly';
-        let actualInterval: string | undefined;
-
-        if (subscriptionId) {
-          try {
-            console.log(`🔍 Obteniendo intervalo real de la suscripción ${subscriptionId}...`);
-            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-            actualInterval = subscription.items.data[0]?.plan.interval;
-
-            if (actualInterval) {
-              paymentType = actualInterval === 'year' ? 'annual' : 'monthly';
-              console.log(`✅ Intervalo real detectado desde Stripe: ${actualInterval} → ${paymentType}`);
-            } else {
-              console.log(`⚠️  No se pudo obtener intervalo de Stripe, usando metadata: ${paymentType}`);
-            }
-          } catch (err) {
-            console.error('⚠️  Error al obtener suscripción de Stripe, usando metadata:', err);
-          }
-        }
 
         console.log('📋 Checkout session data:', {
           sessionId: session.id,
@@ -228,7 +209,6 @@ Deno.serve(async (req: Request) => {
           subscriptionId,
           tier,
           paymentType,
-          actualInterval,
           maxDevices,
           paymentStatus: session.payment_status,
           mode: session.mode,
@@ -293,7 +273,6 @@ Deno.serve(async (req: Request) => {
             max_devices: maxDevices,
             subscription_start_date: new Date().toISOString(),
             subscription_end_date: subscriptionEndDate,
-            subscription_interval: paymentType === 'annual' ? 'annual' : 'monthly',
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
             payment_method: 'stripe',
@@ -354,7 +333,6 @@ Deno.serve(async (req: Request) => {
             max_devices: maxDevices,
             subscription_start_date: new Date().toISOString(),
             subscription_end_date: subscriptionEndDate,
-            subscription_interval: paymentType === 'annual' ? 'annual' : 'monthly',
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
             payment_method: 'stripe',
@@ -403,10 +381,8 @@ Deno.serve(async (req: Request) => {
           const subscription = await stripe.subscriptions.retrieve(subscriptionObj as string);
           const interval = subscription.items.data[0]?.plan.interval;
           const daysToAdd = interval === 'year' ? 365 : 30;
-          const subscriptionInterval = interval === 'year' ? 'annual' : 'monthly';
 
           console.log(`🔍 Looking up user by stripe_customer_id: ${customerId}`);
-          console.log(`📅 Intervalo detectado: ${interval} → ${subscriptionInterval} (${daysToAdd} días)`);
 
           const { data: userProfile } = await supabaseAdmin
             .from('user_profiles')
@@ -420,7 +396,6 @@ Deno.serve(async (req: Request) => {
             const updateData = {
               subscription_status: 'active',
               subscription_end_date: new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000).toISOString(),
-              subscription_interval: subscriptionInterval,
             };
 
             const success = await updateUserProfileWithRetry(
