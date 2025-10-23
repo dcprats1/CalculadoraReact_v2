@@ -91,7 +91,7 @@ const blockHeaders: Record<
   offer: {
     color: 'bg-green-200',
     title: 'Precios a ofrecer',
-    subtitle: 'Ajusta tu margen arriba'
+   // subtitle: 'Ajusta tu margen arriba'
   }
 };
 
