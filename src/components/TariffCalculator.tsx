@@ -999,7 +999,7 @@ const TariffCalculator: React.FC = () => {
               className="w-full px-2 py-1.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
             />
           <p className="text-xs text-gray-500 mt-1">
-             Se aplica automáticamente 7 € por cada bulto irregular detectado.
+             Costes adicionales: cajas, bolsas, etiquetas,...
             </p>
           </div>
           <div>
