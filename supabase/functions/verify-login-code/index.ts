@@ -42,7 +42,6 @@ Deno.serve(async (req: Request) => {
     const ipAddress = req.headers.get('x-forwarded-for') || 'unknown';
     const userAgent = req.headers.get('user-agent') || 'unknown';
 
-    // 1. Buscar código válido en verification_codes
     const { data: verificationCode, error: codeError } = await supabaseAdmin
       .from('verification_codes')
       .select('*')
@@ -66,7 +65,6 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!verificationCode) {
-      // Log failed login
       await supabaseAdmin.from('auth_logs').insert({
         email: email.toLowerCase(),
         event_type: 'login_failed',
@@ -85,7 +83,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 2. Verificar límite de intentos (máximo 3)
     if (verificationCode.attempts >= 3) {
       await supabaseAdmin.from('auth_logs').insert({
         email: email.toLowerCase(),
@@ -105,7 +102,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 3. Obtener datos del usuario desde user_profiles
     const { data: userProfile, error: userError } = await supabaseAdmin
       .from('user_profiles')
       .select('*')
@@ -129,7 +125,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 4. Validar suscripción activa
     if (userProfile.subscription_status !== 'active' && userProfile.subscription_status !== 'trial') {
       await supabaseAdmin.from('auth_logs').insert({
         user_id: userProfile.id,
@@ -173,7 +168,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 5. Contar sesiones activas del usuario
     const { data: activeSessions, error: sessionsError } = await supabaseAdmin
       .from('user_sessions')
       .select('id, device_fingerprint, device_name, last_authenticated_at')
@@ -192,14 +186,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 6. Buscar sesión existente con este device_fingerprint
     const existingSession = activeSessions?.find(s => s.device_fingerprint === deviceFingerprint);
 
     if (existingSession) {
-      // Actualizar sesión existente (renovar 24h)
       const newExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-      // Generar session token ANTES de actualizar
       const sessionToken = btoa(JSON.stringify({
         userId: userProfile.id,
         email: userProfile.email,
@@ -218,7 +209,6 @@ Deno.serve(async (req: Request) => {
         })
         .eq('id', existingSession.id);
 
-      // SINCRONIZAR: Actualizar expires_at de TODAS las sesiones del usuario
       await supabaseAdmin
         .from('user_sessions')
         .update({
@@ -228,13 +218,11 @@ Deno.serve(async (req: Request) => {
         .eq('user_id', userProfile.id)
         .neq('id', existingSession.id);
 
-      // Marcar código como usado
       await supabaseAdmin
         .from('verification_codes')
         .update({ used: true })
         .eq('id', verificationCode.id);
 
-      // Log successful login
       await supabaseAdmin.from('auth_logs').insert({
         user_id: userProfile.id,
         email: email.toLowerCase(),
@@ -264,7 +252,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 7. Si no existe sesión, verificar límite de dispositivos
     const currentDeviceCount = activeSessions?.length || 0;
 
     if (currentDeviceCount >= userProfile.max_devices) {
@@ -294,10 +281,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 8. Crear nueva sesión
     const newExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-    // Generar session token ANTES de insertar (necesitamos generar un ID temporal)
     const tempSessionId = crypto.randomUUID();
     const sessionToken = btoa(JSON.stringify({
       userId: userProfile.id,
@@ -333,7 +318,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // SINCRONIZAR: Actualizar expires_at de TODAS las otras sesiones del usuario
     await supabaseAdmin
       .from('user_sessions')
       .update({
@@ -343,13 +327,11 @@ Deno.serve(async (req: Request) => {
       .eq('user_id', userProfile.id)
       .neq('id', newSession.id);
 
-    // 9. Marcar código como usado
     await supabaseAdmin
       .from('verification_codes')
       .update({ used: true })
       .eq('id', verificationCode.id);
 
-    // 10. Actualizar el token con el ID real de la sesión creada
     const finalSessionToken = btoa(JSON.stringify({
       userId: userProfile.id,
       email: userProfile.email,
@@ -362,7 +344,6 @@ Deno.serve(async (req: Request) => {
       .update({ session_token: finalSessionToken })
       .eq('id', newSession.id);
 
-    // 11. Log successful login
     await supabaseAdmin.from('auth_logs').insert({
       user_id: userProfile.id,
       email: email.toLowerCase(),

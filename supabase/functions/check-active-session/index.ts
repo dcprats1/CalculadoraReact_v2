@@ -41,7 +41,6 @@ Deno.serve(async (req: Request) => {
     const ipAddress = req.headers.get('x-forwarded-for') || 'unknown';
     const userAgent = req.headers.get('user-agent') || 'unknown';
 
-    // 1. Buscar usuario en user_profiles
     const { data: userProfile, error: profileError } = await supabaseAdmin
       .from('user_profiles')
       .select('id, email, subscription_status, subscription_tier, max_devices, subscription_end_date')
@@ -59,7 +58,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Usuario no existe
     if (!userProfile) {
       await supabaseAdmin.from('auth_logs').insert({
         email: normalizedEmail,
@@ -84,7 +82,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 2. Buscar sesión activa para este usuario y dispositivo
     const { data: activeSession, error: sessionError } = await supabaseAdmin
       .from('user_sessions')
       .select('id, session_token, expires_at, last_authenticated_at, user_id')
@@ -105,7 +102,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // NO hay sesión activa válida
     if (!activeSession) {
       await supabaseAdmin.from('auth_logs').insert({
         email: normalizedEmail,
@@ -132,9 +128,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // SÍ hay sesión activa válida - AUTO LOGIN
-
-    // Si session_token es NULL (sesión antigua), regenerarlo
     let finalToken = activeSession.session_token;
 
     if (!finalToken) {
@@ -145,7 +138,6 @@ Deno.serve(async (req: Request) => {
         expiresAt: activeSession.expires_at,
       }));
 
-      // Actualizar la sesión con el token regenerado
       await supabaseAdmin
         .from('user_sessions')
         .update({ session_token: finalToken })
