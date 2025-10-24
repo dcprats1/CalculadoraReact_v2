@@ -87,7 +87,7 @@ Deno.serve(async (req: Request) => {
     // 2. Buscar sesión activa para este usuario y dispositivo
     const { data: activeSession, error: sessionError } = await supabaseAdmin
       .from('user_sessions')
-      .select('id, session_token, expires_at, last_authenticated_at, user_id')
+      .select('id, session_token, expires_at, last_authenticated_at')
       .eq('user_id', userProfile.id)
       .eq('device_fingerprint', deviceFingerprint)
       .eq('is_active', true)
@@ -133,25 +133,6 @@ Deno.serve(async (req: Request) => {
     }
 
     // SÍ hay sesión activa válida - AUTO LOGIN
-
-    // Si session_token es NULL (sesión antigua), regenerarlo
-    let finalToken = activeSession.session_token;
-
-    if (!finalToken) {
-      finalToken = btoa(JSON.stringify({
-        userId: userProfile.id,
-        email: userProfile.email,
-        sessionId: activeSession.id,
-        expiresAt: activeSession.expires_at,
-      }));
-
-      // Actualizar la sesión con el token regenerado
-      await supabaseAdmin
-        .from('user_sessions')
-        .update({ session_token: finalToken })
-        .eq('id', activeSession.id);
-    }
-
     await supabaseAdmin.from('auth_logs').insert({
       email: normalizedEmail,
       event_type: 'session_check_active_found',
@@ -162,15 +143,14 @@ Deno.serve(async (req: Request) => {
         userId: userProfile.id,
         deviceFingerprint,
         sessionId: activeSession.id,
-        expiresAt: activeSession.expires_at,
-        tokenRegenerated: !activeSession.session_token
+        expiresAt: activeSession.expires_at
       }
     });
 
     return new Response(
       JSON.stringify({
         hasActiveSession: true,
-        sessionToken: finalToken,
+        sessionToken: activeSession.session_token,
         user: {
           id: userProfile.id,
           email: userProfile.email,

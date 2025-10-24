@@ -199,14 +199,6 @@ Deno.serve(async (req: Request) => {
       // Actualizar sesión existente (renovar 24h)
       const newExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-      // Generar session token ANTES de actualizar
-      const sessionToken = btoa(JSON.stringify({
-        userId: userProfile.id,
-        email: userProfile.email,
-        sessionId: existingSession.id,
-        expiresAt: newExpiresAt,
-      }));
-
       await supabaseAdmin
         .from('user_sessions')
         .update({
@@ -214,7 +206,6 @@ Deno.serve(async (req: Request) => {
           expires_at: newExpiresAt,
           ip_address: ipAddress,
           user_agent: userAgent,
-          session_token: sessionToken,
         })
         .eq('id', existingSession.id);
 
@@ -243,6 +234,14 @@ Deno.serve(async (req: Request) => {
         user_agent: userAgent,
         success: true,
       });
+
+      // Generar session token (JWT)
+      const sessionToken = btoa(JSON.stringify({
+        userId: userProfile.id,
+        email: userProfile.email,
+        sessionId: existingSession.id,
+        expiresAt: newExpiresAt,
+      }));
 
       return new Response(
         JSON.stringify({
@@ -297,15 +296,6 @@ Deno.serve(async (req: Request) => {
     // 8. Crear nueva sesión
     const newExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-    // Generar session token ANTES de insertar (necesitamos generar un ID temporal)
-    const tempSessionId = crypto.randomUUID();
-    const sessionToken = btoa(JSON.stringify({
-      userId: userProfile.id,
-      email: userProfile.email,
-      sessionId: tempSessionId,
-      expiresAt: newExpiresAt,
-    }));
-
     const { data: newSession, error: newSessionError } = await supabaseAdmin
       .from('user_sessions')
       .insert({
@@ -317,7 +307,6 @@ Deno.serve(async (req: Request) => {
         is_active: true,
         ip_address: ipAddress,
         user_agent: userAgent,
-        session_token: sessionToken,
       })
       .select()
       .single();
@@ -349,20 +338,7 @@ Deno.serve(async (req: Request) => {
       .update({ used: true })
       .eq('id', verificationCode.id);
 
-    // 10. Actualizar el token con el ID real de la sesión creada
-    const finalSessionToken = btoa(JSON.stringify({
-      userId: userProfile.id,
-      email: userProfile.email,
-      sessionId: newSession.id,
-      expiresAt: newExpiresAt,
-    }));
-
-    await supabaseAdmin
-      .from('user_sessions')
-      .update({ session_token: finalSessionToken })
-      .eq('id', newSession.id);
-
-    // 11. Log successful login
+    // 10. Log successful login
     await supabaseAdmin.from('auth_logs').insert({
       user_id: userProfile.id,
       email: email.toLowerCase(),
@@ -372,10 +348,18 @@ Deno.serve(async (req: Request) => {
       success: true,
     });
 
+    // 11. Generar session token (JWT simple)
+    const sessionToken = btoa(JSON.stringify({
+      userId: userProfile.id,
+      email: userProfile.email,
+      sessionId: newSession.id,
+      expiresAt: newExpiresAt,
+    }));
+
     return new Response(
       JSON.stringify({
         success: true,
-        sessionToken: finalSessionToken,
+        sessionToken,
         user: {
           id: userProfile.id,
           email: userProfile.email,
