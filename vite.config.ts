@@ -8,4 +8,19 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
+  build: {
+    modulePreload: {
+      polyfill: false,
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'supabase': ['@supabase/supabase-js'],
+          'excel': ['exceljs'],
+          'icons': ['lucide-react'],
+        },
+      },
+    },
+  },
 });

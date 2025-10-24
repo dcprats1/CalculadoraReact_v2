@@ -80,13 +80,7 @@ function AppContent() {
 function App() {
   if (!ENABLE_AUTH) {
     return (
-      <BrowserRouter
-        basename="/area-privada2/calculadora"
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true
-        }}
-      >
+      <BrowserRouter basename="/area-privada2/calculadora">
         <ViewModeProvider>
           <div className="App">
             <TariffCalculator />
@@ -97,13 +91,7 @@ function App() {
   }
 
   return (
-    <BrowserRouter
-      basename="/area-privada2/calculadora"
-      future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true
-      }}
-    >
+    <BrowserRouter basename="/area-privada2/calculadora">
       <AuthProvider>
         <PreferencesProvider>
           <ViewModeProvider>
