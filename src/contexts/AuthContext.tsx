@@ -36,25 +36,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function initializeAuth() {
-      const sessionData = localStorage.getItem('user_session');
-      if (sessionData) {
-        try {
-          const parsed = JSON.parse(sessionData);
+      try {
+        const sessionData = localStorage.getItem('user_session');
+        if (sessionData) {
+          try {
+            const parsed = JSON.parse(sessionData);
 
-          if (parsed.expiresAt && new Date(parsed.expiresAt) < new Date()) {
+            if (parsed.expiresAt && new Date(parsed.expiresAt) < new Date()) {
+              localStorage.removeItem('user_session');
+              setSessionExpiredMessage('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+              return;
+            }
+
+            setUser({ id: parsed.id, email: parsed.email });
+            await loadUserProfile(parsed.id);
+          } catch (error) {
             localStorage.removeItem('user_session');
-            setSessionExpiredMessage('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
-            setIsLoading(false);
-            return;
           }
-
-          setUser({ id: parsed.id, email: parsed.email });
-          await loadUserProfile(parsed.id);
-        } catch (error) {
-          localStorage.removeItem('user_session');
         }
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     }
 
     initializeAuth();
