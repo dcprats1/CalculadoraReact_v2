@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Save, RotateCcw, Trash2, X } from 'lucide-react';
+import { Save, RotateCcw, Trash2, X, FileUp } from 'lucide-react';
 import { supabase, CustomTariff } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCustomTariffs, useCustomTariffsActive, useTariffs } from '../../hooks/useSupabaseData';
 import { STATIC_SERVICES } from '../../utils/calculations';
+import { TariffPdfUploader } from './TariffPdfUploader';
 
 const WEIGHT_RANGES = [
   { from: '0', to: '1', label: '0-1kg' },
@@ -147,6 +148,7 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [showPdfUploader, setShowPdfUploader] = useState(false);
 
   const isActive = useMemo(() => {
     return activeStates.some(state => state.service_name === selectedService && state.is_active);
@@ -642,7 +644,21 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
                   ))}
                 </select>
               </div>
+
+              <button
+                onClick={() => setShowPdfUploader(!showPdfUploader)}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+              >
+                <FileUp className="w-4 h-4" />
+                {showPdfUploader ? 'Ocultar Importador PDF' : 'Importar desde PDF'}
+              </button>
             </div>
+
+            {showPdfUploader && (
+              <div className="mt-4">
+                <TariffPdfUploader />
+              </div>
+            )}
 
             {saveMessage && (
               <div className={`rounded-lg p-3 text-sm font-medium ${
