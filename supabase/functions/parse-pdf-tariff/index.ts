@@ -20,9 +20,9 @@ const SERVICE_MAPPINGS: ServiceMapping[] = [
   {
     dbName: "Urg8:30H Courier",
     pdfPatterns: [
-      /express\s*0?8:?30/i,
-      /urg\s*0?8:?30/i,
-      /express\s*8(?:\s|$)/i,
+      /express\s*0?8:?30(?!.*glass|.*plus|.*premium)/i,
+      /urg\s*0?8:?30(?!.*glass|.*plus|.*premium)/i,
+      /express\s*8(?:\s|$)(?!.*glass|.*plus|.*premium)/i,
     ],
     keywords: ["express", "08", "8:30", "830"],
     priority: 1
@@ -30,9 +30,9 @@ const SERVICE_MAPPINGS: ServiceMapping[] = [
   {
     dbName: "Urg10H Courier",
     pdfPatterns: [
-      /express\s*10:?30/i,
-      /urg\s*10/i,
-      /express\s*10(?:\s|$)/i,
+      /express\s*10:?30(?!.*glass|.*plus|.*premium)/i,
+      /urg\s*10(?!.*glass|.*plus|.*premium)/i,
+      /express\s*10(?:\s|$)(?!.*glass|.*plus|.*premium)/i,
     ],
     keywords: ["express", "10", "1030"],
     priority: 2
@@ -40,9 +40,9 @@ const SERVICE_MAPPINGS: ServiceMapping[] = [
   {
     dbName: "Urg14H Courier",
     pdfPatterns: [
-      /express\s*14:?00/i,
-      /urg\s*14/i,
-      /express\s*14(?:\s|$)/i,
+      /express\s*14:?00(?!.*glass|.*plus|.*premium)/i,
+      /urg\s*14(?!.*glass|.*plus|.*premium)/i,
+      /express\s*14(?:\s|$)(?!.*glass|.*plus|.*premium)/i,
     ],
     keywords: ["express", "14", "1400"],
     priority: 3
@@ -50,9 +50,9 @@ const SERVICE_MAPPINGS: ServiceMapping[] = [
   {
     dbName: "Urg19H Courier",
     pdfPatterns: [
-      /express\s*19:?00/i,
-      /urg\s*19/i,
-      /express\s*19(?:\s|$)/i,
+      /express\s*19:?00(?!.*glass|.*plus|.*premium)/i,
+      /urg\s*19(?!.*glass|.*plus|.*premium)/i,
+      /express\s*19(?:\s|$)(?!.*glass|.*plus|.*premium)/i,
     ],
     keywords: ["express", "19", "1900"],
     priority: 4
@@ -60,8 +60,8 @@ const SERVICE_MAPPINGS: ServiceMapping[] = [
   {
     dbName: "Business Parcel",
     pdfPatterns: [
-      /business\s*parcel/i,
-      /businessparcel/i,
+      /business\s*parcel(?!.*glass|.*plus|.*premium)/i,
+      /businessparcel(?!.*glass|.*plus|.*premium)/i,
     ],
     keywords: ["business", "parcel"],
     priority: 5
@@ -69,8 +69,8 @@ const SERVICE_MAPPINGS: ServiceMapping[] = [
   {
     dbName: "Eurobusiness Parcel",
     pdfPatterns: [
-      /euro\s*business\s*parcel/i,
-      /eurobusiness/i,
+      /euro\s*business\s*parcel(?!.*glass|.*plus|.*premium)/i,
+      /eurobusiness(?!.*glass|.*plus|.*premium)/i,
     ],
     keywords: ["euro", "business"],
     priority: 6
@@ -78,8 +78,8 @@ const SERVICE_MAPPINGS: ServiceMapping[] = [
   {
     dbName: "Economy Parcel",
     pdfPatterns: [
-      /economy\s*parcel/i,
-      /economyparcel/i,
+      /economy\s*parcel(?!.*glass|.*plus|.*premium)/i,
+      /economyparcel(?!.*glass|.*plus|.*premium)/i,
     ],
     keywords: ["economy", "parcel"],
     priority: 7
@@ -87,8 +87,8 @@ const SERVICE_MAPPINGS: ServiceMapping[] = [
   {
     dbName: "Parcel Shop",
     pdfPatterns: [
-      /parcel\s*shop/i,
-      /shop\s*(?:return|delivery)/i,
+      /parcel\s*shop(?!.*glass|.*plus|.*premium)/i,
+      /shop\s*(?:return|delivery)(?!.*glass|.*plus|.*premium)/i,
     ],
     keywords: ["parcel", "shop"],
     priority: 8
@@ -96,8 +96,8 @@ const SERVICE_MAPPINGS: ServiceMapping[] = [
   {
     dbName: "Marítimo",
     pdfPatterns: [
-      /mar[ií]timo/i,
-      /maritimo/i,
+      /mar[ií]timo(?!.*glass|.*plus|.*premium)/i,
+      /maritimo(?!.*glass|.*plus|.*premium)/i,
     ],
     keywords: ["maritimo", "marítimo"],
     priority: 9
@@ -130,6 +130,66 @@ const ZONE_MAPPINGS: ZoneMapping[] = [
     dbPrefix: "portugal",
     displayName: "Portugal",
     patterns: [/\bportugal\b/i, /\bport\.?\b/i, /\b-?pt-?\b/i]
+  },
+  {
+    dbPrefix: "baleares_mayores",
+    displayName: "Baleares Mayores",
+    patterns: [/\bbaleares\s+mayores\b/i, /\bbal\.?\s*may\.?\b/i, /\bmallorca\b/i, /\bmenorca\b/i, /\bibiza\b/i]
+  },
+  {
+    dbPrefix: "baleares_menores",
+    displayName: "Baleares Menores",
+    patterns: [/\bbaleares\s+menores\b/i, /\bbal\.?\s*men\.?\b/i, /\bformentera\b/i]
+  },
+  {
+    dbPrefix: "canarias_mayores",
+    displayName: "Canarias Mayores",
+    patterns: [/\bcanarias\s+mayores\b/i, /\bcan\.?\s*may\.?\b/i, /\btenerife\b/i, /\bgran\s+canaria\b/i]
+  },
+  {
+    dbPrefix: "canarias_menores",
+    displayName: "Canarias Menores",
+    patterns: [/\bcanarias\s+menores\b/i, /\bcan\.?\s*men\.?\b/i, /\blanzarote\b/i, /\bfuerteventura\b/i, /\bla\s+palma\b/i, /\bla\s+gomera\b/i, /\bel\s+hierro\b/i]
+  },
+  {
+    dbPrefix: "azores_mayores",
+    displayName: "Azores Mayores",
+    patterns: [/\bazores\s+mayores\b/i, /\baz\.?\s*may\.?\b/i]
+  },
+  {
+    dbPrefix: "azores_menores",
+    displayName: "Azores Menores",
+    patterns: [/\bazores\s+menores\b/i, /\baz\.?\s*men\.?\b/i]
+  },
+  {
+    dbPrefix: "madeira_mayores",
+    displayName: "Madeira Mayores",
+    patterns: [/\bmadeira\s+mayores\b/i, /\bmad\.?\s*may\.?\b/i]
+  },
+  {
+    dbPrefix: "madeira_menores",
+    displayName: "Madeira Menores",
+    patterns: [/\bmadeira\s+menores\b/i, /\bmad\.?\s*men\.?\b/i]
+  },
+  {
+    dbPrefix: "ceuta",
+    displayName: "Ceuta",
+    patterns: [/\bceuta\b/i]
+  },
+  {
+    dbPrefix: "melilla",
+    displayName: "Melilla",
+    patterns: [/\bmelilla\b/i]
+  },
+  {
+    dbPrefix: "andorra",
+    displayName: "Andorra",
+    patterns: [/\bandorra\b/i, /\band\.?\b/i]
+  },
+  {
+    dbPrefix: "gibraltar",
+    displayName: "Gibraltar",
+    patterns: [/\bgibraltar\b/i, /\bgib\.?\b/i]
   },
 ];
 
@@ -188,7 +248,6 @@ async function extractTextFromPDF(uint8Array: Uint8Array): Promise<{ text: strin
       const page = await pdfDocument.getPage(pageNum);
       const textContent = await page.getTextContent();
 
-      // MEJORA: Detectar saltos de línea usando coordenadas Y
       interface TextItem {
         str: string;
         transform: number[];
@@ -196,16 +255,14 @@ async function extractTextFromPDF(uint8Array: Uint8Array): Promise<{ text: strin
 
       const items = textContent.items as TextItem[];
 
-      // Agrupar items por línea según coordenada Y
       const lineGroups = new Map<number, string[]>();
-      const LINE_THRESHOLD = 5; // Umbral para detectar nueva línea
+      const LINE_THRESHOLD = 5;
 
       for (const item of items) {
         if (!item.str || item.str.trim().length === 0) continue;
 
         const yCoord = Math.round(item.transform[5]);
 
-        // Buscar si ya existe una línea cercana a esta coordenada Y
         let targetY = yCoord;
         for (const existingY of lineGroups.keys()) {
           if (Math.abs(existingY - yCoord) <= LINE_THRESHOLD) {
@@ -220,7 +277,6 @@ async function extractTextFromPDF(uint8Array: Uint8Array): Promise<{ text: strin
         lineGroups.get(targetY)!.push(item.str);
       }
 
-      // Ordenar líneas por coordenada Y (de arriba a abajo)
       const sortedYCoords = Array.from(lineGroups.keys()).sort((a, b) => b - a);
 
       const pageLines: string[] = [];
@@ -239,7 +295,6 @@ async function extractTextFromPDF(uint8Array: Uint8Array): Promise<{ text: strin
 
     console.log(`[PDF Parser] Extracción completada: ${fullText.length} caracteres`);
 
-    // Log de debug: mostrar primeras 30 líneas
     const debugLines = fullText.split('\n').slice(0, 30);
     console.log(`[PDF Parser] DEBUG - Primeras 30 líneas extraídas:`);
     debugLines.forEach((line, idx) => {
@@ -256,6 +311,12 @@ async function extractTextFromPDF(uint8Array: Uint8Array): Promise<{ text: strin
 
 function detectServiceInText(text: string): string | null {
   const normalized = text.toLowerCase().replace(/\s+/g, ' ');
+
+  const hasRejectedSuffix = /glass|plus|premium/i.test(text);
+  if (hasRejectedSuffix) {
+    console.log(`[Detector] ✗ Servicio rechazado por sufijo no permitido: ${text.substring(0, 60)}`);
+    return null;
+  }
 
   for (const mapping of SERVICE_MAPPINGS) {
     for (const pattern of mapping.pdfPatterns) {
@@ -394,8 +455,8 @@ function extractNumericValues(line: string): number[] {
 
 function extractTariffsFromBlock(block: TableBlock): ParsedTariff[] {
   console.log(`[Extractor] ===== EXTRAYENDO TARIFAS DE ${block.serviceName} =====`);
-  const tariffs: ParsedTariff[] = [];
 
+  const tariffsByWeight = new Map<string, ParsedTariff>();
   let currentZone: string | null = null;
 
   for (let i = 0; i < block.lines.length; i++) {
@@ -411,37 +472,46 @@ function extractTariffsFromBlock(block: TableBlock): ParsedTariff[] {
     const weight = detectWeightInLine(line);
     if (weight && currentZone) {
       const values = extractNumericValues(line);
+      const weightKey = `${weight.from}-${weight.to}`;
 
-      if (values.length >= 3) {
-        const tariff: ParsedTariff = {
+      if (!tariffsByWeight.has(weightKey)) {
+        tariffsByWeight.set(weightKey, {
           service_name: block.serviceName,
           weight_from: weight.from,
           weight_to: weight.to,
-        };
+        });
+      }
 
-        if (values.length >= 6) {
-          tariff[`${currentZone}_rec`] = values[0];
-          tariff[`${currentZone}_arr`] = values[1];
-          tariff[`${currentZone}_sal`] = values[2];
-          tariff[`${currentZone}_int`] = values[3];
-        } else if (values.length >= 4) {
-          tariff[`${currentZone}_sal`] = values[0];
-          tariff[`${currentZone}_rec`] = values[1];
-          tariff[`${currentZone}_arr`] = values[2];
-          tariff[`${currentZone}_int`] = values[3];
-        } else if (values.length >= 3) {
-          tariff[`${currentZone}_sal`] = values[0];
-          tariff[`${currentZone}_rec`] = values[1];
-          tariff[`${currentZone}_arr`] = values[2];
-        }
+      const tariff = tariffsByWeight.get(weightKey)!;
+      const isParcelShop = block.serviceName === "Parcel Shop";
+      const isAzoresOrMadeira = currentZone.startsWith("azores_") || currentZone.startsWith("madeira_");
 
-        tariffs.push(tariff);
-        console.log(`[Extractor]     ✓ Tarifa extraída: ${weight.from}-${weight.to}kg, zona: ${currentZone}, valores: ${values.length}`);
+      if (values.length >= 4 && !isParcelShop && !isAzoresOrMadeira) {
+        tariff[`${currentZone}_sal`] = values[0];
+        tariff[`${currentZone}_rec`] = values[1];
+        tariff[`${currentZone}_arr`] = values[2];
+        tariff[`${currentZone}_int`] = values[3];
+        console.log(`[Extractor]     ✓ Tarifa completa: ${weightKey}kg, zona: ${currentZone}, 4 valores`);
+      } else if (values.length >= 2 && isAzoresOrMadeira) {
+        tariff[`${currentZone}_sal`] = values[0];
+        tariff[`${currentZone}_rec`] = values[1];
+        console.log(`[Extractor]     ✓ Tarifa Azores/Madeira: ${weightKey}kg, zona: ${currentZone}, 2 valores (sin arr/int)`);
+      } else if (values.length >= 1 && isParcelShop) {
+        tariff[`${currentZone}_sal`] = values[0];
+        console.log(`[Extractor]     ✓ Tarifa ParcelShop: ${weightKey}kg, zona: ${currentZone}, 1 valor (solo sal)`);
+      } else if (values.length >= 3) {
+        tariff[`${currentZone}_sal`] = values[0];
+        tariff[`${currentZone}_rec`] = values[1];
+        tariff[`${currentZone}_arr`] = values[2];
+        console.log(`[Extractor]     ✓ Tarifa básica: ${weightKey}kg, zona: ${currentZone}, 3 valores`);
+      } else {
+        console.log(`[Extractor]     ⚠ Valores insuficientes: ${weightKey}kg, zona: ${currentZone}, valores: ${values.length}`);
       }
     }
   }
 
-  console.log(`[Extractor] Total tarifas extraídas de ${block.serviceName}: ${tariffs.length}`);
+  const tariffs = Array.from(tariffsByWeight.values());
+  console.log(`[Extractor] Total tarifas consolidadas de ${block.serviceName}: ${tariffs.length}`);
   return tariffs;
 }
 
@@ -527,9 +597,12 @@ Deno.serve(async (req: Request) => {
 
     const allTariffs: ParsedTariff[] = [];
 
+    console.log(`[PDF Parser] ===== PROCESANDO ${tableBlocks.length} BLOQUES DE SERVICIOS =====`);
     for (const block of tableBlocks) {
+      console.log(`[PDF Parser] Procesando servicio: ${block.serviceName}`);
       const blockTariffs = extractTariffsFromBlock(block);
       allTariffs.push(...blockTariffs);
+      console.log(`[PDF Parser] Subtotal acumulado: ${allTariffs.length} tarifas`);
     }
 
     if (allTariffs.length === 0) {
@@ -548,6 +621,9 @@ Deno.serve(async (req: Request) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log(`[PDF Parser] ===== RESUMEN DE EXTRACCIÓN =====`);
+    console.log(`[PDF Parser] Total tarifas consolidadas: ${allTariffs.length}`);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
