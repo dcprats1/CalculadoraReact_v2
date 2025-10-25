@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Upload, FileText, AlertCircle, CheckCircle2, X, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { TariffPdfPreview } from './TariffPdfPreview';
 
 interface ParsedTariff {
   service_name: string;
@@ -27,11 +28,18 @@ interface UploadResult {
   debugInfo?: any;
 }
 
-export function TariffPdfUploader() {
+type Phase = 'upload' | 'preview' | 'success';
+
+interface TariffPdfUploaderProps {
+  onDataImported?: () => void;
+}
+
+export function TariffPdfUploader({ onDataImported }: TariffPdfUploaderProps = {}) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [currentPhase, setCurrentPhase] = useState<Phase>('upload');
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -172,6 +180,7 @@ export function TariffPdfUploader() {
           imported: result.imported,
           preview: result.preview,
         });
+        setCurrentPhase('preview');
       } else {
         console.error('[TariffPdfUploader] Error en la importación:', result);
         setUploadResult({
@@ -196,7 +205,62 @@ export function TariffPdfUploader() {
   const clearSelection = () => {
     setSelectedFile(null);
     setUploadResult(null);
+    setCurrentPhase('upload');
   };
+
+  const handlePreviewConfirm = () => {
+    setCurrentPhase('success');
+    setUploadResult({
+      success: true,
+      message: 'Tarifas importadas correctamente',
+    });
+  };
+
+  const handlePreviewCancel = () => {
+    clearSelection();
+  };
+
+  if (currentPhase === 'preview') {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <FileText className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">
+              Vista Previa de Importación
+            </h3>
+          </div>
+        </div>
+        <TariffPdfPreview
+          onConfirm={handlePreviewConfirm}
+          onCancel={handlePreviewCancel}
+          onDataImported={onDataImported}
+        />
+      </div>
+    );
+  }
+
+  if (currentPhase === 'success') {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+          <CheckCircle2 className="w-16 h-16 text-green-600 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-green-900 mb-2">
+            ¡Importación Completada!
+          </h3>
+          <p className="text-green-700 mb-4">
+            Las tarifas se han importado correctamente a tu tabla personalizada.
+          </p>
+          <button
+            onClick={clearSelection}
+            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+          >
+            Importar Otro PDF
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -356,14 +420,15 @@ export function TariffPdfUploader() {
         )}
 
         <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-          <h4 className="font-medium text-blue-900 mb-2">Información importante:</h4>
+          <h4 className="font-medium text-blue-900 mb-2">Flujo de Importación:</h4>
           <ul className="text-sm text-blue-800 space-y-1">
-            <li>• Los datos se importarán a la tabla <code className="bg-blue-100 px-1 rounded">tariffspdf</code> (tabla de prueba)</li>
-            <li>• El formato debe ser el PDF oficial de tarifas GLS España 2025</li>
-            <li>• Se usa PDF.js de Mozilla para extracción profesional de texto</li>
-            <li>• Se extraerán automáticamente servicios, pesos y destinos</li>
-            <li>• Los datos existentes NO se verán afectados</li>
-            <li>• Funciona con todos los navegadores (Chrome, Firefox, Safari, Edge)</li>
+            <li>• <strong>Paso 1:</strong> Sube el PDF de tarifas GLS España 2025</li>
+            <li>• <strong>Paso 2:</strong> Revisa la vista previa de datos extraídos</li>
+            <li>• <strong>Paso 3:</strong> Selecciona y confirma las tarifas a importar</li>
+            <li>• Los datos se guardan primero en tabla temporal para revisión</li>
+            <li>• Tus tarifas actuales NO se modifican hasta confirmar</li>
+            <li>• Se usa PDF.js de Mozilla para extracción profesional</li>
+            <li>• Compatible con Chrome, Firefox, Safari y Edge</li>
           </ul>
         </div>
       </div>

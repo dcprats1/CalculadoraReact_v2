@@ -427,6 +427,17 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    const { error: deleteError } = await supabase
+      .from("tariffspdf")
+      .delete()
+      .neq("id", "00000000-0000-0000-0000-000000000000");
+
+    if (deleteError) {
+      console.warn(`[PDF Parser] No se pudo limpiar tariffspdf: ${deleteError.message}`);
+    } else {
+      console.log(`[PDF Parser] Tabla tariffspdf limpiada antes de insertar`);
+    }
+
     const { data: insertedData, error: insertError } = await supabase
       .from("tariffspdf")
       .insert(parsedTariffs)
