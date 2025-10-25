@@ -493,47 +493,34 @@ function detectWeightInLine(line: string): { from: string; to: string } | null {
 }
 
 /**
- * Extrae los 4 valores numéricos relevantes de una línea de tabla
- * SOLO extrae: Arrastre, Salidas, Recogidas (plural), Interciudad
- * IGNORA: Recogida (singular), Entrega
+ * Extrae TODOS los valores numéricos de una línea de tabla
+ * No asume ninguna estructura fija - extrae todos los números encontrados
  *
  * @param line - Línea de texto con valores numéricos separados por espacios
- * @returns Array con exactamente 4 valores: [arrastre, salidas, recogidas, interciudad]
+ * @returns Array con todos los valores numéricos detectados
  *
- * Estructura esperada del PDF:
- * [Peso] [Recogida_IGNORAR] [Arrastre] [Entrega_IGNORAR] [Salidas] [Recogidas] [Interciudad] [...otros]
- *
- * Ejemplo: "1 Kg. 1,17 1,01 1,17 2,18 2,18 3,35"
- * → Extrae índices [1, 3, 4, 5]: [1,01] [2,18] [2,18] [3,35]
- * → Mapea a orden correcto: [Arrastre, Salidas, Recogidas, Interciudad]
+ * El mapeo correcto a los campos se hará posteriormente basándose en los encabezados detectados
  */
 function extractNumericValues(line: string): number[] {
   const parts = line.split(/\s+/);
   const allNumbers: number[] = [];
+  const numbersWithPositions: Array<{value: number, position: number}> = [];
 
-  for (const part of parts) {
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
     const cleaned = part.replace(/,/g, '.').replace(/[^0-9.]/g, '');
     const num = parseFloat(cleaned);
 
     if (!isNaN(num) && num > 0 && num < 10000) {
       allNumbers.push(num);
+      numbersWithPositions.push({value: num, position: i});
     }
   }
 
-  console.log(`[NumericExtractor] Todos los números detectados en línea: [${allNumbers.join(', ')}]`);
+  console.log(`[NumericExtractor] Línea completa: "${line.substring(0, 120)}"`);
+  console.log(`[NumericExtractor] Total números detectados: ${allNumbers.length} → [${allNumbers.join(', ')}]`);
+  console.log(`[NumericExtractor] Posiciones: ${numbersWithPositions.map(n => `pos[${n.position}]=${n.value}`).join(', ')}`);
 
-  if (allNumbers.length >= 6) {
-    const selected = [
-      allNumbers[1],
-      allNumbers[3],
-      allNumbers[4],
-      allNumbers[5]
-    ];
-    console.log(`[NumericExtractor] Valores seleccionados (posiciones 1,3,4,5 → _arr,_sal,_rec,_int): [${selected.join(', ')}]`);
-    return selected;
-  }
-
-  console.log(`[NumericExtractor] ⚠ Menos de 6 valores encontrados, retornando todos: [${allNumbers.join(', ')}]`);
   return allNumbers;
 }
 
@@ -544,44 +531,77 @@ interface ExtractedData {
   zone: string;
   values: number[];
   detectedColumns?: string[];
+  headerLine?: string;
 }
 
-function detectColumnsInBlock(block: TableBlock): string[] {
-  console.log(`[ColumnDetector] Escaneando bloque completo: ${block.lines.length} líneas en total`);
-  const detectedColumns: string[] = [];
+/**
+ * Detecta las columnas presentes en el bloque buscando líneas de encabezado
+ * Retorna el orden de aparición de las columnas basándose en la posición horizontal del texto
+ */
+function detectColumnsInBlock(block: TableBlock): { columns: string[], headerLine: string | null } {
+  console.log(`[ColumnDetector] ===== DETECTANDO ESTRUCTURA DE COLUMNAS =====`);
+  console.log(`[ColumnDetector] Escaneando bloque: ${block.serviceName} (${block.lines.length} líneas)`);
 
-  for (let i = 0; i < block.lines.length; i++) {
+  const detectedColumnsMap = new Map<string, number>();
+  let headerLine: string | null = null;
+
+  for (let i = 0; i < Math.min(block.lines.length, 15); i++) {
     const line = block.lines[i];
     const normalizedLine = line.toLowerCase();
 
-    for (const colMapping of COLUMN_MAPPINGS) {
-      for (const pattern of colMapping.patterns) {
-        if (pattern.test(normalizedLine) && !detectedColumns.includes(colMapping.fieldSuffix)) {
-          detectedColumns.push(colMapping.fieldSuffix);
-          console.log(`[ColumnDetector] ✓ Columna detectada en línea ${i}: ${colMapping.name} (${colMapping.fieldSuffix}) → "${line.substring(0, 80)}"`);
-          break;
+    const hasMultipleHeaders = COLUMN_MAPPINGS.filter(col =>
+      col.patterns.some(pattern => pattern.test(normalizedLine))
+    ).length >= 2;
+
+    if (hasMultipleHeaders) {
+      console.log(`[ColumnDetector] ✓ Línea de encabezado encontrada en línea ${i}: "${line}"`);
+      headerLine = line;
+
+      for (const colMapping of COLUMN_MAPPINGS) {
+        for (const pattern of colMapping.patterns) {
+          const match = normalizedLine.match(pattern);
+          if (match && match.index !== undefined) {
+            const position = match.index;
+            if (!detectedColumnsMap.has(colMapping.fieldSuffix)) {
+              detectedColumnsMap.set(colMapping.fieldSuffix, position);
+              console.log(`[ColumnDetector]   → ${colMapping.name} (${colMapping.fieldSuffix}) detectado en posición ${position}`);
+            }
+            break;
+          }
         }
       }
+      break;
     }
   }
 
-  if (detectedColumns.length === 0) {
-    console.log(`[ColumnDetector] ⚠ No se detectaron columnas en todo el bloque, usando orden por defecto: [_arr, _sal, _rec, _int]`);
-    return ["_arr", "_sal", "_rec", "_int"];
+  if (detectedColumnsMap.size === 0) {
+    console.log(`[ColumnDetector] ⚠ No se detectó línea de encabezado, usando orden por defecto`);
+    return {
+      columns: ["_arr", "_sal", "_rec", "_int"],
+      headerLine: null
+    };
   }
 
-  console.log(`[ColumnDetector] Columnas detectadas en orden: [${detectedColumns.join(", ")}]`);
-  console.log(`[ColumnDetector] IMPORTANTE: Orden esperado del PDF: [Recogida_IGNORAR, Arrastre, Entrega_IGNORAR, Salidas, Recogidas, Interciudad]`);
-  return detectedColumns;
+  const sortedColumns = Array.from(detectedColumnsMap.entries())
+    .sort((a, b) => a[1] - b[1])
+    .map(entry => entry[0]);
+
+  console.log(`[ColumnDetector] ===== RESULTADO DETECCIÓN =====`);
+  console.log(`[ColumnDetector] Columnas detectadas en orden de aparición: [${sortedColumns.join(", ")}]`);
+  console.log(`[ColumnDetector] Total columnas detectadas: ${sortedColumns.length}`);
+
+  return { columns: sortedColumns, headerLine };
 }
 
 function extractTariffsFromBlock(block: TableBlock): ExtractedData[] {
   console.log(`[Extractor] ===== EXTRAYENDO TARIFAS DE ${block.serviceName} =====`);
 
-  const detectedColumns = detectColumnsInBlock(block);
+  const { columns: detectedColumns, headerLine } = detectColumnsInBlock(block);
   const extractedData: ExtractedData[] = [];
   let currentZone: string | null = null;
   let warningCount = 0;
+
+  console.log(`[Extractor] Estructura de columnas para ${block.serviceName}: [${detectedColumns.join(', ')}]`);
 
   for (let i = 0; i < block.lines.length; i++) {
     const line = block.lines[i];
@@ -607,20 +627,38 @@ function extractTariffsFromBlock(block: TableBlock): ExtractedData[] {
       const values = extractNumericValues(line);
 
       if (values.length > 0) {
+        const numExpectedColumns = detectedColumns.length;
+        const numValuesFound = values.length;
+
+        console.log(`[Extractor] Fila ${i}: ${weight.from}-${weight.to}kg ${currentZone}`);
+        console.log(`[Extractor]   → Columnas esperadas: ${numExpectedColumns} [${detectedColumns.join(', ')}]`);
+        console.log(`[Extractor]   → Valores encontrados: ${numValuesFound} [${values.join(', ')}]`);
+
+        const mappedValues = values.slice(0, numExpectedColumns);
+
         extractedData.push({
           serviceName: block.serviceName,
           weightFrom: weight.from,
           weightTo: weight.to,
           zone: currentZone,
-          values: values,
-          detectedColumns: detectedColumns
+          values: mappedValues,
+          detectedColumns: detectedColumns,
+          headerLine: headerLine || undefined
         });
-        console.log(`[Extractor]     ✓ Datos extraídos: ${weight.from}-${weight.to}kg, zona: ${currentZone}, ${values.length} valores`);
+
+        console.log(`[Extractor]   ✓ Datos mapeados: ${detectedColumns.map((col, idx) => `${col}=${mappedValues[idx] || 'N/A'}`).join(', ')}`);
+
+        if (numValuesFound > numExpectedColumns) {
+          console.log(`[Extractor]   ⚠ ${numValuesFound - numExpectedColumns} valores extra ignorados: [${values.slice(numExpectedColumns).join(', ')}]`);
+        } else if (numValuesFound < numExpectedColumns) {
+          console.log(`[Extractor]   ⚠ Solo ${numValuesFound}/${numExpectedColumns} valores encontrados`);
+        }
       }
     }
   }
 
-  console.log(`[Extractor] Total datos extraídos de ${block.serviceName}: ${extractedData.length}`);
+  console.log(`[Extractor] ===== RESUMEN EXTRACCIÓN ${block.serviceName} =====`);
+  console.log(`[Extractor] Total filas extraídas: ${extractedData.length}`);
   if (warningCount > 0) {
     console.log(`[Extractor] ⚠ Total warnings en este bloque: ${warningCount}`);
   }
@@ -690,19 +728,26 @@ function consolidateTariffs(allExtractedData: ExtractedData[]): ParsedTariff[] {
 
     const detectedColumns = data.detectedColumns || ["_arr", "_sal", "_rec", "_int"];
 
-    console.log(`[Mapping] ${data.serviceName} | ${data.weightFrom}-${data.weightTo}kg | Zona: ${data.zone} | Valores: [${data.values.join(', ')}] | Columnas: [${detectedColumns.join(', ')}]`);
+    console.log(`[Mapping] ===== MAPEANDO FILA =====`);
+    console.log(`[Mapping] Servicio: ${data.serviceName} | Peso: ${data.weightFrom}-${data.weightTo}kg | Zona: ${data.zone}`);
+    console.log(`[Mapping] Columnas detectadas: [${detectedColumns.join(', ')}]`);
+    console.log(`[Mapping] Valores extraídos: [${data.values.join(', ')}]`);
+    if (data.headerLine) {
+      console.log(`[Mapping] Línea de encabezado usada: "${data.headerLine}"`);
+    }
 
     const numColumns = Math.min(detectedColumns.length, data.values.length);
     const mappingResult: Record<string, number> = {};
 
     for (let i = 0; i < numColumns; i++) {
-      const fieldName = `${data.zone}${detectedColumns[i]}`;
+      const columnSuffix = detectedColumns[i];
+      const fieldName = `${data.zone}${columnSuffix}`;
       const value = data.values[i];
 
       if (tariff.hasOwnProperty(fieldName) || fieldName.includes('_')) {
         tariff[fieldName] = value;
         mappingResult[fieldName] = value;
-        console.log(`[Consolidator]   → ${fieldName} = ${value}`);
+        console.log(`[Consolidator]   ${i+1}. ${columnSuffix} → ${fieldName} = ${value}`);
       } else {
         console.warn(`[Consolidator]   ⚠ Campo no existe en plantilla: ${fieldName}`);
       }
@@ -713,17 +758,22 @@ function consolidateTariffs(allExtractedData: ExtractedData[]): ParsedTariff[] {
     const recValue = mappingResult[`${data.zone}_rec`];
     const intValue = mappingResult[`${data.zone}_int`];
 
-    if (arrValue && salValue && arrValue > salValue) {
-      console.log(`[ValidationWarning] Valor sospechoso: _arr (${arrValue}) > _sal (${salValue}) para ${data.serviceName} ${data.weightFrom}kg ${data.zone}. Continuando...`);
-    }
-    if (arrValue && recValue && arrValue > recValue) {
-      console.log(`[ValidationWarning] Valor sospechoso: _arr (${arrValue}) > _rec (${recValue}) para ${data.serviceName} ${data.weightFrom}kg ${data.zone}. Continuando...`);
-    }
+    console.log(`[Mapping] Resultado final: arr=${arrValue || 'null'}, sal=${salValue || 'null'}, rec=${recValue || 'null'}, int=${intValue || 'null'}`);
 
-    console.log(`[Mapping] Resultado: ${data.zone}_arr=${arrValue || 'null'}, ${data.zone}_sal=${salValue || 'null'}, ${data.zone}_rec=${recValue || 'null'}, ${data.zone}_int=${intValue || 'null'}`);
+    if (arrValue && salValue && arrValue > salValue) {
+      console.log(`[ValidationWarning] ⚠⚠⚠ VALOR SOSPECHOSO: arr (${arrValue}) > sal (${salValue})`);
+      console.log(`[ValidationWarning]   Servicio: ${data.serviceName}, Peso: ${data.weightFrom}kg, Zona: ${data.zone}`);
+      console.log(`[ValidationWarning]   Verifica que el orden de columnas sea correcto: [${detectedColumns.join(', ')}]`);
+    }
+    if (salValue && recValue && salValue > recValue) {
+      console.log(`[ValidationWarning] ⚠⚠⚠ VALOR SOSPECHOSO: sal (${salValue}) > rec (${recValue})`);
+    }
+    if (recValue && intValue && recValue > intValue) {
+      console.log(`[ValidationWarning] ⚠⚠⚠ VALOR SOSPECHOSO: rec (${recValue}) > int (${intValue})`);
+    }
 
     if (data.values.length > detectedColumns.length) {
-      console.log(`[Consolidator]   ⚠ Valores extra ignorados: ${data.values.slice(detectedColumns.length).join(', ')}`);
+      console.log(`[Consolidator]   ⚠ ${data.values.length - detectedColumns.length} valores extra ignorados: [${data.values.slice(detectedColumns.length).join(', ')}]`);
     }
   }
 
