@@ -12,43 +12,126 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 interface ServiceMapping {
   pdfName: string;
   dbName: string;
+  keywords: string[];
 }
 
 const SERVICE_MAPPINGS: ServiceMapping[] = [
-  { pdfName: "Express08:30", dbName: "Urg8:30H Courier" },
-  { pdfName: "Express8:30", dbName: "Urg8:30H Courier" },
-  { pdfName: "Express 8:30", dbName: "Urg8:30H Courier" },
-  { pdfName: "Express10:30", dbName: "Urg10H Courier" },
-  { pdfName: "Express 10:30", dbName: "Urg10H Courier" },
-  { pdfName: "Express14:00", dbName: "Urg14H Courier" },
-  { pdfName: "Express 14:00", dbName: "Urg14H Courier" },
-  { pdfName: "Express19:00", dbName: "Urg19H Courier" },
-  { pdfName: "Express 19:00", dbName: "Urg19H Courier" },
-  { pdfName: "BusinessParcel", dbName: "Business Parcel" },
-  { pdfName: "Business Parcel", dbName: "Business Parcel" },
-  { pdfName: "EuroBusinessParcel", dbName: "EuroBusiness Parcel" },
-  { pdfName: "Euro Business Parcel", dbName: "EuroBusiness Parcel" },
-  { pdfName: "EconomyParcel", dbName: "Economy Parcel" },
-  { pdfName: "Economy Parcel", dbName: "Economy Parcel" },
-  { pdfName: "Maritimo", dbName: "Marítimo" },
-  { pdfName: "Marítimo", dbName: "Marítimo" },
-  { pdfName: "ParcelShop", dbName: "Parcel Shop" },
-  { pdfName: "Parcel Shop", dbName: "Parcel Shop" },
+  {
+    pdfName: "Express08:30",
+    dbName: "Urg8:30H Courier",
+    keywords: ["express 08:30", "express08:30", "express 8:30", "express8:30", "08:30", "8:30"]
+  },
+  {
+    pdfName: "Express10:30",
+    dbName: "Urg10H Courier",
+    keywords: ["express 10:30", "express10:30", "express 10", "10:30"]
+  },
+  {
+    pdfName: "Express14:00",
+    dbName: "Urg14H Courier",
+    keywords: ["express 14:00", "express14:00", "express 14", "14:00"]
+  },
+  {
+    pdfName: "Express19:00",
+    dbName: "Urg19H Courier",
+    keywords: ["express 19:00", "express19:00", "express 19", "19:00"]
+  },
+  {
+    pdfName: "BusinessParcel",
+    dbName: "Business Parcel",
+    keywords: ["business parcel", "businessparcel", "business", "parcel"]
+  },
+  {
+    pdfName: "EuroBusinessParcel",
+    dbName: "EuroBusiness Parcel",
+    keywords: ["euro business parcel", "eurobusiness", "euro business"]
+  },
+  {
+    pdfName: "EconomyParcel",
+    dbName: "Economy Parcel",
+    keywords: ["economy parcel", "economyparcel", "economy"]
+  },
+  {
+    pdfName: "Maritimo",
+    dbName: "Marítimo",
+    keywords: ["maritimo", "marítimo", "maritim"]
+  },
+  {
+    pdfName: "ParcelShop",
+    dbName: "Parcel Shop",
+    keywords: ["parcel shop", "parcelshop", "shop"]
+  },
 ];
 
 interface WeightRange {
   from: string;
   to: string;
-  patterns: string[];
+  patterns: RegExp[];
 }
 
 const WEIGHT_RANGES: WeightRange[] = [
-  { from: "0", to: "1", patterns: ["1kg", "1 kg", "hasta 1", "0-1", "Hasta 1"] },
-  { from: "1", to: "3", patterns: ["3kg", "3 kg", "1-3", "De 1 a 3"] },
-  { from: "3", to: "5", patterns: ["5kg", "5 kg", "3-5", "De 3 a 5"] },
-  { from: "5", to: "10", patterns: ["10kg", "10 kg", "5-10", "De 5 a 10"] },
-  { from: "10", to: "15", patterns: ["15kg", "15 kg", "10-15", "De 10 a 15"] },
-  { from: "15", to: "999", patterns: ["+kg", "+ kg", "15+", ">15", "Mayor 1 pallet", "Más de 15"] },
+  {
+    from: "0",
+    to: "1",
+    patterns: [
+      /^[0-9.,\s]*1\s*kg/i,
+      /hasta\s*1/i,
+      /0\s*[-–]\s*1/i,
+      /^1$/
+    ]
+  },
+  {
+    from: "1",
+    to: "3",
+    patterns: [
+      /^[0-9.,\s]*3\s*kg/i,
+      /1\s*[-–]\s*3/i,
+      /de\s*1\s*a\s*3/i,
+      /^3$/
+    ]
+  },
+  {
+    from: "3",
+    to: "5",
+    patterns: [
+      /^[0-9.,\s]*5\s*kg/i,
+      /3\s*[-–]\s*5/i,
+      /de\s*3\s*a\s*5/i,
+      /^5$/
+    ]
+  },
+  {
+    from: "5",
+    to: "10",
+    patterns: [
+      /^[0-9.,\s]*10\s*kg/i,
+      /5\s*[-–]\s*10/i,
+      /de\s*5\s*a\s*10/i,
+      /^10$/
+    ]
+  },
+  {
+    from: "10",
+    to: "15",
+    patterns: [
+      /^[0-9.,\s]*15\s*kg/i,
+      /10\s*[-–]\s*15/i,
+      /de\s*10\s*a\s*15/i,
+      /^15$/
+    ]
+  },
+  {
+    from: "15",
+    to: "999",
+    patterns: [
+      /\+\s*kg/i,
+      /15\s*\+/i,
+      />\s*15/i,
+      /mayor.*pallet/i,
+      /m[aá]s\s*de\s*15/i,
+      /^999$/
+    ]
+  },
 ];
 
 interface ParsedTariff {
@@ -58,11 +141,14 @@ interface ParsedTariff {
   [key: string]: string | number | null;
 }
 
-function mapServiceName(pdfServiceName: string): string | null {
-  const normalized = pdfServiceName.trim();
+function mapServiceName(text: string): string | null {
+  const normalized = text.toLowerCase().trim();
+
   for (const mapping of SERVICE_MAPPINGS) {
-    if (normalized.includes(mapping.pdfName)) {
-      return mapping.dbName;
+    for (const keyword of mapping.keywords) {
+      if (normalized.includes(keyword.toLowerCase())) {
+        return mapping.dbName;
+      }
     }
   }
   return null;
@@ -70,9 +156,10 @@ function mapServiceName(pdfServiceName: string): string | null {
 
 function parseWeightRange(weightText: string): { from: string; to: string } | null {
   const normalized = weightText.toLowerCase().trim();
+
   for (const range of WEIGHT_RANGES) {
     for (const pattern of range.patterns) {
-      if (normalized.includes(pattern.toLowerCase())) {
+      if (pattern.test(normalized)) {
         return { from: range.from, to: range.to };
       }
     }
@@ -84,12 +171,17 @@ function parseNumericValue(value: string): number | null {
   if (!value || value.trim() === "" || value === "-") {
     return null;
   }
-  const cleaned = value.replace(/,/g, ".").replace(/[^0-9.]/g, "");
+
+  const cleaned = value
+    .replace(/,/g, ".")
+    .replace(/[^0-9.]/g, "")
+    .trim();
+
   const parsed = parseFloat(cleaned);
   return isNaN(parsed) ? null : parsed;
 }
 
-function extractTextFromPDF(uint8Array: Uint8Array): { text: string; confidence: 'high' | 'low' } {
+function extractTextFromPDF(uint8Array: Uint8Array): { text: string; confidence: 'high' | 'medium' | 'low' } {
   const pdfSignature = uint8Array.slice(0, 5);
   const signatureStr = new TextDecoder('utf-8').decode(pdfSignature);
 
@@ -102,44 +194,134 @@ function extractTextFromPDF(uint8Array: Uint8Array): { text: string; confidence:
     let pdfText = textDecoder.decode(uint8Array);
 
     pdfText = pdfText.replace(/\0/g, ' ');
-    pdfText = pdfText.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F]/g, '');
+    pdfText = pdfText.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F]/g, ' ');
 
-    const streamPattern = /stream\s+(.*?)\s+endstream/gs;
-    const textObjects = /\((.*?)\)/g;
-    const tjOperators = /\[(.*?)\]\s*TJ/g;
+    const extractedChunks: string[] = [];
+    let confidence: 'high' | 'medium' | 'low' = 'low';
 
-    let extractedText = '';
+    const streamPattern = /stream\s*([\s\S]*?)\s*endstream/g;
+    let streamMatch;
+    let totalStreamsFound = 0;
 
-    let match;
-    while ((match = streamPattern.exec(pdfText)) !== null) {
-      const streamContent = match[1];
+    while ((streamMatch = streamPattern.exec(pdfText)) !== null) {
+      totalStreamsFound++;
+      const streamContent = streamMatch[1];
 
-      let textMatch;
-      while ((textMatch = textObjects.exec(streamContent)) !== null) {
-        extractedText += textMatch[1] + '\n';
+      if (streamContent.includes('FlateDecode') || streamContent.includes('Fl')) {
+        continue;
       }
 
-      while ((textMatch = tjOperators.exec(streamContent)) !== null) {
-        const arrayContent = textMatch[1];
-        const strings = arrayContent.match(/\((.*?)\)/g);
-        if (strings) {
-          strings.forEach(s => {
-            extractedText += s.replace(/[()]/g, '') + ' ';
-          });
-          extractedText += '\n';
+      const textObjectPattern = /\(((?:[^()\\]|\\[()\\nrtfb])*)\)\s*Tj/g;
+      let textMatch;
+
+      while ((textMatch = textObjectPattern.exec(streamContent)) !== null) {
+        let extractedText = textMatch[1];
+
+        extractedText = extractedText
+          .replace(/\\n/g, '\n')
+          .replace(/\\r/g, '\r')
+          .replace(/\\t/g, '\t')
+          .replace(/\\\(/g, '(')
+          .replace(/\\\)/g, ')')
+          .replace(/\\\\/g, '\\');
+
+        if (extractedText.length > 0 && /[a-zA-Z0-9]/.test(extractedText)) {
+          extractedChunks.push(extractedText);
+        }
+      }
+
+      const tjArrayPattern = /\[((?:[^\[\]]|\\\[|\\\])*)\]\s*TJ/g;
+      let tjMatch;
+
+      while ((tjMatch = tjArrayPattern.exec(streamContent)) !== null) {
+        const arrayContent = tjMatch[1];
+        const stringMatches = arrayContent.match(/\(((?:[^()\\]|\\[()\\nrtfb])*)\)/g);
+
+        if (stringMatches) {
+          for (const str of stringMatches) {
+            const cleaned = str
+              .replace(/^\(|\)$/g, '')
+              .replace(/\\n/g, '\n')
+              .replace(/\\r/g, '\r')
+              .replace(/\\t/g, '\t')
+              .replace(/\\\(/g, '(')
+              .replace(/\\\)/g, ')')
+              .replace(/\\\\/g, '\\');
+
+            if (cleaned.length > 0 && /[a-zA-Z0-9]/.test(cleaned)) {
+              extractedChunks.push(cleaned);
+            }
+          }
         }
       }
     }
 
-    if (extractedText.length < 100) {
-      pdfText = pdfText.replace(/[^\x20-\x7E\n]/g, '');
-      return { text: pdfText, confidence: 'low' };
+    const extractedText = extractedChunks.join(' ');
+
+    if (extractedText.length > 500) {
+      confidence = 'high';
+    } else if (extractedText.length > 100) {
+      confidence = 'medium';
+    } else {
+      confidence = 'low';
     }
 
-    return { text: extractedText, confidence: 'high' };
+    console.log(`[PDF Parser] Extraction stats:`, {
+      totalBytes: uint8Array.length,
+      streamsFound: totalStreamsFound,
+      chunksExtracted: extractedChunks.length,
+      textLength: extractedText.length,
+      confidence
+    });
+
+    if (extractedText.length < 50) {
+      const fallbackPattern = /BT\s+([\s\S]*?)\s+ET/g;
+      let fallbackMatch;
+      const fallbackChunks: string[] = [];
+
+      while ((fallbackMatch = fallbackPattern.exec(pdfText)) !== null) {
+        const btContent = fallbackMatch[1];
+        const simpleText = btContent.match(/\(([^)]+)\)/g);
+        if (simpleText) {
+          fallbackChunks.push(...simpleText.map(t => t.replace(/[()]/g, '')));
+        }
+      }
+
+      if (fallbackChunks.length > 0) {
+        return { text: fallbackChunks.join(' '), confidence: 'medium' };
+      }
+
+      const rawText = pdfText.replace(/[^\x20-\x7E\xA0-\xFF\n]/g, '');
+      return { text: rawText, confidence: 'low' };
+    }
+
+    return { text: extractedText, confidence };
   } catch (error) {
     throw new Error(`Error al extraer texto del PDF: ${error.message}`);
   }
+}
+
+function normalizeSpaces(text: string): string {
+  return text
+    .replace(/\s+/g, ' ')
+    .replace(/\n\s*\n/g, '\n')
+    .trim();
+}
+
+function extractTablesFromText(text: string): string[][] {
+  const lines = text.split('\n').map(line => normalizeSpaces(line));
+  const tables: string[][] = [];
+
+  for (const line of lines) {
+    if (line.trim().length === 0) continue;
+
+    const parts = line.split(/\s{2,}|\t+/);
+    if (parts.length > 3) {
+      tables.push(parts.map(p => p.trim()).filter(p => p.length > 0));
+    }
+  }
+
+  return tables;
 }
 
 Deno.serve(async (req: Request) => {
@@ -208,11 +390,18 @@ Deno.serve(async (req: Request) => {
 
     const { text: pdfText, confidence } = extractTextFromPDF(uint8Array);
 
-    console.log(`[PDF Parser] Texto extraído con confianza: ${confidence}`);
+    console.log(`[PDF Parser] Texto extraído (${pdfText.length} caracteres) con confianza: ${confidence}`);
+    console.log(`[PDF Parser] Primeros 500 caracteres:`, pdfText.substring(0, 500));
 
-    const lines = pdfText.split("\n")
-      .map(line => line.trim())
-      .filter(line => line.length > 0);
+    const normalizedText = normalizeSpaces(pdfText);
+    const lines = normalizedText.split('\n').filter(line => line.trim().length > 0);
+    const tables = extractTablesFromText(normalizedText);
+
+    console.log(`[PDF Parser] Procesamiento:`, {
+      totalLines: lines.length,
+      tablesDetected: tables.length,
+      confidence
+    });
 
     const parsedTariffs: ParsedTariff[] = [];
     const warnings: string[] = [];
@@ -227,18 +416,30 @@ Deno.serve(async (req: Request) => {
       const serviceName = mapServiceName(line);
       if (serviceName) {
         currentService = serviceName;
-        console.log(`[PDF Parser] Servicio detectado: ${serviceName}`);
+        console.log(`[PDF Parser] Servicio detectado en línea ${i}: ${serviceName}`);
         continue;
       }
 
       if (!currentService) continue;
 
-      const weightRange = parseWeightRange(line);
-      if (!weightRange) continue;
+      const parts = line.split(/\s+/).filter(p => p.trim().length > 0);
 
-      const parts = line.split(/\s+/);
-      if (parts.length < 5) {
-        warnings.push(`Línea ${i+1}: Datos insuficientes en rango de peso ${weightRange.from}-${weightRange.to}kg`);
+      const weightRange = parseWeightRange(line);
+      if (!weightRange) {
+        if (parts.length > 3 && parts.some(p => /^\d+[.,]?\d*$/.test(p))) {
+          const firstPart = parts[0];
+          const potentialWeight = parseWeightRange(firstPart);
+          if (potentialWeight) {
+            console.log(`[PDF Parser] Peso detectado indirectamente en línea ${i}: ${firstPart}`);
+          }
+        }
+        continue;
+      }
+
+      console.log(`[PDF Parser] Procesando rango de peso ${weightRange.from}-${weightRange.to}kg en línea ${i}`);
+
+      if (parts.length < 2) {
+        warnings.push(`Línea ${i+1}: Datos insuficientes para ${weightRange.from}-${weightRange.to}kg`);
         continue;
       }
 
@@ -248,38 +449,52 @@ Deno.serve(async (req: Request) => {
         weight_to: weightRange.to,
       };
 
-      let columnIndex = 0;
-      for (let j = 0; j < parts.length; j++) {
-        const value = parseNumericValue(parts[j]);
+      const numericValues: number[] = [];
+      for (const part of parts) {
+        const value = parseNumericValue(part);
         if (value !== null) {
-          const destinations = [
-            "provincial", "regional", "nacional", "portugal",
-            "baleares_mayores", "baleares_menores",
-            "canarias_mayores", "canarias_menores",
-            "ceuta", "melilla",
-            "andorra", "gibraltar",
-            "azores_mayores", "azores_menores",
-            "madeira_mayores", "madeira_menores"
-          ];
-          const columns = ["_sal", "_rec", "_int", "_arr"];
-
-          const destIndex = Math.floor(columnIndex / 4);
-          const colIndex = columnIndex % 4;
-
-          if (destIndex < destinations.length && colIndex < columns.length) {
-            const fieldName = destinations[destIndex] + columns[colIndex];
-            tariff[fieldName] = value;
-          }
-          columnIndex++;
+          numericValues.push(value);
         }
       }
 
-      if (Object.keys(tariff).length > 3) {
-        parsedTariffs.push(tariff);
+      console.log(`[PDF Parser] Valores numéricos encontrados:`, numericValues);
+
+      if (numericValues.length > 0) {
+        const destinations = [
+          "provincial", "regional", "nacional", "portugal",
+          "baleares_mayores", "baleares_menores",
+          "canarias_mayores", "canarias_menores",
+          "ceuta", "melilla",
+          "andorra", "gibraltar",
+          "azores_mayores", "azores_menores",
+          "madeira_mayores", "madeira_menores"
+        ];
+        const columns = ["_sal", "_rec", "_int", "_arr"];
+
+        for (let colIndex = 0; colIndex < numericValues.length; colIndex++) {
+          const destIndex = Math.floor(colIndex / 4);
+          const typeIndex = colIndex % 4;
+
+          if (destIndex < destinations.length && typeIndex < columns.length) {
+            const fieldName = destinations[destIndex] + columns[typeIndex];
+            tariff[fieldName] = numericValues[colIndex];
+          }
+        }
+
+        if (Object.keys(tariff).length > 3) {
+          parsedTariffs.push(tariff);
+          console.log(`[PDF Parser] Tarifa añadida:`, tariff);
+        } else {
+          warnings.push(`Línea ${i+1}: Tarifa con pocos datos (${Object.keys(tariff).length} campos)`);
+        }
       }
     }
 
-    console.log(`[PDF Parser] Procesadas ${processedLines} líneas, encontradas ${parsedTariffs.length} tarifas`);
+    console.log(`[PDF Parser] Procesamiento completado:`, {
+      processedLines,
+      tariffsFound: parsedTariffs.length,
+      warnings: warnings.length
+    });
 
     if (parsedTariffs.length === 0) {
       return new Response(
@@ -290,12 +505,15 @@ Deno.serve(async (req: Request) => {
             "Asegúrese de que el PDF contiene tablas de tarifas GLS España 2025",
             "El PDF debe incluir nombres de servicios (Business Parcel, Express, etc.)",
             "Las tablas deben tener rangos de peso y precios claramente definidos",
-            "Si el PDF está escaneado, puede que necesite OCR"
+            "Si el PDF está encriptado o protegido, primero desbloquéelo"
           ],
           debugInfo: {
             processedLines,
             confidence,
-            sampleLines: lines.slice(0, 10)
+            textLength: pdfText.length,
+            tablesDetected: tables.length,
+            sampleLines: lines.slice(0, 20),
+            extractedTextSample: pdfText.substring(0, 1000)
           }
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -339,8 +557,13 @@ Deno.serve(async (req: Request) => {
         success: true,
         message: `Se importaron ${parsedTariffs.length} tarifas correctamente`,
         imported: insertedData?.length || 0,
-        warnings: warnings.length > 0 ? warnings.slice(0, 5) : undefined,
+        warnings: warnings.length > 0 ? warnings.slice(0, 10) : undefined,
         confidence,
+        stats: {
+          textLength: pdfText.length,
+          linesProcessed: processedLines,
+          tablesDetected: tables.length
+        },
         preview: parsedTariffs.slice(0, 5)
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -348,12 +571,13 @@ Deno.serve(async (req: Request) => {
 
   } catch (error) {
     console.error(`[PDF Parser] Error fatal: ${error.message}`);
+    console.error(`[PDF Parser] Stack trace:`, error.stack);
     return new Response(
       JSON.stringify({
         error: "Error interno del servidor",
         details: error.message,
         type: error.name,
-        hint: "Por favor, verifica que el archivo sea un PDF válido y no esté corrupto"
+        hint: "Por favor, verifica que el archivo sea un PDF válido y no esté corrupto o protegido"
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
