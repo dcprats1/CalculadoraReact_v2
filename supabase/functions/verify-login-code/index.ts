@@ -148,29 +148,24 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (userProfile.subscription_end_date) {
-      const endDate = new Date(userProfile.subscription_end_date);
-      const now = new Date();
+    if (new Date(userProfile.subscription_end_date) < new Date()) {
+      await supabaseAdmin.from('auth_logs').insert({
+        user_id: userProfile.id,
+        email: email.toLowerCase(),
+        event_type: 'access_denied',
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        success: false,
+        error_message: 'Suscripción expirada',
+      });
 
-      if (endDate < now) {
-        await supabaseAdmin.from('auth_logs').insert({
-          user_id: userProfile.id,
-          email: email.toLowerCase(),
-          event_type: 'access_denied',
-          ip_address: ipAddress,
-          user_agent: userAgent,
-          success: false,
-          error_message: 'Suscripción expirada',
-        });
-
-        return new Response(
-          JSON.stringify({ error: 'Tu suscripción ha expirado' }),
-          {
-            status: 403,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          }
-        );
-      }
+      return new Response(
+        JSON.stringify({ error: 'Tu suscripción ha expirado' }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     const { data: activeSessions, error: sessionsError } = await supabaseAdmin
@@ -288,11 +283,10 @@ Deno.serve(async (req: Request) => {
 
     const newExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-    const tempSessionId = crypto.randomUUID();
     const sessionToken = btoa(JSON.stringify({
       userId: userProfile.id,
       email: userProfile.email,
-      sessionId: tempSessionId,
+      sessionId: 'temp',
       expiresAt: newExpiresAt,
     }));
 
@@ -323,6 +317,20 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const finalSessionToken = btoa(JSON.stringify({
+      userId: userProfile.id,
+      email: userProfile.email,
+      sessionId: newSession.id,
+      expiresAt: newExpiresAt,
+    }));
+
+    await supabaseAdmin
+      .from('user_sessions')
+      .update({
+        session_token: finalSessionToken
+      })
+      .eq('id', newSession.id);
+
     await supabaseAdmin
       .from('user_sessions')
       .update({
@@ -336,18 +344,6 @@ Deno.serve(async (req: Request) => {
       .from('verification_codes')
       .update({ used: true })
       .eq('id', verificationCode.id);
-
-    const finalSessionToken = btoa(JSON.stringify({
-      userId: userProfile.id,
-      email: userProfile.email,
-      sessionId: newSession.id,
-      expiresAt: newExpiresAt,
-    }));
-
-    await supabaseAdmin
-      .from('user_sessions')
-      .update({ session_token: finalSessionToken })
-      .eq('id', newSession.id);
 
     await supabaseAdmin.from('auth_logs').insert({
       user_id: userProfile.id,
@@ -377,18 +373,9 @@ Deno.serve(async (req: Request) => {
       }
     );
   } catch (error) {
-    console.error('Unexpected error in verify-login-code:', error);
-    console.error('Error details:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack
-    });
-
+    console.error('Unexpected error:', error);
     return new Response(
-      JSON.stringify({
-        error: 'Error interno del servidor',
-        details: error.message || 'Unknown error'
-      }),
+      JSON.stringify({ error: 'Error interno del servidor' }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
