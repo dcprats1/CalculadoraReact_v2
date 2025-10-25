@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { PDFTableHeaderDetector } from "./header-detector.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -305,43 +306,67 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[PDF Parser] Procesamiento: ${lines.length} líneas detectadas`);
 
+    const detectedHeaders = PDFTableHeaderDetector.analyzeTableHeaders(pdfText, 1);
+    console.log(`[PDF Parser] Encabezados detectados:`, detectedHeaders);
+
+    if (detectedHeaders.length > 0) {
+      for (const header of detectedHeaders) {
+        const validation = PDFTableHeaderDetector.validateTableStructure(header);
+        console.log(`[PDF Parser] Validación de encabezado ${header.serviceName}:`, validation);
+      }
+    }
+
     const parsedTariffs: ParsedTariff[] = [];
     const warnings: string[] = [];
 
     let currentService: string | null = null;
+    let currentDestination: string | null = null;
+    let detectedColumns: string[] = [];
     let processedLines = 0;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       processedLines++;
 
-      const serviceName = mapServiceName(line);
-      if (serviceName) {
-        currentService = serviceName;
-        console.log(`[PDF Parser] Servicio detectado en línea ${i}: ${serviceName}`);
+      const serviceDetection = PDFTableHeaderDetector.detectServiceName(line);
+      if (serviceDetection && serviceDetection.confidence >= 0.6) {
+        currentService = serviceDetection.dbName;
+        console.log(`[PDF Parser] Servicio detectado en línea ${i}: ${serviceDetection.dbName} (confianza: ${serviceDetection.confidence})`);
         continue;
+      }
+
+      const destDetection = PDFTableHeaderDetector.detectDestinationZone(line);
+      if (destDetection && destDetection.confidence >= 0.6) {
+        currentDestination = destDetection.dbPrefix;
+        console.log(`[PDF Parser] Zona detectada en línea ${i}: ${destDetection.displayName} (${destDetection.dbPrefix})`);
+      }
+
+      const columnHeaders = PDFTableHeaderDetector.detectColumns(line);
+      if (columnHeaders.length >= 3) {
+        detectedColumns = columnHeaders.map(c => c.dbField);
+        console.log(`[PDF Parser] Columnas detectadas en línea ${i}:`, detectedColumns);
       }
 
       if (!currentService) continue;
 
       const parts = line.split(/\s+/).filter(p => p.trim().length > 0);
 
-      const weightRange = parseWeightRange(line);
-      if (!weightRange) {
+      const weightRangeDetection = PDFTableHeaderDetector.detectWeightRange(line);
+      if (!weightRangeDetection) {
         continue;
       }
 
-      console.log(`[PDF Parser] Procesando rango de peso ${weightRange.from}-${weightRange.to}kg en línea ${i}`);
+      console.log(`[PDF Parser] Procesando rango de peso ${weightRangeDetection.from}-${weightRangeDetection.to}kg en línea ${i}`);
 
       if (parts.length < 2) {
-        warnings.push(`Línea ${i+1}: Datos insuficientes para ${weightRange.from}-${weightRange.to}kg`);
+        warnings.push(`Línea ${i+1}: Datos insuficientes para ${weightRangeDetection.from}-${weightRangeDetection.to}kg`);
         continue;
       }
 
       const tariff: ParsedTariff = {
         service_name: currentService,
-        weight_from: weightRange.from,
-        weight_to: weightRange.to,
+        weight_from: weightRangeDetection.from,
+        weight_to: weightRangeDetection.to,
       };
 
       const numericValues: number[] = [];
@@ -364,14 +389,15 @@ Deno.serve(async (req: Request) => {
           "azores_mayores", "azores_menores",
           "madeira_mayores", "madeira_menores"
         ];
-        const columns = ["_sal", "_rec", "_int", "_arr"];
+
+        const columnsToUse = detectedColumns.length >= 3 ? detectedColumns : ["_sal", "_rec", "_int", "_arr"];
 
         for (let colIndex = 0; colIndex < numericValues.length; colIndex++) {
-          const destIndex = Math.floor(colIndex / 4);
-          const typeIndex = colIndex % 4;
+          const destIndex = Math.floor(colIndex / columnsToUse.length);
+          const typeIndex = colIndex % columnsToUse.length;
 
-          if (destIndex < destinations.length && typeIndex < columns.length) {
-            const fieldName = destinations[destIndex] + columns[typeIndex];
+          if (destIndex < destinations.length && typeIndex < columnsToUse.length) {
+            const fieldName = destinations[destIndex] + columnsToUse[typeIndex];
             tariff[fieldName] = numericValues[colIndex];
           }
         }
@@ -408,7 +434,14 @@ Deno.serve(async (req: Request) => {
             textLength: pdfText.length,
             pages,
             sampleLines: lines.slice(0, 30),
-            extractedTextSample: pdfText.substring(0, 1500)
+            extractedTextSample: pdfText.substring(0, 1500),
+            detectedHeaders: detectedHeaders.map(h => ({
+              service: h.serviceName,
+              destination: h.destinationZone,
+              columns: h.columns.map(c => c.name),
+              tableType: h.tableType,
+              confidence: h.confidence
+            }))
           }
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -469,8 +502,17 @@ Deno.serve(async (req: Request) => {
         stats: {
           textLength: pdfText.length,
           linesProcessed: processedLines,
-          pagesProcessed: pages
+          pagesProcessed: pages,
+          headersDetected: detectedHeaders.length,
+          servicesFound: [...new Set(detectedHeaders.map(h => h.serviceName))].filter(Boolean)
         },
+        detectedHeaders: detectedHeaders.slice(0, 5).map(h => ({
+          service: h.serviceName,
+          destination: h.destinationZone,
+          columns: h.columns.map(c => c.name),
+          tableType: h.tableType,
+          confidence: h.confidence
+        })),
         preview: parsedTariffs.slice(0, 5)
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
