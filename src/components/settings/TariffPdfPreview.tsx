@@ -299,26 +299,87 @@ export function TariffPdfPreview({ onConfirm, onCancel, onDataImported }: Tariff
                     onChange={() => toggleSelection(tariff.id)}
                     className="w-5 h-5 rounded border-gray-300"
                   />
-                  <div className="flex-1 grid grid-cols-5 gap-2 text-xs">
-                    <div>
-                      <span className="font-medium text-gray-700">Peso:</span>
-                      <span className="ml-1">{tariff.weight_from}-{tariff.weight_to}kg</span>
+                  <div className="flex-1 space-y-1">
+                    <div className="font-medium text-gray-900 mb-2">
+                      Peso: {tariff.weight_from}-{tariff.weight_to}kg
                     </div>
-                    <div>
-                      <span className="font-medium text-gray-700">Prov:</span>
-                      <span className="ml-1">{tariff.provincial_sal?.toFixed(2) || '-'}</span>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-700">Reg:</span>
-                      <span className="ml-1">{tariff.regional_sal?.toFixed(2) || '-'}</span>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-700">Nac:</span>
-                      <span className="ml-1">{tariff.nacional_sal?.toFixed(2) || '-'}</span>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-700">Port:</span>
-                      <span className="ml-1">{tariff.portugal_sal?.toFixed(2) || '-'}</span>
+                    <div className="grid grid-cols-4 gap-3 text-xs">
+                      <div className="space-y-1">
+                        <div className="font-semibold text-gray-600">Provincial</div>
+                        <div className="flex gap-1">
+                          <span className={`px-1.5 py-0.5 rounded ${tariff.provincial_sal !== null && tariff.provincial_sal !== undefined ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'}`}>
+                            Sal: {tariff.provincial_sal?.toFixed(2) || '-'}
+                          </span>
+                          <span className={`px-1.5 py-0.5 rounded ${tariff.provincial_rec !== null && tariff.provincial_rec !== undefined ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'}`}>
+                            Rec: {tariff.provincial_rec?.toFixed(2) || '-'}
+                          </span>
+                        </div>
+                        <div className="flex gap-1">
+                          <span className={`px-1.5 py-0.5 rounded ${tariff.provincial_int !== null && tariff.provincial_int !== undefined ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'}`}>
+                            Int: {tariff.provincial_int?.toFixed(2) || '-'}
+                          </span>
+                          <span className={`px-1.5 py-0.5 rounded ${tariff.provincial_arr !== null && tariff.provincial_arr !== undefined ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'}`}>
+                            Arr: {tariff.provincial_arr?.toFixed(2) || '-'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="font-semibold text-gray-600">Regional</div>
+                        <div className="flex gap-1">
+                          <span className={`px-1.5 py-0.5 rounded ${tariff.regional_sal !== null && tariff.regional_sal !== undefined ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'}`}>
+                            Sal: {tariff.regional_sal?.toFixed(2) || '-'}
+                          </span>
+                          <span className={`px-1.5 py-0.5 rounded ${tariff.regional_rec !== null && tariff.regional_rec !== undefined ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'}`}>
+                            Rec: {tariff.regional_rec?.toFixed(2) || '-'}
+                          </span>
+                        </div>
+                        <div className="flex gap-1">
+                          <span className={`px-1.5 py-0.5 rounded ${tariff.regional_int !== null && tariff.regional_int !== undefined ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'}`}>
+                            Int: {tariff.regional_int?.toFixed(2) || '-'}
+                          </span>
+                          <span className={`px-1.5 py-0.5 rounded ${tariff.regional_arr !== null && tariff.regional_arr !== undefined ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'}`}>
+                            Arr: {tariff.regional_arr?.toFixed(2) || '-'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="font-semibold text-gray-600">Nacional</div>
+                        <div className="flex gap-1">
+                          <span className={`px-1.5 py-0.5 rounded ${tariff.nacional_sal !== null && tariff.nacional_sal !== undefined ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'}`}>
+                            Sal: {tariff.nacional_sal?.toFixed(2) || '-'}
+                          </span>
+                          <span className={`px-1.5 py-0.5 rounded ${tariff.nacional_rec !== null && tariff.nacional_rec !== undefined ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'}`}>
+                            Rec: {tariff.nacional_rec?.toFixed(2) || '-'}
+                          </span>
+                        </div>
+                        <div className="flex gap-1">
+                          <span className={`px-1.5 py-0.5 rounded ${tariff.nacional_int !== null && tariff.nacional_int !== undefined ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'}`}>
+                            Int: {tariff.nacional_int?.toFixed(2) || '-'}
+                          </span>
+                          <span className={`px-1.5 py-0.5 rounded ${tariff.nacional_arr !== null && tariff.nacional_arr !== undefined ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'}`}>
+                            Arr: {tariff.nacional_arr?.toFixed(2) || '-'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="font-semibold text-gray-600">Portugal</div>
+                        <div className="flex gap-1">
+                          <span className={`px-1.5 py-0.5 rounded ${tariff.portugal_sal !== null && tariff.portugal_sal !== undefined ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'}`}>
+                            Sal: {tariff.portugal_sal?.toFixed(2) || '-'}
+                          </span>
+                          <span className={`px-1.5 py-0.5 rounded ${tariff.portugal_rec !== null && tariff.portugal_rec !== undefined ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'}`}>
+                            Rec: {tariff.portugal_rec?.toFixed(2) || '-'}
+                          </span>
+                        </div>
+                        <div className="flex gap-1">
+                          <span className={`px-1.5 py-0.5 rounded ${tariff.portugal_int !== null && tariff.portugal_int !== undefined ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'}`}>
+                            Int: {tariff.portugal_int?.toFixed(2) || '-'}
+                          </span>
+                          <span className={`px-1.5 py-0.5 rounded ${tariff.portugal_arr !== null && tariff.portugal_arr !== undefined ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'}`}>
+                            Arr: {tariff.portugal_arr?.toFixed(2) || '-'}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

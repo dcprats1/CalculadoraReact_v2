@@ -205,45 +205,10 @@ const WEIGHT_RANGES: WeightRange[] = [
   { from: "3", to: "5", patterns: [/(?:^|\s)5\s*kg/i, /^5$/] },
   { from: "5", to: "10", patterns: [/(?:^|\s)10\s*kg/i, /^10$/] },
   { from: "10", to: "15", patterns: [/(?:^|\s)15\s*kg/i, /^15$/] },
-  { from: "15", to: "999", patterns: [/\+?\s*kg/i, /adicional/i, /(?:^|\s)\+kg/i] },
-];
-
-interface DestinationConfig {
-  dbPrefix: string;
-  displayName: string;
-  fields: string[];
-}
-
-const DESTINATION_CONFIGS: DestinationConfig[] = [
-  { dbPrefix: "provincial", displayName: "Provincial", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "regional", displayName: "Regional", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "nacional", displayName: "Nacional", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "portugal", displayName: "Portugal", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "canarias_mayores", displayName: "Canarias Mayores", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "canarias_menores", displayName: "Canarias Menores", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "baleares_mayores", displayName: "Baleares Mayores", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "baleares_menores", displayName: "Baleares Menores", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "ceuta", displayName: "Ceuta", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "melilla", displayName: "Melilla", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "andorra", displayName: "Andorra", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "gibraltar", displayName: "Gibraltar", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "azores_mayores", displayName: "Azores Mayores", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "azores_menores", displayName: "Azores Menores", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "madeira_mayores", displayName: "Madeira Mayores", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "madeira_menores", displayName: "Madeira Menores", fields: ["_sal", "_rec", "_int", "_arr"] },
-];
-
-interface ColumnMapping {
-  name: string;
-  fieldSuffix: string;
-  patterns: RegExp[];
-}
-
-const COLUMN_MAPPINGS: ColumnMapping[] = [
-  { name: "Recogida", fieldSuffix: "_rec", patterns: [/recogida/i, /recogidas/i, /\brec\b/i] },
-  { name: "Arrastre", fieldSuffix: "_arr", patterns: [/arrastre/i, /\barr\b/i] },
-  { name: "Salidas", fieldSuffix: "_sal", patterns: [/salidas?/i, /\bsal\b/i] },
-  { name: "Interciudad", fieldSuffix: "_int", patterns: [/interciudad/i, /\bint\b/i] },
+  { from: "15", to: "20", patterns: [/(?:^|\s)20\s*kg/i, /^20$/] },
+  { from: "20", to: "25", patterns: [/(?:^|\s)25\s*kg/i, /^25$/] },
+  { from: "25", to: "30", patterns: [/(?:^|\s)30\s*kg/i, /^30$/] },
+  { from: "30", to: "999", patterns: [/\+?\s*kg/i, /adicional/i] },
 ];
 
 interface ParsedTariff {
@@ -504,41 +469,11 @@ interface ExtractedData {
   weightTo: string;
   zone: string;
   values: number[];
-  detectedColumns?: string[];
-}
-
-function detectColumnsInBlock(block: TableBlock): string[] {
-  const detectedColumns: string[] = [];
-
-  for (const line of block.lines) {
-    const normalizedLine = line.toLowerCase();
-
-    for (const colMapping of COLUMN_MAPPINGS) {
-      for (const pattern of colMapping.patterns) {
-        if (pattern.test(normalizedLine) && !detectedColumns.includes(colMapping.fieldSuffix)) {
-          detectedColumns.push(colMapping.fieldSuffix);
-          console.log(`[ColumnDetector] ✓ Columna detectada: ${colMapping.name} (${colMapping.fieldSuffix})`);
-          break;
-        }
-      }
-    }
-
-    if (detectedColumns.length >= 4) break;
-  }
-
-  if (detectedColumns.length === 0) {
-    console.log(`[ColumnDetector] ⚠ No se detectaron columnas, usando orden estándar: _sal, _rec, _int, _arr`);
-    return ["_sal", "_rec", "_int", "_arr"];
-  }
-
-  console.log(`[ColumnDetector] Columnas detectadas en orden: ${detectedColumns.join(", ")}`);
-  return detectedColumns;
 }
 
 function extractTariffsFromBlock(block: TableBlock): ExtractedData[] {
   console.log(`[Extractor] ===== EXTRAYENDO TARIFAS DE ${block.serviceName} =====`);
 
-  const detectedColumns = detectColumnsInBlock(block);
   const extractedData: ExtractedData[] = [];
   let currentZone: string | null = null;
 
@@ -562,8 +497,7 @@ function extractTariffsFromBlock(block: TableBlock): ExtractedData[] {
           weightFrom: weight.from,
           weightTo: weight.to,
           zone: currentZone,
-          values: values,
-          detectedColumns: detectedColumns
+          values: values
         });
         console.log(`[Extractor]     ✓ Datos extraídos: ${weight.from}-${weight.to}kg, zona: ${currentZone}, ${values.length} valores`);
       }
@@ -575,101 +509,91 @@ function extractTariffsFromBlock(block: TableBlock): ExtractedData[] {
 }
 
 /**
- * Consolida tarifas usando estructura de plantilla como marco de referencia.
+ * Consolida tarifas por servicio y rango de peso, aplicando el mapeo correcto
+ * de valores numéricos según especificación GLS España.
  *
- * ENFOQUE BASADO EN PLANTILLA:
- * 1. Para cada servicio detectado, crear 6 registros (uno por cada rango de peso de la plantilla)
- * 2. Para cada registro, inicializar todos los campos de destino como NULL
- * 3. Rellenar solo los campos que tengan datos en el PDF
- * 4. Mapear valores según las columnas detectadas en el PDF
+ * MAPEO DE VALORES (6 valores por fila en tabla GLS):
+ * - values[0] → Ignorar (peso o texto descriptivo)
+ * - values[1] → Arrastre (_arr)
+ * - values[2] → Ignorar (columna intermedia no usada)
+ * - values[3] → Salidas (_sal)
+ * - values[4] → Recogidas (_rec)
+ * - values[5] → Interciudad (_int)
  *
- * VENTAJAS:
- * - Estructura consistente siempre (6 rangos x N destinos x 4 campos)
- * - Fácil identificar qué datos faltan (campos NULL)
- * - Compatible con la estructura de custom_tariffs
+ * COLUMNAS A IGNORAR:
+ * - "Km" en Express10:30 (última columna)
+ *
+ * CASOS ESPECIALES:
+ * - Parcel Shop: Solo 1 valor (_sal)
+ * - Azores/Madeira: Solo 2 valores (_sal y _rec)
+ * - Destinos especiales (Ceuta, Melilla, Gibraltar, Andorra): Solo 2 rangos de peso
  */
 function consolidateTariffs(allExtractedData: ExtractedData[]): ParsedTariff[] {
-  console.log(`[Consolidator] ===== CONSOLIDANDO CON ESTRUCTURA DE PLANTILLA =====`);
-  console.log(`[Consolidator] Total datos extraídos: ${allExtractedData.length}`);
+  console.log(`[Consolidator] ===== CONSOLIDANDO TARIFAS GLOBALMENTE =====`);
+  console.log(`[Consolidator] Total datos a procesar: ${allExtractedData.length}`);
 
-  const serviceMap = new Map<string, Map<string, ParsedTariff>>();
-
-  const detectedServices = new Set(allExtractedData.map(d => d.serviceName));
-
-  for (const serviceName of detectedServices) {
-    const weightMap = new Map<string, ParsedTariff>();
-
-    for (const weightRange of WEIGHT_RANGES) {
-      const rangeKey = `${weightRange.from}_${weightRange.to}`;
-      const tariffRecord: ParsedTariff = {
-        service_name: serviceName,
-        weight_from: weightRange.from,
-        weight_to: weightRange.to,
-      };
-
-      for (const destConfig of DESTINATION_CONFIGS) {
-        for (const fieldSuffix of destConfig.fields) {
-          tariffRecord[`${destConfig.dbPrefix}${fieldSuffix}`] = null;
-        }
-      }
-
-      weightMap.set(rangeKey, tariffRecord);
-    }
-
-    serviceMap.set(serviceName, weightMap);
-    console.log(`[Consolidator] ✓ Plantilla inicializada para ${serviceName}: ${WEIGHT_RANGES.length} rangos de peso`);
-  }
+  const tariffMap = new Map<string, ParsedTariff>();
 
   for (const data of allExtractedData) {
-    const rangeKey = `${data.weightFrom}_${data.weightTo}`;
-    const weightMap = serviceMap.get(data.serviceName);
+    const consolidationKey = `${data.serviceName}|${data.weightFrom}|${data.weightTo}`;
 
-    if (!weightMap) {
-      console.warn(`[Consolidator] ⚠ Servicio no encontrado: ${data.serviceName}`);
-      continue;
+    if (!tariffMap.has(consolidationKey)) {
+      tariffMap.set(consolidationKey, {
+        service_name: data.serviceName,
+        weight_from: data.weightFrom,
+        weight_to: data.weightTo,
+      });
     }
 
-    const tariff = weightMap.get(rangeKey);
-    if (!tariff) {
-      console.warn(`[Consolidator] ⚠ Rango de peso no encontrado en plantilla: ${rangeKey}`);
-      continue;
+    const tariff = tariffMap.get(consolidationKey)!;
+    const isParcelShop = data.serviceName === "Parcel Shop";
+    const isAzoresOrMadeira = data.zone.startsWith("azores_") || data.zone.startsWith("madeira_");
+
+    console.log(`[Consolidator] Procesando: ${data.serviceName} | ${data.weightFrom}-${data.weightTo}kg | Zona: ${data.zone} | Valores: [${data.values.join(', ')}]`);
+
+    // Caso especial: Parcel Shop (solo 1 valor)
+    if (isParcelShop && data.values.length >= 1) {
+      tariff[`${data.zone}_sal`] = data.values[0];
+      console.log(`[Consolidator]   → Parcel Shop: sal=${data.values[0]}`);
     }
-
-    const detectedColumns = data.detectedColumns || ["_sal", "_rec", "_int", "_arr"];
-
-    console.log(`[Consolidator] Procesando: ${data.serviceName} | ${data.weightFrom}-${data.weightTo}kg | Zona: ${data.zone} | Valores: [${data.values.join(', ')}] | Columnas: [${detectedColumns.join(', ')}]`);
-
-    const numColumns = Math.min(detectedColumns.length, data.values.length);
-
-    for (let i = 0; i < numColumns; i++) {
-      const fieldName = `${data.zone}${detectedColumns[i]}`;
-      const value = data.values[i];
-
-      if (tariff.hasOwnProperty(fieldName) || fieldName.includes('_')) {
-        tariff[fieldName] = value;
-        console.log(`[Consolidator]   → ${fieldName} = ${value}`);
-      } else {
-        console.warn(`[Consolidator]   ⚠ Campo no existe en plantilla: ${fieldName}`);
-      }
+    // Caso especial: Azores/Madeira (solo 2 valores)
+    else if (isAzoresOrMadeira && data.values.length >= 2) {
+      tariff[`${data.zone}_sal`] = data.values[0];
+      tariff[`${data.zone}_rec`] = data.values[1];
+      console.log(`[Consolidator]   → Azores/Madeira: sal=${data.values[0]}, rec=${data.values[1]}`);
     }
-
-    if (data.values.length > detectedColumns.length) {
-      console.log(`[Consolidator]   ⚠ Valores extra ignorados: ${data.values.slice(detectedColumns.length).join(', ')}`);
+    // Caso estándar: 6 valores numéricos (mapeo correcto)
+    else if (data.values.length >= 6) {
+      // Mapeo según especificación:
+      // values[1] → arr, values[3] → sal, values[4] → rec, values[5] → int
+      // Ignorar: values[0], values[2], y values[6+] (columna Km si existe)
+      tariff[`${data.zone}_arr`] = data.values[1];
+      tariff[`${data.zone}_sal`] = data.values[3];
+      tariff[`${data.zone}_rec`] = data.values[4];
+      tariff[`${data.zone}_int`] = data.values[5];
+      console.log(`[Consolidator]   → Mapeo estándar: arr=${data.values[1]}, sal=${data.values[3]}, rec=${data.values[4]}, int=${data.values[5]} | Ignorados: [${data.values[0]}, ${data.values[2]}]`);
+    }
+    // Caso legacy: 4 valores (compatibilidad hacia atrás)
+    else if (data.values.length >= 4) {
+      tariff[`${data.zone}_arr`] = data.values[0];
+      tariff[`${data.zone}_sal`] = data.values[1];
+      tariff[`${data.zone}_rec`] = data.values[2];
+      tariff[`${data.zone}_int`] = data.values[3];
+      console.log(`[Consolidator]   → Mapeo legacy (4 valores): arr=${data.values[0]}, sal=${data.values[1]}, rec=${data.values[2]}, int=${data.values[3]}`);
+    }
+    // Valores insuficientes
+    else {
+      console.warn(`[Consolidator]   ⚠ Valores insuficientes para ${data.serviceName} ${data.zone} ${data.weightFrom}-${data.weightTo}kg: solo ${data.values.length} valores`);
     }
   }
 
-  const allTariffs: ParsedTariff[] = [];
-  for (const [serviceName, weightMap] of serviceMap.entries()) {
-    for (const [rangeKey, tariff] of weightMap.entries()) {
-      allTariffs.push(tariff);
-    }
-  }
+  const consolidatedTariffs = Array.from(tariffMap.values());
 
   console.log(`[Consolidator] ===== RESUMEN CONSOLIDACIÓN =====`);
   console.log(`[Consolidator] Datos de entrada: ${allExtractedData.length}`);
-  console.log(`[Consolidator] Registros generados: ${allTariffs.length}`);
+  console.log(`[Consolidator] Tarifas únicas (servicio+peso): ${consolidatedTariffs.length}`);
 
-  const serviceBreakdown = allTariffs.reduce((acc, t) => {
+  const serviceBreakdown = consolidatedTariffs.reduce((acc, t) => {
     acc[t.service_name] = (acc[t.service_name] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
@@ -679,12 +603,7 @@ function consolidateTariffs(allExtractedData: ExtractedData[]): ParsedTariff[] {
     console.log(`[Consolidator]   - ${service}: ${count} rangos de peso`);
   });
 
-  const filledFieldsCount = allTariffs.reduce((count, t) => {
-    return count + Object.keys(t).filter(k => k !== 'service_name' && k !== 'weight_from' && k !== 'weight_to' && t[k] !== null).length;
-  }, 0);
-  console.log(`[Consolidator] Total campos rellenados: ${filledFieldsCount}`);
-
-  return allTariffs;
+  return consolidatedTariffs;
 }
 
 Deno.serve(async (req: Request) => {
