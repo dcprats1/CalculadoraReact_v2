@@ -40,9 +40,25 @@ export function TariffPdfUploader() {
     setIsDragging(false);
 
     const files = Array.from(e.dataTransfer.files);
-    const pdfFile = files.find(file => file.type === 'application/pdf');
+    const pdfFile = files.find(file =>
+      file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+    );
 
     if (pdfFile) {
+      if (pdfFile.size > 10 * 1024 * 1024) {
+        setUploadResult({
+          success: false,
+          message: 'El archivo es demasiado grande',
+          details: `Tamaño máximo: 10MB. Tu archivo: ${(pdfFile.size / 1024 / 1024).toFixed(2)}MB`
+        });
+        return;
+      }
+
+      console.log('[TariffPdfUploader] Archivo arrastrado:', {
+        nombre: pdfFile.name,
+        tamaño: pdfFile.size,
+        tipo: pdfFile.type
+      });
       setSelectedFile(pdfFile);
       setUploadResult(null);
     } else {
@@ -57,13 +73,29 @@ export function TariffPdfUploader() {
     const files = e.target.files;
     if (files && files.length > 0) {
       const file = files[0];
-      if (file.type === 'application/pdf') {
+
+      if (file.size > 10 * 1024 * 1024) {
+        setUploadResult({
+          success: false,
+          message: 'El archivo es demasiado grande',
+          details: `Tamaño máximo: 10MB. Tu archivo: ${(file.size / 1024 / 1024).toFixed(2)}MB`
+        });
+        return;
+      }
+
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        console.log('[TariffPdfUploader] Archivo seleccionado:', {
+          nombre: file.name,
+          tamaño: file.size,
+          tipo: file.type
+        });
         setSelectedFile(file);
         setUploadResult(null);
       } else {
         setUploadResult({
           success: false,
-          message: 'Por favor, selecciona un archivo PDF válido'
+          message: 'Por favor, selecciona un archivo PDF válido',
+          details: `Tipo detectado: ${file.type || 'desconocido'}`
         });
       }
     }
@@ -76,11 +108,25 @@ export function TariffPdfUploader() {
     setUploadResult(null);
 
     try {
+      console.log('[TariffPdfUploader] Iniciando subida de archivo:', {
+        nombre: selectedFile.name,
+        tamaño: selectedFile.size,
+        tipo: selectedFile.type
+      });
+
       const formData = new FormData();
-      formData.append('pdf', selectedFile);
+      formData.append('pdf', selectedFile, selectedFile.name);
+
+      console.log('[TariffPdfUploader] FormData creado, claves:', Array.from(formData.keys()));
 
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error('Variables de entorno de Supabase no configuradas');
+      }
+
+      console.log('[TariffPdfUploader] Enviando petición a:', `${supabaseUrl}/functions/v1/parse-pdf-tariff`);
 
       const response = await fetch(
         `${supabaseUrl}/functions/v1/parse-pdf-tariff`,
@@ -93,9 +139,25 @@ export function TariffPdfUploader() {
         }
       );
 
-      const result = await response.json();
+      console.log('[TariffPdfUploader] Respuesta recibida:', {
+        status: response.status,
+        statusText: response.statusText,
+        contentType: response.headers.get('content-type')
+      });
+
+      const responseText = await response.text();
+      console.log('[TariffPdfUploader] Respuesta raw:', responseText);
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (e) {
+        console.error('[TariffPdfUploader] Error al parsear JSON:', e);
+        throw new Error(`Respuesta inválida del servidor: ${responseText.substring(0, 100)}`);
+      }
 
       if (response.ok && result.success) {
+        console.log('[TariffPdfUploader] Importación exitosa:', result);
         setUploadResult({
           success: true,
           message: result.message,
@@ -103,14 +165,16 @@ export function TariffPdfUploader() {
           preview: result.preview,
         });
       } else {
+        console.error('[TariffPdfUploader] Error en la importación:', result);
         setUploadResult({
           success: false,
           message: result.error || 'Error al procesar el PDF',
-          details: result.details,
-          errors: result.errors,
+          details: result.details || JSON.stringify(result.debug),
+          errors: result.errors || result.suggestions,
         });
       }
     } catch (error) {
+      console.error('[TariffPdfUploader] Error capturado:', error);
       setUploadResult({
         success: false,
         message: 'Error al conectar con el servidor',

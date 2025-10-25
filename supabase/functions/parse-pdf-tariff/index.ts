@@ -143,6 +143,9 @@ function extractTextFromPDF(uint8Array: Uint8Array): { text: string; confidence:
 }
 
 Deno.serve(async (req: Request) => {
+  console.log(`[PDF Parser] Nueva petición: ${req.method}`);
+  console.log(`[PDF Parser] Headers:`, Object.fromEntries(req.headers.entries()));
+
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
@@ -151,24 +154,38 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    console.log(`[PDF Parser] Content-Type: ${req.headers.get('content-type')}`);
     const formData = await req.formData();
+    console.log(`[PDF Parser] FormData keys:`, Array.from(formData.keys()));
     const pdfFile = formData.get("pdf") as File;
+    console.log(`[PDF Parser] Archivo recibido:`, {
+      name: pdfFile?.name,
+      size: pdfFile?.size,
+      type: pdfFile?.type
+    });
 
     if (!pdfFile) {
+      console.error('[PDF Parser] No se recibió archivo PDF en el FormData');
       return new Response(
         JSON.stringify({
           error: "No se proporcionó archivo PDF",
-          details: "Por favor, selecciona un archivo PDF de tarifas GLS"
+          details: "Por favor, selecciona un archivo PDF de tarifas GLS",
+          debug: {
+            formDataKeys: Array.from(formData.keys()),
+            contentType: req.headers.get('content-type')
+          }
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (!pdfFile.type || pdfFile.type !== 'application/pdf') {
+      console.error(`[PDF Parser] Tipo de archivo inválido: ${pdfFile.type}`);
       return new Response(
         JSON.stringify({
           error: "El archivo debe ser un PDF",
-          details: `Tipo de archivo recibido: ${pdfFile.type || 'desconocido'}`
+          details: `Tipo de archivo recibido: ${pdfFile.type || 'desconocido'}`,
+          hint: "Asegúrate de que el archivo tenga extensión .pdf"
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
