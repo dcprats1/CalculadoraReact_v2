@@ -146,16 +146,22 @@ export function TariffPdfUploader({ onDataImported }: TariffPdfUploaderProps = {
 
       console.log('[TariffPdfUploader] Enviando petición a:', `${supabaseUrl}/functions/v1/parse-pdf-tariff`);
 
-      const response = await fetch(
-        `${supabaseUrl}/functions/v1/parse-pdf-tariff`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${supabaseAnonKey}`,
-          },
-          body: formData,
-        }
-      );
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+      try {
+        const response = await fetch(
+          `${supabaseUrl}/functions/v1/parse-pdf-tariff`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${supabaseAnonKey}`,
+            },
+            body: formData,
+            signal: controller.signal,
+          }
+        );
+        clearTimeout(timeoutId);
 
       console.log('[TariffPdfUploader] Respuesta recibida:', {
         status: response.status,
@@ -163,21 +169,33 @@ export function TariffPdfUploader({ onDataImported }: TariffPdfUploaderProps = {
         contentType: response.headers.get('content-type')
       });
 
-      const responseText = await response.text();
-      console.log('[TariffPdfUploader] Respuesta raw:', responseText);
+        const responseText = await response.text();
+        console.log('[TariffPdfUploader] Respuesta raw:', responseText.substring(0, 200));
 
-      let result;
-      try {
-        result = JSON.parse(responseText);
-      } catch (e) {
-        console.error('[TariffPdfUploader] Error al parsear JSON:', e);
-        throw new Error(`Respuesta inválida del servidor: ${responseText.substring(0, 100)}`);
-      }
+        let result;
+        try {
+          result = JSON.parse(responseText);
+        } catch (e) {
+          console.error('[TariffPdfUploader] Error al parsear JSON:', e);
+          throw new Error(`Respuesta inválida del servidor: ${responseText.substring(0, 100)}`);
+        }
 
       if (response.ok && result.success) {
         console.log('[TariffPdfUploader] Importación exitosa:', result);
 
-        await new Promise(resolve => setTimeout(resolve, 800));
+        if (result.verified === 0 || result.imported === 0) {
+          console.error('[TariffPdfUploader] Advertencia: No hay datos verificados en DB');
+          setUploadResult({
+            success: false,
+            message: 'Error de sincronización con base de datos',
+            details: `Se parsearon ${result.imported || 0} tarifas pero no se verificaron en la base de datos. Intenta de nuevo.`,
+          });
+          return;
+        }
+
+        if (result.verified !== result.imported) {
+          console.warn(`[TariffPdfUploader] Discrepancia: insertadas=${result.imported}, verificadas=${result.verified}`);
+        }
 
         setUploadResult({
           success: true,
@@ -196,6 +214,13 @@ export function TariffPdfUploader({ onDataImported }: TariffPdfUploaderProps = {
           details: result.details || JSON.stringify(result.debug),
           errors: result.errors || result.suggestions,
         });
+      }
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+          throw new Error('Timeout: El servidor tardó más de 2 minutos en responder');
+        }
+        throw fetchError;
       }
     } catch (error) {
       console.error('[TariffPdfUploader] Error capturado:', error);
