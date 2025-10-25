@@ -17,14 +17,6 @@ interface UploadResult {
   errors?: string[];
   error?: string;
   details?: string;
-  confidence?: 'high' | 'medium' | 'low';
-  pages?: number;
-  stats?: {
-    textLength: number;
-    linesProcessed: number;
-    pagesProcessed: number;
-  };
-  debugInfo?: any;
 }
 
 export function TariffPdfUploader() {
@@ -298,16 +290,6 @@ export function TariffPdfUploader() {
                     Registros importados: {uploadResult.imported}
                   </p>
                 )}
-                {uploadResult.pages !== undefined && (
-                  <p className="text-sm text-green-700 mt-1">
-                    Páginas procesadas: {uploadResult.pages}
-                  </p>
-                )}
-                {uploadResult.confidence && (
-                  <p className="text-sm text-green-700 mt-1">
-                    Confianza de extracción: {uploadResult.confidence === 'high' ? 'Alta' : uploadResult.confidence === 'medium' ? 'Media' : 'Baja'}
-                  </p>
-                )}
                 {uploadResult.details && (
                   <p className="text-sm text-red-700 mt-1">{uploadResult.details}</p>
                 )}
@@ -358,12 +340,10 @@ export function TariffPdfUploader() {
         <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
           <h4 className="font-medium text-blue-900 mb-2">Información importante:</h4>
           <ul className="text-sm text-blue-800 space-y-1">
-            <li>• Los datos se importarán a la tabla <code className="bg-blue-100 px-1 rounded">tariffspdf</code> (tabla de prueba)</li>
+            <li>• Los datos se importarán a la tabla <code className="bg-blue-100 px-1 rounded">tariffsPDF</code> (tabla de prueba)</li>
             <li>• El formato debe ser el PDF oficial de tarifas GLS España 2025</li>
-            <li>• Se usa PDF.js de Mozilla para extracción profesional de texto</li>
             <li>• Se extraerán automáticamente servicios, pesos y destinos</li>
             <li>• Los datos existentes NO se verán afectados</li>
-            <li>• Funciona con todos los navegadores (Chrome, Firefox, Safari, Edge)</li>
           </ul>
         </div>
       </div>

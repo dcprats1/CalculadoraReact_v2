@@ -147,55 +147,235 @@ interface ParsedTariff {
   [key: string]: string | number | null;
 }
 
-async function extractTextFromPDF(uint8Array: Uint8Array): Promise<{ text: string; confidence: 'high' | 'medium' | 'low'; pages: number }> {
+function decompressFlateDecode(data: Uint8Array): Uint8Array {
   try {
-    console.log('[PDF Parser] Intentando cargar PDF.js...');
+    const decompressed = new DecompressionStream('deflate');
+    const writer = decompressed.writable.getWriter();
+    writer.write(data);
+    writer.close();
 
-    const { getDocument, version } = await import("npm:pdfjs-dist@4.0.379/legacy/build/pdf.mjs");
+    const reader = decompressed.readable.getReader();
+    const chunks: Uint8Array[] = [];
 
-    console.log(`[PDF Parser] PDF.js cargado correctamente (versión ${version})`);
+    return new Promise((resolve, reject) => {
+      const pump = async () => {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (value) chunks.push(value);
+          }
 
-    const loadingTask = getDocument({
-      data: uint8Array,
-      verbosity: 0,
-      isEvalSupported: false,
-      useSystemFonts: true,
+          const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+          const result = new Uint8Array(totalLength);
+          let offset = 0;
+          for (const chunk of chunks) {
+            result.set(chunk, offset);
+            offset += chunk.length;
+          }
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      pump();
     });
+  } catch (error) {
+    console.error('[PDF Parser] Decompression error:', error);
+    return data;
+  }
+}
 
-    const pdfDocument = await loadingTask.promise;
-    const numPages = pdfDocument.numPages;
+function extractEncodedText(text: string): string {
+  let decoded = text;
 
-    console.log(`[PDF Parser] PDF cargado: ${numPages} páginas`);
+  decoded = decoded
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\r')
+    .replace(/\\t/g, '\t')
+    .replace(/\\\(/g, '(')
+    .replace(/\\\)/g, ')')
+    .replace(/\\\\/g, '\\')
+    .replace(/\\b/g, '\b')
+    .replace(/\\f/g, '\f');
 
-    let fullText = '';
+  decoded = decoded.replace(/\\(\d{3})/g, (match, octal) => {
+    const code = parseInt(octal, 8);
+    return String.fromCharCode(code);
+  });
 
-    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-      const page = await pdfDocument.getPage(pageNum);
-      const textContent = await page.getTextContent();
+  decoded = decoded.replace(/<([0-9A-Fa-f]+)>/g, (match, hex) => {
+    let result = '';
+    for (let i = 0; i < hex.length; i += 2) {
+      const byte = hex.substr(i, 2);
+      result += String.fromCharCode(parseInt(byte, 16));
+    }
+    return result;
+  });
 
-      const pageText = textContent.items
-        .map((item: any) => item.str || '')
-        .filter((str: string) => str.trim().length > 0)
-        .join(' ');
+  return decoded;
+}
 
-      fullText += pageText + '\n\n';
+async function extractTextFromPDF(uint8Array: Uint8Array): Promise<{ text: string; confidence: 'high' | 'medium' | 'low' }> {
+  const pdfSignature = uint8Array.slice(0, 5);
+  const signatureStr = new TextDecoder('utf-8').decode(pdfSignature);
 
-      console.log(`[PDF Parser] Página ${pageNum}/${numPages} procesada: ${pageText.length} caracteres`);
+  if (!signatureStr.startsWith('%PDF-')) {
+    throw new Error('El archivo no es un PDF válido');
+  }
+
+  try {
+    const textDecoder = new TextDecoder("latin1", { fatal: false });
+    let pdfText = textDecoder.decode(uint8Array);
+
+    const extractedChunks: string[] = [];
+    let confidence: 'high' | 'medium' | 'low' = 'low';
+
+    const objectPattern = /(\d+)\s+(\d+)\s+obj\s*([\s\S]*?)\s*endobj/g;
+    let objectMatch;
+    let totalObjectsProcessed = 0;
+    let totalTextExtracted = 0;
+
+    while ((objectMatch = objectPattern.exec(pdfText)) !== null) {
+      totalObjectsProcessed++;
+      const objectContent = objectMatch[3];
+
+      const streamMatch = /stream\s*([\s\S]*?)\s*endstream/g.exec(objectContent);
+      if (!streamMatch) {
+        const simpleTextPattern = /\(((?:[^()\\]|\\[()\\nrtfb]|\\[0-9]{3})*)\)\s*Tj/g;
+        let textMatch;
+
+        while ((textMatch = simpleTextPattern.exec(objectContent)) !== null) {
+          const extracted = extractEncodedText(textMatch[1]);
+          if (extracted.length > 0 && /[a-zA-Z0-9]/.test(extracted)) {
+            extractedChunks.push(extracted);
+            totalTextExtracted++;
+          }
+        }
+        continue;
+      }
+
+      const streamContent = streamMatch[1];
+
+      const filterMatch = /\/Filter\s*\/FlateDecode/i.exec(objectContent);
+      if (filterMatch) {
+        try {
+          const streamStartIndex = pdfText.indexOf('stream', objectMatch.index) + 6;
+          while (pdfText.charCodeAt(streamStartIndex) === 13 || pdfText.charCodeAt(streamStartIndex) === 10) {
+            streamStartIndex++;
+          }
+          const streamEndIndex = pdfText.indexOf('endstream', streamStartIndex);
+
+          const compressedData = uint8Array.slice(streamStartIndex, streamEndIndex);
+          const decompressed = await decompressFlateDecode(compressedData);
+          const decompressedText = new TextDecoder('latin1').decode(decompressed);
+
+          const tjPattern = /\(((?:[^()\\]|\\[()\\nrtfb]|\\[0-9]{3})*)\)\s*Tj/g;
+          let tjMatch;
+          while ((tjMatch = tjPattern.exec(decompressedText)) !== null) {
+            const extracted = extractEncodedText(tjMatch[1]);
+            if (extracted.length > 0) {
+              extractedChunks.push(extracted);
+              totalTextExtracted++;
+            }
+          }
+
+          const tjArrayPattern = /\[((?:[^\[\]]|\\\[|\\\])*)\]\s*TJ/g;
+          let tjArrayMatch;
+          while ((tjArrayMatch = tjArrayPattern.exec(decompressedText)) !== null) {
+            const arrayContent = tjArrayMatch[1];
+            const stringMatches = arrayContent.match(/\(((?:[^()\\]|\\[()\\nrtfb]|\\[0-9]{3})*)\)/g);
+
+            if (stringMatches) {
+              for (const str of stringMatches) {
+                const cleaned = str.replace(/^\(|\)$/g, '');
+                const extracted = extractEncodedText(cleaned);
+                if (extracted.length > 0) {
+                  extractedChunks.push(extracted);
+                  totalTextExtracted++;
+                }
+              }
+            }
+          }
+        } catch (decompError) {
+          console.error('[PDF Parser] Decompression failed for object:', decompError);
+        }
+        continue;
+      }
+
+      const textObjectPattern = /\(((?:[^()\\]|\\[()\\nrtfb]|\\[0-9]{3})*)\)\s*Tj/g;
+      let textMatch;
+
+      while ((textMatch = textObjectPattern.exec(streamContent)) !== null) {
+        const extracted = extractEncodedText(textMatch[1]);
+        if (extracted.length > 0 && /[a-zA-Z0-9]/.test(extracted)) {
+          extractedChunks.push(extracted);
+          totalTextExtracted++;
+        }
+      }
+
+      const tjArrayPattern = /\[((?:[^\[\]]|\\\[|\\\])*)\]\s*TJ/g;
+      let tjMatch;
+
+      while ((tjMatch = tjArrayPattern.exec(streamContent)) !== null) {
+        const arrayContent = tjMatch[1];
+        const stringMatches = arrayContent.match(/\(((?:[^()\\]|\\[()\\nrtfb]|\\[0-9]{3})*)\)/g);
+
+        if (stringMatches) {
+          for (const str of stringMatches) {
+            const cleaned = str.replace(/^\(|\)$/g, '');
+            const extracted = extractEncodedText(cleaned);
+            if (extracted.length > 0) {
+              extractedChunks.push(extracted);
+              totalTextExtracted++;
+            }
+          }
+        }
+      }
     }
 
-    const confidence = fullText.length > 1000 ? 'high' : fullText.length > 300 ? 'medium' : 'low';
+    const extractedText = extractedChunks.join(' ');
 
-    console.log(`[PDF Parser] Extracción completada: ${fullText.length} caracteres totales, confianza: ${confidence}`);
+    if (extractedText.length > 1000 && totalTextExtracted > 50) {
+      confidence = 'high';
+    } else if (extractedText.length > 300 && totalTextExtracted > 20) {
+      confidence = 'medium';
+    } else {
+      confidence = 'low';
+    }
 
-    return {
-      text: fullText,
-      confidence,
-      pages: numPages
-    };
+    console.log(`[PDF Parser] Extraction stats:`, {
+      totalBytes: uint8Array.length,
+      objectsProcessed: totalObjectsProcessed,
+      textChunksExtracted: totalTextExtracted,
+      totalTextLength: extractedText.length,
+      confidence
+    });
 
+    if (extractedText.length < 100) {
+      const fallbackPattern = /BT\s+([\s\S]*?)\s+ET/g;
+      let fallbackMatch;
+      const fallbackChunks: string[] = [];
+
+      while ((fallbackMatch = fallbackPattern.exec(pdfText)) !== null) {
+        const btContent = fallbackMatch[1];
+        const simpleText = btContent.match(/\(([^)]+)\)/g);
+        if (simpleText) {
+          fallbackChunks.push(...simpleText.map(t => extractEncodedText(t.replace(/[()]/g, ''))));
+        }
+      }
+
+      if (fallbackChunks.length > 0) {
+        return { text: fallbackChunks.join(' '), confidence: 'medium' };
+      }
+
+      const rawText = pdfText.replace(/[^\x20-\x7E\xA0-\xFF\n]/g, ' ');
+      return { text: rawText, confidence: 'low' };
+    }
+
+    return { text: extractedText, confidence };
   } catch (error) {
-    console.error('[PDF Parser] Error al usar PDF.js:', error);
-    throw new Error(`Error al extraer texto del PDF con PDF.js: ${error.message}`);
+    throw new Error(`Error al extraer texto del PDF: ${error.message}`);
   }
 }
 
@@ -244,6 +424,32 @@ function parseNumericValue(value: string): number | null {
 
   const parsed = parseFloat(cleaned);
   return isNaN(parsed) ? null : parsed;
+}
+
+function extractTableStructure(lines: string[]): { rows: string[][], headers: string[] } {
+  const rows: string[][] = [];
+  let headers: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.trim().length === 0) continue;
+
+    const parts = line.split(/\s{2,}|\t+/).map(p => p.trim()).filter(p => p.length > 0);
+
+    if (parts.length > 5) {
+      if (parts.some(p => /provincial|regional|nacional|portugal/i.test(p))) {
+        headers = parts;
+        console.log(`[PDF Parser] Table headers detected at line ${i}:`, headers);
+        continue;
+      }
+
+      if (parts.some(p => /^\d+([.,]\d+)?\s*kg/i.test(p) || /^\d+$/.test(p))) {
+        rows.push(parts);
+      }
+    }
+  }
+
+  return { rows, headers };
 }
 
 Deno.serve(async (req: Request) => {
@@ -295,15 +501,22 @@ Deno.serve(async (req: Request) => {
     const arrayBuffer = await pdfFile.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
 
-    const { text: pdfText, confidence, pages } = await extractTextFromPDF(uint8Array);
+    const { text: pdfText, confidence } = await extractTextFromPDF(uint8Array);
 
-    console.log(`[PDF Parser] Texto extraído (${pdfText.length} caracteres, ${pages} páginas) con confianza: ${confidence}`);
+    console.log(`[PDF Parser] Texto extraído (${pdfText.length} caracteres) con confianza: ${confidence}`);
     console.log(`[PDF Parser] Primeros 800 caracteres:`, pdfText.substring(0, 800));
 
     const normalizedText = normalizeSpaces(pdfText);
     const lines = normalizedText.split('\n').filter(line => line.trim().length > 0);
 
-    console.log(`[PDF Parser] Procesamiento: ${lines.length} líneas detectadas`);
+    const { rows: tableRows, headers: tableHeaders } = extractTableStructure(lines);
+
+    console.log(`[PDF Parser] Procesamiento:`, {
+      totalLines: lines.length,
+      tableRowsDetected: tableRows.length,
+      tableHeaders: tableHeaders.length,
+      confidence
+    });
 
     const parsedTariffs: ParsedTariff[] = [];
     const warnings: string[] = [];
@@ -328,6 +541,13 @@ Deno.serve(async (req: Request) => {
 
       const weightRange = parseWeightRange(line);
       if (!weightRange) {
+        if (parts.length > 3 && parts.some(p => /^\d+[.,]?\d*$/.test(p))) {
+          const firstPart = parts[0];
+          const potentialWeight = parseWeightRange(firstPart);
+          if (potentialWeight) {
+            console.log(`[PDF Parser] Peso detectado indirectamente en línea ${i}: ${firstPart}`);
+          }
+        }
         continue;
       }
 
@@ -406,7 +626,7 @@ Deno.serve(async (req: Request) => {
             processedLines,
             confidence,
             textLength: pdfText.length,
-            pages,
+            tableRowsDetected: tableRows.length,
             sampleLines: lines.slice(0, 30),
             extractedTextSample: pdfText.substring(0, 1500)
           }
@@ -454,11 +674,10 @@ Deno.serve(async (req: Request) => {
         imported: insertedData?.length || 0,
         warnings: warnings.length > 0 ? warnings.slice(0, 10) : undefined,
         confidence,
-        pages,
         stats: {
           textLength: pdfText.length,
           linesProcessed: processedLines,
-          pagesProcessed: pages
+          tableRowsDetected: tableRows.length
         },
         preview: parsedTariffs.slice(0, 5)
       }),
