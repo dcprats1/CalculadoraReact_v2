@@ -260,9 +260,9 @@ interface ColumnMapping {
 }
 
 const COLUMN_MAPPINGS: ColumnMapping[] = [
-  { name: "Recogida", fieldSuffix: "_rec", patterns: [/recogida/i, /recogidas/i, /\brec\b/i] },
   { name: "Arrastre", fieldSuffix: "_arr", patterns: [/arrastre/i, /\barr\b/i] },
   { name: "Salidas", fieldSuffix: "_sal", patterns: [/salidas?/i, /\bsal\b/i] },
+  { name: "Recogidas", fieldSuffix: "_rec", patterns: [/recogidas/i, /\brec\b/i] },
   { name: "Interciudad", fieldSuffix: "_int", patterns: [/interciudad/i, /\bint\b/i] },
 ];
 
@@ -493,29 +493,42 @@ function detectWeightInLine(line: string): { from: string; to: string } | null {
 }
 
 /**
- * Extrae todos los valores numéricos de una línea de tabla
- * @param line - Línea de texto con valores numéricos separados por espacios
- * @returns Array con todos los valores numéricos encontrados en orden
+ * Extrae los 4 valores numéricos relevantes de una línea de tabla
+ * SOLO extrae: Arrastre, Salidas, Recogidas (plural), Interciudad
+ * IGNORA: Recogida (singular), Entrega
  *
- * Ejemplos de líneas válidas:
- * - "1 Kg. 1,17 1,01 2,00 3,01 2,18 4,18 0,34"
- * - "3 Kg. 1,23 1,08 2,00 3,08 2,31 4,31 0,34"
- * - "Provincial 1,17 1,01 1,25 2,26 2,18 3,43"
+ * @param line - Línea de texto con valores numéricos separados por espacios
+ * @returns Array con exactamente 4 valores: [arrastre, salidas, recogidas, interciudad]
+ *
+ * Estructura esperada del PDF:
+ * [Peso] [Recogida_IGNORAR] [Arrastre] [Entrega_IGNORAR] [Salidas] [Recogidas] [Interciudad] [...otros]
+ *
+ * Ejemplo: "1 Kg. 1,17 1,01 1,17 2,18 2,18 3,35"
+ * → Extrae índices: [1,01] [2,18] [2,18] [3,35]
  */
 function extractNumericValues(line: string): number[] {
   const parts = line.split(/\s+/);
-  const values: number[] = [];
+  const allNumbers: number[] = [];
 
   for (const part of parts) {
     const cleaned = part.replace(/,/g, '.').replace(/[^0-9.]/g, '');
     const num = parseFloat(cleaned);
 
     if (!isNaN(num) && num > 0 && num < 10000) {
-      values.push(num);
+      allNumbers.push(num);
     }
   }
 
-  return values;
+  if (allNumbers.length >= 6) {
+    return [
+      allNumbers[1],
+      allNumbers[3],
+      allNumbers[4],
+      allNumbers[5]
+    ];
+  }
+
+  return allNumbers;
 }
 
 interface ExtractedData {
@@ -547,8 +560,8 @@ function detectColumnsInBlock(block: TableBlock): string[] {
   }
 
   if (detectedColumns.length === 0) {
-    console.log(`[ColumnDetector] ⚠ No se detectaron columnas, usando orden estándar: _sal, _rec, _int, _arr`);
-    return ["_sal", "_rec", "_int", "_arr"];
+    console.log(`[ColumnDetector] ⚠ No se detectaron columnas, usando orden estándar: _arr, _sal, _rec, _int`);
+    return ["_arr", "_sal", "_rec", "_int"];
   }
 
   console.log(`[ColumnDetector] Columnas detectadas en orden: ${detectedColumns.join(", ")}`);
