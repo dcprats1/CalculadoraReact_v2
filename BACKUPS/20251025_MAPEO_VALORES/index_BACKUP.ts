@@ -437,16 +437,6 @@ function detectWeightInLine(line: string): { from: string; to: string } | null {
   return null;
 }
 
-/**
- * Extrae todos los valores numéricos de una línea de tabla
- * @param line - Línea de texto con valores numéricos separados por espacios
- * @returns Array con todos los valores numéricos encontrados en orden
- *
- * Ejemplos de líneas válidas:
- * - "1 Kg. 1,17 1,01 2,00 3,01 2,18 4,18 0,34"
- * - "3 Kg. 1,23 1,08 2,00 3,08 2,31 4,31 0,34"
- * - "Provincial 1,17 1,01 1,25 2,26 2,18 3,43"
- */
 function extractNumericValues(line: string): number[] {
   const parts = line.split(/\s+/);
   const values: number[] = [];
@@ -508,26 +498,6 @@ function extractTariffsFromBlock(block: TableBlock): ExtractedData[] {
   return extractedData;
 }
 
-/**
- * Consolida tarifas por servicio y rango de peso, aplicando el mapeo correcto
- * de valores numéricos según especificación GLS España.
- *
- * MAPEO DE VALORES (6 valores por fila en tabla GLS):
- * - values[0] → Ignorar (peso o texto descriptivo)
- * - values[1] → Arrastre (_arr)
- * - values[2] → Ignorar (columna intermedia no usada)
- * - values[3] → Salidas (_sal)
- * - values[4] → Recogidas (_rec)
- * - values[5] → Interciudad (_int)
- *
- * COLUMNAS A IGNORAR:
- * - "Km" en Express10:30 (última columna)
- *
- * CASOS ESPECIALES:
- * - Parcel Shop: Solo 1 valor (_sal)
- * - Azores/Madeira: Solo 2 valores (_sal y _rec)
- * - Destinos especiales (Ceuta, Melilla, Gibraltar, Andorra): Solo 2 rangos de peso
- */
 function consolidateTariffs(allExtractedData: ExtractedData[]): ParsedTariff[] {
   console.log(`[Consolidator] ===== CONSOLIDANDO TARIFAS GLOBALMENTE =====`);
   console.log(`[Consolidator] Total datos a procesar: ${allExtractedData.length}`);
@@ -549,41 +519,20 @@ function consolidateTariffs(allExtractedData: ExtractedData[]): ParsedTariff[] {
     const isParcelShop = data.serviceName === "Parcel Shop";
     const isAzoresOrMadeira = data.zone.startsWith("azores_") || data.zone.startsWith("madeira_");
 
-    console.log(`[Consolidator] Procesando: ${data.serviceName} | ${data.weightFrom}-${data.weightTo}kg | Zona: ${data.zone} | Valores: [${data.values.join(', ')}]`);
-
-    // Caso especial: Parcel Shop (solo 1 valor)
-    if (isParcelShop && data.values.length >= 1) {
-      tariff[`${data.zone}_sal`] = data.values[0];
-      console.log(`[Consolidator]   → Parcel Shop: sal=${data.values[0]}`);
-    }
-    // Caso especial: Azores/Madeira (solo 2 valores)
-    else if (isAzoresOrMadeira && data.values.length >= 2) {
+    if (data.values.length >= 4 && !isParcelShop && !isAzoresOrMadeira) {
       tariff[`${data.zone}_sal`] = data.values[0];
       tariff[`${data.zone}_rec`] = data.values[1];
-      console.log(`[Consolidator]   → Azores/Madeira: sal=${data.values[0]}, rec=${data.values[1]}`);
-    }
-    // Caso estándar: 6 valores numéricos (mapeo correcto)
-    else if (data.values.length >= 6) {
-      // Mapeo según especificación:
-      // values[1] → arr, values[3] → sal, values[4] → rec, values[5] → int
-      // Ignorar: values[0], values[2], y values[6+] (columna Km si existe)
-      tariff[`${data.zone}_arr`] = data.values[1];
-      tariff[`${data.zone}_sal`] = data.values[3];
-      tariff[`${data.zone}_rec`] = data.values[4];
-      tariff[`${data.zone}_int`] = data.values[5];
-      console.log(`[Consolidator]   → Mapeo estándar: arr=${data.values[1]}, sal=${data.values[3]}, rec=${data.values[4]}, int=${data.values[5]} | Ignorados: [${data.values[0]}, ${data.values[2]}]`);
-    }
-    // Caso legacy: 4 valores (compatibilidad hacia atrás)
-    else if (data.values.length >= 4) {
-      tariff[`${data.zone}_arr`] = data.values[0];
-      tariff[`${data.zone}_sal`] = data.values[1];
-      tariff[`${data.zone}_rec`] = data.values[2];
+      tariff[`${data.zone}_arr`] = data.values[2];
       tariff[`${data.zone}_int`] = data.values[3];
-      console.log(`[Consolidator]   → Mapeo legacy (4 valores): arr=${data.values[0]}, sal=${data.values[1]}, rec=${data.values[2]}, int=${data.values[3]}`);
-    }
-    // Valores insuficientes
-    else {
-      console.warn(`[Consolidator]   ⚠ Valores insuficientes para ${data.serviceName} ${data.zone} ${data.weightFrom}-${data.weightTo}kg: solo ${data.values.length} valores`);
+    } else if (data.values.length >= 2 && isAzoresOrMadeira) {
+      tariff[`${data.zone}_sal`] = data.values[0];
+      tariff[`${data.zone}_rec`] = data.values[1];
+    } else if (data.values.length >= 1 && isParcelShop) {
+      tariff[`${data.zone}_sal`] = data.values[0];
+    } else if (data.values.length >= 3) {
+      tariff[`${data.zone}_sal`] = data.values[0];
+      tariff[`${data.zone}_rec`] = data.values[1];
+      tariff[`${data.zone}_arr`] = data.values[2];
     }
   }
 
