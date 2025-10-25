@@ -247,6 +247,112 @@ function parseNumericValue(value: string): number | null {
   return isNaN(parsed) ? null : parsed;
 }
 
+interface TableRow {
+  weightFrom: string;
+  weightTo: string;
+  values: number[];
+  rawLine: string;
+  lineIndex: number;
+}
+
+function extractTableStructure(lines: string[], serviceStart: number): {
+  headers: string[];
+  rows: TableRow[];
+  destinationType: string | null;
+} {
+  const headers: string[] = [];
+  const rows: TableRow[] = [];
+  let destinationType: string | null = null;
+
+  for (let i = serviceStart; i < Math.min(serviceStart + 50, lines.length); i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (trimmed.length === 0) continue;
+
+    if (/^(Interciudad|Provincial|Regional|Nacional)$/i.test(trimmed)) {
+      destinationType = trimmed.toLowerCase();
+      console.log(`[ExtractTable] Tipo de destino detectado: ${destinationType}`);
+      continue;
+    }
+
+    if (/^(Peso|Coste Total|Recogida|Arrastre|Entrega|Salidas)/i.test(trimmed)) {
+      const headerParts = line.split(/\s+/).filter(p => p.trim().length > 0);
+      headers.push(...headerParts);
+      console.log(`[ExtractTable] Encabezados detectados:`, headerParts);
+      continue;
+    }
+
+    const weightMatch = line.match(/(\d+)\s*[Kk]g\.?/);
+    if (weightMatch) {
+      const weight = parseInt(weightMatch[1]);
+      const parts = line.split(/\s+/).filter(p => p.trim().length > 0);
+
+      const numericValues: number[] = [];
+      for (const part of parts) {
+        const val = parseNumericValue(part);
+        if (val !== null) {
+          numericValues.push(val);
+        }
+      }
+
+      if (numericValues.length >= 4) {
+        let weightTo: string;
+        if (weight === 1) {
+          weightTo = '1';
+        } else if (weight === 3) {
+          weightTo = '3';
+        } else if (weight === 5) {
+          weightTo = '5';
+        } else if (weight === 10) {
+          weightTo = '10';
+        } else if (weight === 15) {
+          weightTo = '15';
+        } else {
+          weightTo = weight.toString();
+        }
+
+        const weightFrom = weight === 1 ? '0' : weight === 3 ? '1' : weight === 5 ? '3' : weight === 10 ? '5' : weight === 15 ? '10' : (weight - 1).toString();
+
+        rows.push({
+          weightFrom,
+          weightTo,
+          values: numericValues,
+          rawLine: line,
+          lineIndex: i
+        });
+
+        console.log(`[ExtractTable] Fila detectada - ${weightFrom}-${weightTo}kg: ${numericValues.length} valores`);
+      }
+    }
+
+    if (/\+\s*[Kk]g/i.test(line)) {
+      const parts = line.split(/\s+/).filter(p => p.trim().length > 0);
+      const numericValues: number[] = [];
+      for (const part of parts) {
+        const val = parseNumericValue(part);
+        if (val !== null) {
+          numericValues.push(val);
+        }
+      }
+
+      if (numericValues.length >= 2) {
+        rows.push({
+          weightFrom: '15',
+          weightTo: '999',
+          values: numericValues,
+          rawLine: line,
+          lineIndex: i
+        });
+
+        console.log(`[ExtractTable] Fila +Kg detectada: ${numericValues.length} valores`);
+      }
+    }
+  }
+
+  return { headers, rows, destinationType };
+}
+
 Deno.serve(async (req: Request) => {
   console.log(`[PDF Parser] Nueva petición: ${req.method}`);
 
@@ -318,10 +424,6 @@ Deno.serve(async (req: Request) => {
 
     const parsedTariffs: ParsedTariff[] = [];
     const warnings: string[] = [];
-
-    let currentService: string | null = null;
-    let currentDestination: string | null = null;
-    let detectedColumns: string[] = [];
     let processedLines = 0;
 
     for (let i = 0; i < lines.length; i++) {
@@ -330,84 +432,82 @@ Deno.serve(async (req: Request) => {
 
       const serviceDetection = PDFTableHeaderDetector.detectServiceName(line);
       if (serviceDetection && serviceDetection.confidence >= 0.6) {
-        currentService = serviceDetection.dbName;
-        console.log(`[PDF Parser] Servicio detectado en línea ${i}: ${serviceDetection.dbName} (confianza: ${serviceDetection.confidence})`);
-        continue;
-      }
+        const currentService = serviceDetection.dbName;
+        console.log(`[PDF Parser] ========================================`);
+        console.log(`[PDF Parser] SERVICIO DETECTADO: ${currentService}`);
+        console.log(`[PDF Parser] ========================================`);
 
-      const destDetection = PDFTableHeaderDetector.detectDestinationZone(line);
-      if (destDetection && destDetection.confidence >= 0.6) {
-        currentDestination = destDetection.dbPrefix;
-        console.log(`[PDF Parser] Zona detectada en línea ${i}: ${destDetection.displayName} (${destDetection.dbPrefix})`);
-      }
+        const tableData = extractTableStructure(lines, i + 1);
+        console.log(`[PDF Parser] Tabla extraída:`, {
+          headers: tableData.headers,
+          rows: tableData.rows.length,
+          destinationType: tableData.destinationType
+        });
 
-      const columnHeaders = PDFTableHeaderDetector.detectColumns(line);
-      if (columnHeaders.length >= 3) {
-        detectedColumns = columnHeaders.map(c => c.dbField);
-        console.log(`[PDF Parser] Columnas detectadas en línea ${i}:`, detectedColumns);
-      }
+        const columnMapping: { [key: string]: string } = {
+          'recogida': '_rec',
+          'arrastre': '_arr',
+          'entrega': '_ent',
+          'salidas': '_sal',
+          'interciudad': '_int',
+          'rec': '_rec',
+          'arr': '_arr',
+          'ent': '_ent',
+          'sal': '_sal',
+          'int': '_int'
+        };
 
-      if (!currentService) continue;
+        const destinationPrefixMap: { [key: string]: string } = {
+          'interciudad': 'nacional',
+          'provincial': 'provincial',
+          'regional': 'regional',
+          'nacional': 'nacional'
+        };
 
-      const parts = line.split(/\s+/).filter(p => p.trim().length > 0);
+        for (const row of tableData.rows) {
+          const tariff: ParsedTariff = {
+            service_name: currentService,
+            weight_from: row.weightFrom,
+            weight_to: row.weightTo,
+          };
 
-      const weightRangeDetection = PDFTableHeaderDetector.detectWeightRange(line);
-      if (!weightRangeDetection) {
-        continue;
-      }
+          const destPrefix = tableData.destinationType
+            ? destinationPrefixMap[tableData.destinationType] || 'nacional'
+            : 'nacional';
 
-      console.log(`[PDF Parser] Procesando rango de peso ${weightRangeDetection.from}-${weightRangeDetection.to}kg en línea ${i}`);
+          if (row.values.length >= 6) {
+            tariff[`${destPrefix}_rec`] = row.values[0];
+            tariff[`${destPrefix}_arr`] = row.values[1];
+            tariff[`${destPrefix}_ent`] = row.values[2];
+            tariff[`${destPrefix}_sal`] = row.values[3];
 
-      if (parts.length < 2) {
-        warnings.push(`Línea ${i+1}: Datos insuficientes para ${weightRangeDetection.from}-${weightRangeDetection.to}kg`);
-        continue;
-      }
+            if (destPrefix === 'provincial' && row.values.length >= 5) {
+              tariff[`provincial_rec`] = row.values[4] || row.values[0];
+            }
+            if (destPrefix === 'regional' && row.values.length >= 5) {
+              tariff[`regional_rec`] = row.values[4] || row.values[0];
+            }
 
-      const tariff: ParsedTariff = {
-        service_name: currentService,
-        weight_from: weightRangeDetection.from,
-        weight_to: weightRangeDetection.to,
-      };
+            tariff[`${destPrefix}_int`] = row.values[row.values.length - 1];
+          } else if (row.values.length >= 4) {
+            tariff[`${destPrefix}_rec`] = row.values[0];
+            tariff[`${destPrefix}_arr`] = row.values[1];
+            tariff[`${destPrefix}_ent`] = row.values[2];
+            tariff[`${destPrefix}_sal`] = row.values[3];
+          } else if (row.values.length === 2) {
+            tariff[`${destPrefix}_rec`] = row.values[0];
+            tariff[`${destPrefix}_arr`] = row.values[1];
+          }
 
-      const numericValues: number[] = [];
-      for (const part of parts) {
-        const value = parseNumericValue(part);
-        if (value !== null) {
-          numericValues.push(value);
-        }
-      }
-
-      console.log(`[PDF Parser] Valores numéricos encontrados:`, numericValues);
-
-      if (numericValues.length > 0) {
-        const destinations = [
-          "provincial", "regional", "nacional", "portugal",
-          "baleares_mayores", "baleares_menores",
-          "canarias_mayores", "canarias_menores",
-          "ceuta", "melilla",
-          "andorra", "gibraltar",
-          "azores_mayores", "azores_menores",
-          "madeira_mayores", "madeira_menores"
-        ];
-
-        const columnsToUse = detectedColumns.length >= 3 ? detectedColumns : ["_sal", "_rec", "_int", "_arr"];
-
-        for (let colIndex = 0; colIndex < numericValues.length; colIndex++) {
-          const destIndex = Math.floor(colIndex / columnsToUse.length);
-          const typeIndex = colIndex % columnsToUse.length;
-
-          if (destIndex < destinations.length && typeIndex < columnsToUse.length) {
-            const fieldName = destinations[destIndex] + columnsToUse[typeIndex];
-            tariff[fieldName] = numericValues[colIndex];
+          if (Object.keys(tariff).length > 3) {
+            parsedTariffs.push(tariff);
+            console.log(`[PDF Parser] Tarifa creada:`, tariff);
+          } else {
+            warnings.push(`Fila ${row.lineIndex}: Datos insuficientes (${Object.keys(tariff).length} campos)`);
           }
         }
 
-        if (Object.keys(tariff).length > 3) {
-          parsedTariffs.push(tariff);
-          console.log(`[PDF Parser] Tarifa añadida:`, tariff);
-        } else {
-          warnings.push(`Línea ${i+1}: Tarifa con pocos datos (${Object.keys(tariff).length} campos)`);
-        }
+        i += tableData.rows.length + 10;
       }
     }
 
