@@ -283,6 +283,13 @@ Deno.serve(async (req: Request) => {
 
     const newExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
+    await supabaseAdmin
+      .from('user_sessions')
+      .update({ is_active: false })
+      .eq('user_id', userProfile.id)
+      .eq('device_fingerprint', deviceFingerprint)
+      .eq('is_active', true);
+
     const sessionToken = btoa(JSON.stringify({
       userId: userProfile.id,
       email: userProfile.email,
