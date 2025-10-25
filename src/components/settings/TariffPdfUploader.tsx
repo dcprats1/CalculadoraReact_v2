@@ -14,6 +14,8 @@ interface UploadResult {
   success: boolean;
   message: string;
   imported?: number;
+  verified?: number;
+  uniqueServices?: number;
   preview?: ParsedTariff[];
   errors?: string[];
   error?: string;
@@ -174,10 +176,15 @@ export function TariffPdfUploader({ onDataImported }: TariffPdfUploaderProps = {
 
       if (response.ok && result.success) {
         console.log('[TariffPdfUploader] Importación exitosa:', result);
+
+        await new Promise(resolve => setTimeout(resolve, 800));
+
         setUploadResult({
           success: true,
           message: result.message,
           imported: result.imported,
+          verified: result.verified,
+          uniqueServices: result.uniqueServices,
           preview: result.preview,
         });
         setCurrentPhase('preview');
@@ -359,7 +366,15 @@ export function TariffPdfUploader({ onDataImported }: TariffPdfUploaderProps = {
                 </p>
                 {uploadResult.imported !== undefined && (
                   <p className="text-sm text-green-700 mt-1">
-                    Registros importados: {uploadResult.imported}
+                    Tarifas importadas: {uploadResult.imported}
+                    {uploadResult.verified !== undefined && uploadResult.verified !== uploadResult.imported && (
+                      <span className="text-yellow-700"> (verificadas: {uploadResult.verified})</span>
+                    )}
+                  </p>
+                )}
+                {uploadResult.uniqueServices !== undefined && (
+                  <p className="text-sm text-green-700 mt-1">
+                    Servicios detectados: {uploadResult.uniqueServices}
                   </p>
                 )}
                 {uploadResult.pages !== undefined && (

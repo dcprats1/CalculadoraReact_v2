@@ -42,24 +42,37 @@ export function TariffPdfPreview({ onConfirm, onCancel, onDataImported }: Tariff
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadTariffsPdf();
+    loadTariffsPdfWithRetry();
   }, []);
+
+  const loadTariffsPdfWithRetry = async (retryCount = 0) => {
+    const maxRetries = 3;
+    await loadTariffsPdf();
+
+    if (tariffs.length === 0 && retryCount < maxRetries) {
+      console.log(`[TariffPdfPreview] Reintenando carga (${retryCount + 1}/${maxRetries})...`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return loadTariffsPdfWithRetry(retryCount + 1);
+    }
+  };
 
   const loadTariffsPdf = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from('tariffspdf')
-        .select('*')
+        .select('*', { count: 'exact' })
         .order('service_name', { ascending: true })
         .order('weight_from', { ascending: true });
 
       if (error) throw error;
 
+      console.log(`[TariffPdfPreview] Datos cargados: ${data?.length || 0} registros (count: ${count})`);
+
       setTariffs(data || []);
       setSelectedIds(new Set(data?.map(t => t.id) || []));
     } catch (err: any) {
-      console.error('Error cargando tariffspdf:', err);
+      console.error('[TariffPdfPreview] Error cargando tariffspdf:', err);
       setError(err.message || 'Error al cargar datos temporales');
     } finally {
       setLoading(false);
@@ -167,9 +180,12 @@ export function TariffPdfPreview({ onConfirm, onCancel, onDataImported }: Tariff
     return (
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
         <AlertTriangle className="w-12 h-12 text-yellow-600 mx-auto mb-3" />
-        <p className="text-yellow-900 font-medium">No hay datos para importar</p>
+        <p className="text-yellow-900 font-medium">No se encontraron tarifas en la tabla temporal</p>
         <p className="text-sm text-yellow-700 mt-2">
-          Parece que no se extrajeron tarifas del PDF. Intenta con otro archivo.
+          La importación reportó éxito pero no hay datos en la vista previa.
+        </p>
+        <p className="text-xs text-yellow-600 mt-1">
+          Esto puede deberse a un problema de sincronización. Intenta de nuevo.
         </p>
         <button
           onClick={onCancel}

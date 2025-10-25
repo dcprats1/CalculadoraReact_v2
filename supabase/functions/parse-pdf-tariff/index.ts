@@ -453,10 +453,18 @@ function extractNumericValues(line: string): number[] {
   return values;
 }
 
-function extractTariffsFromBlock(block: TableBlock): ParsedTariff[] {
+interface ExtractedData {
+  serviceName: string;
+  weightFrom: string;
+  weightTo: string;
+  zone: string;
+  values: number[];
+}
+
+function extractTariffsFromBlock(block: TableBlock): ExtractedData[] {
   console.log(`[Extractor] ===== EXTRAYENDO TARIFAS DE ${block.serviceName} =====`);
 
-  const tariffsByWeight = new Map<string, ParsedTariff>();
+  const extractedData: ExtractedData[] = [];
   let currentZone: string | null = null;
 
   for (let i = 0; i < block.lines.length; i++) {
@@ -472,47 +480,79 @@ function extractTariffsFromBlock(block: TableBlock): ParsedTariff[] {
     const weight = detectWeightInLine(line);
     if (weight && currentZone) {
       const values = extractNumericValues(line);
-      const weightKey = `${weight.from}-${weight.to}`;
 
-      if (!tariffsByWeight.has(weightKey)) {
-        tariffsByWeight.set(weightKey, {
-          service_name: block.serviceName,
-          weight_from: weight.from,
-          weight_to: weight.to,
+      if (values.length > 0) {
+        extractedData.push({
+          serviceName: block.serviceName,
+          weightFrom: weight.from,
+          weightTo: weight.to,
+          zone: currentZone,
+          values: values
         });
-      }
-
-      const tariff = tariffsByWeight.get(weightKey)!;
-      const isParcelShop = block.serviceName === "Parcel Shop";
-      const isAzoresOrMadeira = currentZone.startsWith("azores_") || currentZone.startsWith("madeira_");
-
-      if (values.length >= 4 && !isParcelShop && !isAzoresOrMadeira) {
-        tariff[`${currentZone}_sal`] = values[0];
-        tariff[`${currentZone}_rec`] = values[1];
-        tariff[`${currentZone}_arr`] = values[2];
-        tariff[`${currentZone}_int`] = values[3];
-        console.log(`[Extractor]     ✓ Tarifa completa: ${weightKey}kg, zona: ${currentZone}, 4 valores`);
-      } else if (values.length >= 2 && isAzoresOrMadeira) {
-        tariff[`${currentZone}_sal`] = values[0];
-        tariff[`${currentZone}_rec`] = values[1];
-        console.log(`[Extractor]     ✓ Tarifa Azores/Madeira: ${weightKey}kg, zona: ${currentZone}, 2 valores (sin arr/int)`);
-      } else if (values.length >= 1 && isParcelShop) {
-        tariff[`${currentZone}_sal`] = values[0];
-        console.log(`[Extractor]     ✓ Tarifa ParcelShop: ${weightKey}kg, zona: ${currentZone}, 1 valor (solo sal)`);
-      } else if (values.length >= 3) {
-        tariff[`${currentZone}_sal`] = values[0];
-        tariff[`${currentZone}_rec`] = values[1];
-        tariff[`${currentZone}_arr`] = values[2];
-        console.log(`[Extractor]     ✓ Tarifa básica: ${weightKey}kg, zona: ${currentZone}, 3 valores`);
-      } else {
-        console.log(`[Extractor]     ⚠ Valores insuficientes: ${weightKey}kg, zona: ${currentZone}, valores: ${values.length}`);
+        console.log(`[Extractor]     ✓ Datos extraídos: ${weight.from}-${weight.to}kg, zona: ${currentZone}, ${values.length} valores`);
       }
     }
   }
 
-  const tariffs = Array.from(tariffsByWeight.values());
-  console.log(`[Extractor] Total tarifas consolidadas de ${block.serviceName}: ${tariffs.length}`);
-  return tariffs;
+  console.log(`[Extractor] Total datos extraídos de ${block.serviceName}: ${extractedData.length}`);
+  return extractedData;
+}
+
+function consolidateTariffs(allExtractedData: ExtractedData[]): ParsedTariff[] {
+  console.log(`[Consolidator] ===== CONSOLIDANDO TARIFAS GLOBALMENTE =====`);
+  console.log(`[Consolidator] Total datos a procesar: ${allExtractedData.length}`);
+
+  const tariffMap = new Map<string, ParsedTariff>();
+
+  for (const data of allExtractedData) {
+    const consolidationKey = `${data.serviceName}|${data.weightFrom}|${data.weightTo}`;
+
+    if (!tariffMap.has(consolidationKey)) {
+      tariffMap.set(consolidationKey, {
+        service_name: data.serviceName,
+        weight_from: data.weightFrom,
+        weight_to: data.weightTo,
+      });
+    }
+
+    const tariff = tariffMap.get(consolidationKey)!;
+    const isParcelShop = data.serviceName === "Parcel Shop";
+    const isAzoresOrMadeira = data.zone.startsWith("azores_") || data.zone.startsWith("madeira_");
+
+    if (data.values.length >= 4 && !isParcelShop && !isAzoresOrMadeira) {
+      tariff[`${data.zone}_sal`] = data.values[0];
+      tariff[`${data.zone}_rec`] = data.values[1];
+      tariff[`${data.zone}_arr`] = data.values[2];
+      tariff[`${data.zone}_int`] = data.values[3];
+    } else if (data.values.length >= 2 && isAzoresOrMadeira) {
+      tariff[`${data.zone}_sal`] = data.values[0];
+      tariff[`${data.zone}_rec`] = data.values[1];
+    } else if (data.values.length >= 1 && isParcelShop) {
+      tariff[`${data.zone}_sal`] = data.values[0];
+    } else if (data.values.length >= 3) {
+      tariff[`${data.zone}_sal`] = data.values[0];
+      tariff[`${data.zone}_rec`] = data.values[1];
+      tariff[`${data.zone}_arr`] = data.values[2];
+    }
+  }
+
+  const consolidatedTariffs = Array.from(tariffMap.values());
+
+  console.log(`[Consolidator] ===== RESUMEN CONSOLIDACIÓN =====`);
+  console.log(`[Consolidator] Datos de entrada: ${allExtractedData.length}`);
+  console.log(`[Consolidator] Tarifas únicas (servicio+peso): ${consolidatedTariffs.length}`);
+
+  const serviceBreakdown = consolidatedTariffs.reduce((acc, t) => {
+    acc[t.service_name] = (acc[t.service_name] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  console.log(`[Consolidator] Desglose por servicio:`);
+  Object.entries(serviceBreakdown).forEach(([service, count]) => {
+    console.log(`[Consolidator]   - ${service}: ${count} rangos de peso`);
+  });
+
+  return consolidatedTariffs;
 }
 
 Deno.serve(async (req: Request) => {
@@ -595,15 +635,18 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const allTariffs: ParsedTariff[] = [];
+    const allExtractedData: ExtractedData[] = [];
 
-    console.log(`[PDF Parser] ===== PROCESANDO ${tableBlocks.length} BLOQUES DE SERVICIOS =====`);
+    console.log(`[PDF Parser] ===== EXTRAYENDO DATOS DE ${tableBlocks.length} BLOQUES DE SERVICIOS =====`);
     for (const block of tableBlocks) {
-      console.log(`[PDF Parser] Procesando servicio: ${block.serviceName}`);
-      const blockTariffs = extractTariffsFromBlock(block);
-      allTariffs.push(...blockTariffs);
-      console.log(`[PDF Parser] Subtotal acumulado: ${allTariffs.length} tarifas`);
+      console.log(`[PDF Parser] Extrayendo datos de servicio: ${block.serviceName}`);
+      const blockData = extractTariffsFromBlock(block);
+      allExtractedData.push(...blockData);
+      console.log(`[PDF Parser] Subtotal datos extraídos: ${allExtractedData.length}`);
     }
+
+    console.log(`[PDF Parser] ===== CONSOLIDANDO TARIFAS =====`);
+    const allTariffs = consolidateTariffs(allExtractedData);
 
     if (allTariffs.length === 0) {
       return new Response(
@@ -637,17 +680,20 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log('[PDF Parser] Limpiando tabla tariffspdf...');
-    const { error: deleteError } = await supabase
+    console.log('[PDF Parser] Limpiando tabla tariffspdf antes de insertar...');
+    const { error: deleteError, count: deletedCount } = await supabase
       .from("tariffspdf")
       .delete()
-      .neq("id", "00000000-0000-0000-0000-000000000000");
+      .neq("id", "00000000-0000-0000-0000-000000000000")
+      .select('*', { count: 'exact', head: true });
 
     if (deleteError) {
       console.warn(`[PDF Parser] Advertencia al limpiar: ${deleteError.message}`);
+    } else {
+      console.log(`[PDF Parser] ✓ Tabla limpiada: ${deletedCount || 0} registros eliminados`);
     }
 
-    console.log(`[PDF Parser] Insertando ${allTariffs.length} tarifas...`);
+    console.log(`[PDF Parser] Insertando ${allTariffs.length} tarifas consolidadas...`);
     const { data: insertedData, error: insertError } = await supabase
       .from("tariffspdf")
       .insert(allTariffs)
@@ -665,19 +711,33 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log(`[PDF Parser] ✓ Importación exitosa: ${insertedData?.length || 0} registros`);
+    console.log(`[PDF Parser] ✓ Inserción completada: ${insertedData?.length || 0} registros`);
+
+    const { count: verificationCount } = await supabase
+      .from("tariffspdf")
+      .select('*', { count: 'exact', head: true });
+
+    console.log(`[PDF Parser] ✓ Verificación post-inserción: ${verificationCount || 0} registros en tabla`);
+
+    const uniqueServices = Array.from(new Set(allTariffs.map(t => t.service_name)));
+    const serviceStats = uniqueServices.map(service => ({
+      service,
+      weightRanges: allTariffs.filter(t => t.service_name === service).length,
+      zones: Object.keys(allTariffs.find(t => t.service_name === service) || {})
+        .filter(k => k.endsWith('_sal'))
+        .map(k => k.replace('_sal', ''))
+    }));
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Se importaron ${allTariffs.length} tarifas correctamente`,
+        message: `Se importaron ${insertedData?.length || 0} tarifas consolidadas correctamente`,
         imported: insertedData?.length || 0,
+        verified: verificationCount || 0,
         pages,
-        servicesProcessed: tableBlocks.length,
-        serviceBreakdown: tableBlocks.map(b => ({
-          service: b.serviceName,
-          tariffsExtracted: allTariffs.filter(t => t.service_name === b.serviceName).length
-        })),
+        uniqueServices: uniqueServices.length,
+        serviceStats,
+        dataExtracted: allExtractedData.length,
         preview: allTariffs.slice(0, 10)
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
