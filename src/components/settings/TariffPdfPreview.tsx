@@ -46,17 +46,20 @@ export function TariffPdfPreview({ onConfirm, onCancel, onDataImported }: Tariff
   }, []);
 
   const loadTariffsPdfWithRetry = async (retryCount = 0) => {
-    const maxRetries = 3;
-    await loadTariffsPdf();
+    const maxRetries = 5;
+    const result = await loadTariffsPdf();
 
-    if (tariffs.length === 0 && retryCount < maxRetries) {
-      console.log(`[TariffPdfPreview] Reintenando carga (${retryCount + 1}/${maxRetries})...`);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    if (result === 0 && retryCount < maxRetries) {
+      const backoffDelay = Math.min(1000 * Math.pow(1.5, retryCount), 5000);
+      console.log(`[TariffPdfPreview] Reintenando carga (${retryCount + 1}/${maxRetries}) en ${backoffDelay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, backoffDelay));
       return loadTariffsPdfWithRetry(retryCount + 1);
     }
+
+    return result;
   };
 
-  const loadTariffsPdf = async () => {
+  const loadTariffsPdf = async (): Promise<number> => {
     try {
       setLoading(true);
       const { data, error, count } = await supabase
@@ -71,9 +74,12 @@ export function TariffPdfPreview({ onConfirm, onCancel, onDataImported }: Tariff
 
       setTariffs(data || []);
       setSelectedIds(new Set(data?.map(t => t.id) || []));
+
+      return data?.length || 0;
     } catch (err: any) {
       console.error('[TariffPdfPreview] Error cargando tariffspdf:', err);
       setError(err.message || 'Error al cargar datos temporales');
+      return 0;
     } finally {
       setLoading(false);
     }
@@ -113,41 +119,83 @@ export function TariffPdfPreview({ onConfirm, onCancel, onDataImported }: Tariff
 
     try {
       const selectedTariffs = tariffs.filter(t => selectedIds.has(t.id));
+      let successCount = 0;
+      let errorCount = 0;
 
       for (const tariff of selectedTariffs) {
-        const { id, created_at, updated_at, ...tariffData } = tariff;
+        try {
+          const { id, created_at, updated_at, ...tariffData } = tariff;
 
-        const existingTariff = await supabase
-          .from('custom_tariffs')
-          .select('id')
-          .eq('user_id', userData.id)
-          .eq('service_name', tariff.service_name)
-          .eq('weight_from', tariff.weight_from)
-          .eq('weight_to', tariff.weight_to)
-          .maybeSingle();
+          const { data: existingTariff, error: searchError } = await supabase
+            .from('custom_tariffs')
+            .select('id')
+            .eq('user_id', userData.id)
+            .eq('service_name', tariff.service_name)
+            .eq('weight_from', tariff.weight_from)
+            .eq('weight_to', tariff.weight_to)
+            .maybeSingle();
 
-        if (existingTariff.data) {
-          await supabase
-            .from('custom_tariffs')
-            .update(tariffData)
-            .eq('id', existingTariff.data.id);
-        } else {
-          await supabase
-            .from('custom_tariffs')
-            .insert([{
-              ...tariffData,
-              user_id: userData.id
-            }]);
+          if (searchError) {
+            console.error(`Error buscando tarifa existente:`, searchError);
+            errorCount++;
+            continue;
+          }
+
+          if (existingTariff) {
+            const { error: updateError } = await supabase
+              .from('custom_tariffs')
+              .update(tariffData)
+              .eq('id', existingTariff.id);
+
+            if (updateError) {
+              console.error(`Error actualizando tarifa:`, updateError);
+              errorCount++;
+            } else {
+              successCount++;
+            }
+          } else {
+            const { error: insertError } = await supabase
+              .from('custom_tariffs')
+              .insert([{
+                ...tariffData,
+                user_id: userData.id
+              }]);
+
+            if (insertError) {
+              console.error(`Error insertando tarifa:`, insertError);
+              errorCount++;
+            } else {
+              successCount++;
+            }
+          }
+        } catch (itemError: any) {
+          console.error('Error procesando tarifa individual:', itemError);
+          errorCount++;
         }
       }
 
-      await supabase
+      console.log(`[TariffPdfPreview] Transferéncia completada: ${successCount} exitosas, ${errorCount} errores`);
+
+      if (errorCount > 0 && successCount === 0) {
+        setError(`No se pudo importar ninguna tarifa. Verifica los permisos e inténtalo de nuevo.`);
+        return;
+      }
+
+      const { error: deleteError } = await supabase
         .from('tariffspdf')
         .delete()
         .neq('id', '00000000-0000-0000-0000-000000000000');
 
+      if (deleteError) {
+        console.warn('[TariffPdfPreview] Advertencia al limpiar tabla temporal:', deleteError);
+      }
+
       if (onDataImported) {
         onDataImported();
+      }
+
+      if (errorCount > 0) {
+        console.warn(`[TariffPdfPreview] Importación parcial: ${successCount} exitosas, ${errorCount} errores`);
       }
 
       onConfirm();
