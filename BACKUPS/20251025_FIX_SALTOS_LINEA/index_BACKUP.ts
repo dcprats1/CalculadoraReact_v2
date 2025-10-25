@@ -188,64 +188,16 @@ async function extractTextFromPDF(uint8Array: Uint8Array): Promise<{ text: strin
       const page = await pdfDocument.getPage(pageNum);
       const textContent = await page.getTextContent();
 
-      // MEJORA: Detectar saltos de línea usando coordenadas Y
-      interface TextItem {
-        str: string;
-        transform: number[];
-      }
+      const pageText = textContent.items
+        .map((item: any) => item.str || '')
+        .filter((str: string) => str.trim().length > 0)
+        .join(' ');
 
-      const items = textContent.items as TextItem[];
-
-      // Agrupar items por línea según coordenada Y
-      const lineGroups = new Map<number, string[]>();
-      const LINE_THRESHOLD = 5; // Umbral para detectar nueva línea
-
-      for (const item of items) {
-        if (!item.str || item.str.trim().length === 0) continue;
-
-        const yCoord = Math.round(item.transform[5]);
-
-        // Buscar si ya existe una línea cercana a esta coordenada Y
-        let targetY = yCoord;
-        for (const existingY of lineGroups.keys()) {
-          if (Math.abs(existingY - yCoord) <= LINE_THRESHOLD) {
-            targetY = existingY;
-            break;
-          }
-        }
-
-        if (!lineGroups.has(targetY)) {
-          lineGroups.set(targetY, []);
-        }
-        lineGroups.get(targetY)!.push(item.str);
-      }
-
-      // Ordenar líneas por coordenada Y (de arriba a abajo)
-      const sortedYCoords = Array.from(lineGroups.keys()).sort((a, b) => b - a);
-
-      const pageLines: string[] = [];
-      for (const yCoord of sortedYCoords) {
-        const lineText = lineGroups.get(yCoord)!.join(' ').trim();
-        if (lineText.length > 0) {
-          pageLines.push(lineText);
-        }
-      }
-
-      const pageText = pageLines.join('\n');
       fullText += pageText + '\n';
-
-      console.log(`[PDF Parser] Página ${pageNum}/${numPages}: ${pageLines.length} líneas extraídas, ${pageText.length} caracteres`);
+      console.log(`[PDF Parser] Página ${pageNum}/${numPages}: ${pageText.length} caracteres`);
     }
 
     console.log(`[PDF Parser] Extracción completada: ${fullText.length} caracteres`);
-
-    // Log de debug: mostrar primeras 30 líneas
-    const debugLines = fullText.split('\n').slice(0, 30);
-    console.log(`[PDF Parser] DEBUG - Primeras 30 líneas extraídas:`);
-    debugLines.forEach((line, idx) => {
-      console.log(`  ${idx + 1}: "${line.substring(0, 100)}"`);
-    });
-
     return { text: fullText, pages: numPages };
 
   } catch (error) {
