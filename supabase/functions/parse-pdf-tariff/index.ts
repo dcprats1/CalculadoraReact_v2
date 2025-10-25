@@ -227,11 +227,31 @@ const DESTINATION_CONFIGS: DestinationConfig[] = [
   { dbPrefix: "melilla", displayName: "Melilla", fields: ["_sal", "_rec", "_int", "_arr"] },
   { dbPrefix: "andorra", displayName: "Andorra", fields: ["_sal", "_rec", "_int", "_arr"] },
   { dbPrefix: "gibraltar", displayName: "Gibraltar", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "azores_mayores", displayName: "Azores Mayores", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "azores_menores", displayName: "Azores Menores", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "madeira_mayores", displayName: "Madeira Mayores", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "madeira_menores", displayName: "Madeira Menores", fields: ["_sal", "_rec", "_int", "_arr"] },
+  { dbPrefix: "azores_mayores", displayName: "Azores Mayores", fields: ["_sal", "_rec", "_int"] },
+  { dbPrefix: "azores_menores", displayName: "Azores Menores", fields: ["_sal", "_rec", "_int"] },
+  { dbPrefix: "madeira_mayores", displayName: "Madeira Mayores", fields: ["_sal", "_rec", "_int"] },
+  { dbPrefix: "madeira_menores", displayName: "Madeira Menores", fields: ["_sal", "_rec", "_int"] },
 ];
+
+const VALID_DB_FIELDS = new Set([
+  'service_name', 'weight_from', 'weight_to',
+  'provincial_sal', 'provincial_rec', 'provincial_int', 'provincial_arr',
+  'regional_sal', 'regional_rec', 'regional_int', 'regional_arr',
+  'nacional_sal', 'nacional_rec', 'nacional_int', 'nacional_arr',
+  'portugal_sal', 'portugal_rec', 'portugal_int', 'portugal_arr',
+  'andorra_sal', 'andorra_rec', 'andorra_int', 'andorra_arr',
+  'gibraltar_sal', 'gibraltar_rec', 'gibraltar_int', 'gibraltar_arr',
+  'canarias_mayores_sal', 'canarias_mayores_rec', 'canarias_mayores_int', 'canarias_mayores_arr',
+  'canarias_menores_sal', 'canarias_menores_rec', 'canarias_menores_int', 'canarias_menores_arr',
+  'baleares_mayores_sal', 'baleares_mayores_rec', 'baleares_mayores_int', 'baleares_mayores_arr',
+  'baleares_menores_sal', 'baleares_menores_rec', 'baleares_menores_int', 'baleares_menores_arr',
+  'ceuta_sal', 'ceuta_rec', 'ceuta_int', 'ceuta_arr',
+  'melilla_sal', 'melilla_rec', 'melilla_int', 'melilla_arr',
+  'azores_mayores_sal', 'azores_mayores_rec', 'azores_mayores_int',
+  'azores_menores_sal', 'azores_menores_rec', 'azores_menores_int',
+  'madeira_mayores_sal', 'madeira_mayores_rec', 'madeira_mayores_int',
+  'madeira_menores_sal', 'madeira_menores_rec', 'madeira_menores_int',
+]);
 
 interface ColumnMapping {
   name: string;
@@ -825,10 +845,30 @@ Deno.serve(async (req: Request) => {
       console.log(`[PDF Parser] ✓ Tabla limpiada: ${deletedCount || 0} registros eliminados`);
     }
 
-    console.log(`[PDF Parser] Insertando ${allTariffs.length} tarifas consolidadas...`);
+    const sanitizedTariffs = allTariffs.map(tariff => {
+      const cleaned: Record<string, any> = {};
+      let removedFields = 0;
+
+      for (const [key, value] of Object.entries(tariff)) {
+        if (VALID_DB_FIELDS.has(key)) {
+          cleaned[key] = value;
+        } else {
+          console.log(`[PDF Parser] ⚠ Campo no válido ignorado: ${key} = ${value}`);
+          removedFields++;
+        }
+      }
+
+      if (removedFields > 0) {
+        console.log(`[PDF Parser] Tarifa ${tariff.service_name} ${tariff.weight_from}-${tariff.weight_to}: ${removedFields} campos no válidos eliminados`);
+      }
+
+      return cleaned;
+    });
+
+    console.log(`[PDF Parser] Insertando ${sanitizedTariffs.length} tarifas sanitizadas...`);
     const { data: insertedData, error: insertError } = await supabase
       .from("tariffspdf")
-      .insert(allTariffs)
+      .insert(sanitizedTariffs)
       .select();
 
     if (insertError) {
