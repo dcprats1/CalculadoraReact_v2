@@ -504,7 +504,8 @@ function detectWeightInLine(line: string): { from: string; to: string } | null {
  * [Peso] [Recogida_IGNORAR] [Arrastre] [Entrega_IGNORAR] [Salidas] [Recogidas] [Interciudad] [...otros]
  *
  * Ejemplo: "1 Kg. 1,17 1,01 1,17 2,18 2,18 3,35"
- * → Extrae índices: [1,01] [2,18] [2,18] [3,35]
+ * → Extrae índices [1, 3, 4, 5]: [1,01] [2,18] [2,18] [3,35]
+ * → Mapea a orden correcto: [Arrastre, Salidas, Recogidas, Interciudad]
  */
 function extractNumericValues(line: string): number[] {
   const parts = line.split(/\s+/);
@@ -519,15 +520,20 @@ function extractNumericValues(line: string): number[] {
     }
   }
 
+  console.log(`[NumericExtractor] Todos los números detectados en línea: [${allNumbers.join(', ')}]`);
+
   if (allNumbers.length >= 6) {
-    return [
+    const selected = [
       allNumbers[1],
       allNumbers[3],
       allNumbers[4],
       allNumbers[5]
     ];
+    console.log(`[NumericExtractor] Valores seleccionados (posiciones 1,3,4,5 → _arr,_sal,_rec,_int): [${selected.join(', ')}]`);
+    return selected;
   }
 
+  console.log(`[NumericExtractor] ⚠ Menos de 6 valores encontrados, retornando todos: [${allNumbers.join(', ')}]`);
   return allNumbers;
 }
 
@@ -541,30 +547,31 @@ interface ExtractedData {
 }
 
 function detectColumnsInBlock(block: TableBlock): string[] {
+  console.log(`[ColumnDetector] Escaneando bloque completo: ${block.lines.length} líneas en total`);
   const detectedColumns: string[] = [];
 
-  for (const line of block.lines) {
+  for (let i = 0; i < block.lines.length; i++) {
+    const line = block.lines[i];
     const normalizedLine = line.toLowerCase();
 
     for (const colMapping of COLUMN_MAPPINGS) {
       for (const pattern of colMapping.patterns) {
         if (pattern.test(normalizedLine) && !detectedColumns.includes(colMapping.fieldSuffix)) {
           detectedColumns.push(colMapping.fieldSuffix);
-          console.log(`[ColumnDetector] ✓ Columna detectada: ${colMapping.name} (${colMapping.fieldSuffix})`);
+          console.log(`[ColumnDetector] ✓ Columna detectada en línea ${i}: ${colMapping.name} (${colMapping.fieldSuffix}) → "${line.substring(0, 80)}"`);
           break;
         }
       }
     }
-
-    if (detectedColumns.length >= 4) break;
   }
 
   if (detectedColumns.length === 0) {
-    console.log(`[ColumnDetector] ⚠ No se detectaron columnas, usando orden estándar: _arr, _sal, _rec, _int`);
+    console.log(`[ColumnDetector] ⚠ No se detectaron columnas en todo el bloque, usando orden por defecto: [_arr, _sal, _rec, _int]`);
     return ["_arr", "_sal", "_rec", "_int"];
   }
 
-  console.log(`[ColumnDetector] Columnas detectadas en orden: ${detectedColumns.join(", ")}`);
+  console.log(`[ColumnDetector] Columnas detectadas en orden: [${detectedColumns.join(", ")}]`);
+  console.log(`[ColumnDetector] IMPORTANTE: Orden esperado del PDF: [Recogida_IGNORAR, Arrastre, Entrega_IGNORAR, Salidas, Recogidas, Interciudad]`);
   return detectedColumns;
 }
 
@@ -574,19 +581,29 @@ function extractTariffsFromBlock(block: TableBlock): ExtractedData[] {
   const detectedColumns = detectColumnsInBlock(block);
   const extractedData: ExtractedData[] = [];
   let currentZone: string | null = null;
+  let warningCount = 0;
 
   for (let i = 0; i < block.lines.length; i++) {
     const line = block.lines[i];
 
     const zone = detectZoneInLine(line);
     if (zone) {
+      if (currentZone) {
+        console.log(`[ZoneSwitch] Cambiando de zona: ${currentZone} → ${zone}`);
+      }
       currentZone = zone;
       console.log(`[Extractor]   ✓ Zona detectada: ${zone} en línea: ${line.substring(0, 60)}`);
       continue;
     }
 
     const weight = detectWeightInLine(line);
-    if (weight && currentZone) {
+    if (weight) {
+      if (!currentZone) {
+        console.log(`[Warning] Peso detectado sin zona asignada en línea: "${line.substring(0, 80)}"`);
+        warningCount++;
+        continue;
+      }
+
       const values = extractNumericValues(line);
 
       if (values.length > 0) {
@@ -604,6 +621,9 @@ function extractTariffsFromBlock(block: TableBlock): ExtractedData[] {
   }
 
   console.log(`[Extractor] Total datos extraídos de ${block.serviceName}: ${extractedData.length}`);
+  if (warningCount > 0) {
+    console.log(`[Extractor] ⚠ Total warnings en este bloque: ${warningCount}`);
+  }
   return extractedData;
 }
 
@@ -668,11 +688,12 @@ function consolidateTariffs(allExtractedData: ExtractedData[]): ParsedTariff[] {
       continue;
     }
 
-    const detectedColumns = data.detectedColumns || ["_sal", "_rec", "_int", "_arr"];
+    const detectedColumns = data.detectedColumns || ["_arr", "_sal", "_rec", "_int"];
 
-    console.log(`[Consolidator] Procesando: ${data.serviceName} | ${data.weightFrom}-${data.weightTo}kg | Zona: ${data.zone} | Valores: [${data.values.join(', ')}] | Columnas: [${detectedColumns.join(', ')}]`);
+    console.log(`[Mapping] ${data.serviceName} | ${data.weightFrom}-${data.weightTo}kg | Zona: ${data.zone} | Valores: [${data.values.join(', ')}] | Columnas: [${detectedColumns.join(', ')}]`);
 
     const numColumns = Math.min(detectedColumns.length, data.values.length);
+    const mappingResult: Record<string, number> = {};
 
     for (let i = 0; i < numColumns; i++) {
       const fieldName = `${data.zone}${detectedColumns[i]}`;
@@ -680,11 +701,26 @@ function consolidateTariffs(allExtractedData: ExtractedData[]): ParsedTariff[] {
 
       if (tariff.hasOwnProperty(fieldName) || fieldName.includes('_')) {
         tariff[fieldName] = value;
+        mappingResult[fieldName] = value;
         console.log(`[Consolidator]   → ${fieldName} = ${value}`);
       } else {
         console.warn(`[Consolidator]   ⚠ Campo no existe en plantilla: ${fieldName}`);
       }
     }
+
+    const arrValue = mappingResult[`${data.zone}_arr`];
+    const salValue = mappingResult[`${data.zone}_sal`];
+    const recValue = mappingResult[`${data.zone}_rec`];
+    const intValue = mappingResult[`${data.zone}_int`];
+
+    if (arrValue && salValue && arrValue > salValue) {
+      console.log(`[ValidationWarning] Valor sospechoso: _arr (${arrValue}) > _sal (${salValue}) para ${data.serviceName} ${data.weightFrom}kg ${data.zone}. Continuando...`);
+    }
+    if (arrValue && recValue && arrValue > recValue) {
+      console.log(`[ValidationWarning] Valor sospechoso: _arr (${arrValue}) > _rec (${recValue}) para ${data.serviceName} ${data.weightFrom}kg ${data.zone}. Continuando...`);
+    }
+
+    console.log(`[Mapping] Resultado: ${data.zone}_arr=${arrValue || 'null'}, ${data.zone}_sal=${salValue || 'null'}, ${data.zone}_rec=${recValue || 'null'}, ${data.zone}_int=${intValue || 'null'}`);
 
     if (data.values.length > detectedColumns.length) {
       console.log(`[Consolidator]   ⚠ Valores extra ignorados: ${data.values.slice(detectedColumns.length).join(', ')}`);
@@ -715,7 +751,16 @@ function consolidateTariffs(allExtractedData: ExtractedData[]): ParsedTariff[] {
   const filledFieldsCount = allTariffs.reduce((count, t) => {
     return count + Object.keys(t).filter(k => k !== 'service_name' && k !== 'weight_from' && k !== 'weight_to' && t[k] !== null).length;
   }, 0);
+  const nullFieldsCount = allTariffs.reduce((count, t) => {
+    return count + Object.keys(t).filter(k => k !== 'service_name' && k !== 'weight_from' && k !== 'weight_to' && t[k] === null).length;
+  }, 0);
   console.log(`[Consolidator] Total campos rellenados: ${filledFieldsCount}`);
+  console.log(`[Consolidator] Total campos NULL: ${nullFieldsCount}`);
+
+  const previewTariff = allTariffs.find(t => t.service_name === 'Business Parcel' && t.weight_from === '0' && t.weight_to === '1');
+  if (previewTariff) {
+    console.log(`[Preview] Business Parcel 1kg Provincial: arr=${previewTariff['provincial_arr']}, sal=${previewTariff['provincial_sal']}, rec=${previewTariff['provincial_rec']}, int=${previewTariff['provincial_int']}`);
+  }
 
   return allTariffs;
 }
