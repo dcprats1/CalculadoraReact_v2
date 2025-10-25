@@ -22,9 +22,9 @@ const SERVICE_MAPPINGS: ServiceMapping[] = [
     dbName: "Urg8:30H Courier",
     keywords: ["express", "08:30", "8:30", "830"],
     patterns: [
-      /express\s*0?8:?30/i,
+      /express0?8:?30/i,
       /urg\s*0?8:?30/i,
-      /express\s*8/i,
+      /\bexpress\s*8\b/i,
     ]
   },
   {
@@ -32,9 +32,9 @@ const SERVICE_MAPPINGS: ServiceMapping[] = [
     dbName: "Urg10H Courier",
     keywords: ["express", "10:30", "10", "1030"],
     patterns: [
-      /express\s*10:?30/i,
+      /express10:?30/i,
       /urg\s*10/i,
-      /express\s*10(?!:)/i,
+      /\bexpress\s*10\b/i,
     ]
   },
   {
@@ -42,9 +42,9 @@ const SERVICE_MAPPINGS: ServiceMapping[] = [
     dbName: "Urg14H Courier",
     keywords: ["express", "14:00", "14", "1400"],
     patterns: [
-      /express\s*14:?00/i,
+      /express14:?00/i,
       /urg\s*14/i,
-      /express\s*14(?!:)/i,
+      /\bexpress\s*14\b/i,
     ]
   },
   {
@@ -52,9 +52,9 @@ const SERVICE_MAPPINGS: ServiceMapping[] = [
     dbName: "Urg19H Courier",
     keywords: ["express", "19:00", "19", "1900"],
     patterns: [
-      /express\s*19:?00/i,
+      /express19:?00/i,
       /urg\s*19/i,
-      /express\s*19(?!:)/i,
+      /\bexpress\s*19\b/i,
     ]
   },
   {
@@ -71,8 +71,9 @@ const SERVICE_MAPPINGS: ServiceMapping[] = [
     dbName: "Eurobusiness Parcel",
     keywords: ["euro", "business", "parcel"],
     patterns: [
-      /euro\s*business/i,
-      /eurobusiness/i,
+      /euro\s*business\s*parcel/i,
+      /eurobusiness\s*parcel/i,
+      /eurobusinessparcel/i,
     ]
   },
   {
@@ -92,6 +93,8 @@ const SERVICE_MAPPINGS: ServiceMapping[] = [
       /parcel\s*shop/i,
       /shop\s*return/i,
       /shop\s*delivery/i,
+      /shopreturnservice/i,
+      /shopdeliveryservice/i,
     ]
   },
   {
@@ -115,20 +118,26 @@ const DESTINATION_ZONES: DestinationZone[] = [
   {
     dbPrefix: "provincial",
     displayName: "Provincial",
-    patterns: [/\bprovincial\b/i],
-    keywords: ["provincial"]
+    patterns: [/\bprovincial\b/i, /\bprov\.?\b/i],
+    keywords: ["provincial", "prov"]
   },
   {
     dbPrefix: "regional",
     displayName: "Regional",
-    patterns: [/\bregional\b/i],
-    keywords: ["regional"]
+    patterns: [/\bregional\b/i, /\breg\.?\b/i],
+    keywords: ["regional", "reg"]
   },
   {
     dbPrefix: "nacional",
     displayName: "Nacional",
-    patterns: [/\bnacional\b/i, /\binterciudad\b/i],
-    keywords: ["nacional", "interciudad"]
+    patterns: [/\bnacional\b/i, /\bnac\.?\b/i, /\binterciudad\b/i],
+    keywords: ["nacional", "nac", "interciudad"]
+  },
+  {
+    dbPrefix: "portugal",
+    displayName: "Portugal",
+    patterns: [/\bportugal\b/i, /\bport\.?\b/i, /\bpt\b/i],
+    keywords: ["portugal", "port", "pt"]
   },
 ];
 
@@ -143,37 +152,55 @@ const WEIGHT_RANGES: WeightRange[] = [
   {
     from: "0",
     to: "1",
-    patterns: [/\b1\s*kg/i, /hasta\s*1/i, /^1$/],
+    patterns: [/\b1\s*kg/i, /hasta\s*1/i, /^1$/, /\b0[-–]1\b/i],
     displayText: "1kg"
   },
   {
     from: "1",
     to: "3",
-    patterns: [/\b3\s*kg/i, /1\s*[-–]\s*3/i, /^3$/],
+    patterns: [/\b3\s*kg/i, /1\s*[-–]\s*3/i, /^3$/, /\b1[-–]3\b/i],
     displayText: "3kg"
   },
   {
     from: "3",
     to: "5",
-    patterns: [/\b5\s*kg/i, /3\s*[-–]\s*5/i, /^5$/],
+    patterns: [/\b5\s*kg/i, /3\s*[-–]\s*5/i, /^5$/, /\b3[-–]5\b/i],
     displayText: "5kg"
   },
   {
     from: "5",
     to: "10",
-    patterns: [/\b10\s*kg/i, /5\s*[-–]\s*10/i, /^10$/],
+    patterns: [/\b10\s*kg/i, /5\s*[-–]\s*10/i, /^10$/, /\b5[-–]10\b/i],
     displayText: "10kg"
   },
   {
     from: "10",
     to: "15",
-    patterns: [/\b15\s*kg/i, /10\s*[-–]\s*15/i, /^15$/],
+    patterns: [/\b15\s*kg/i, /10\s*[-–]\s*15/i, /^15$/, /\b10[-–]15\b/i],
     displayText: "15kg"
   },
   {
     from: "15",
+    to: "20",
+    patterns: [/\b20\s*kg/i, /15\s*[-–]\s*20/i, /^20$/, /\b15[-–]20\b/i],
+    displayText: "20kg"
+  },
+  {
+    from: "20",
+    to: "25",
+    patterns: [/\b25\s*kg/i, /20\s*[-–]\s*25/i, /^25$/, /\b20[-–]25\b/i],
+    displayText: "25kg"
+  },
+  {
+    from: "25",
+    to: "30",
+    patterns: [/\b30\s*kg/i, /25\s*[-–]\s*30/i, /^30$/, /\b25[-–]30\b/i],
+    displayText: "30kg"
+  },
+  {
+    from: "30",
     to: "999",
-    patterns: [/\+\s*kg/i, /15\s*\+/i, /por\s*kg/i, /adicional/i],
+    patterns: [/\+\s*kg/i, /30\s*\+/i, /por\s*kg/i, /adicional/i, /\b30[-–]\+/i],
     displayText: "+kg"
   },
 ];
@@ -269,10 +296,11 @@ function normalizeSpaces(text: string): string {
 
 function detectServiceInLine(line: string): string | null {
   const normalized = line.toLowerCase().trim();
+  const cleanLine = normalized.replace(/\s+/g, '');
 
   for (const mapping of SERVICE_MAPPINGS) {
     for (const pattern of mapping.patterns) {
-      if (pattern.test(normalized)) {
+      if (pattern.test(normalized) || pattern.test(cleanLine)) {
         console.log(`[Service Detection] Matched ${mapping.dbName} with pattern ${pattern} in line: ${line.substring(0, 80)}`);
         return mapping.dbName;
       }
@@ -281,7 +309,8 @@ function detectServiceInLine(line: string): string | null {
     let keywordMatches = 0;
     const matchedKeywords: string[] = [];
     for (const keyword of mapping.keywords) {
-      if (normalized.includes(keyword.toLowerCase())) {
+      const cleanKeyword = keyword.toLowerCase().replace(/\s+/g, '');
+      if (normalized.includes(keyword.toLowerCase()) || cleanLine.includes(cleanKeyword)) {
         keywordMatches++;
         matchedKeywords.push(keyword);
       }
@@ -375,12 +404,12 @@ function extractDataRow(line: string): DataRow | null {
 
   for (const part of parts) {
     const val = parseNumericValue(part);
-    if (val !== null) {
+    if (val !== null && val > 0 && val < 10000) {
       values.push(val);
     }
   }
 
-  if (values.length >= 4) {
+  if (values.length >= 3) {
     return {
       weightFrom: weightRange.from,
       weightTo: weightRange.to,
@@ -498,21 +527,25 @@ function phaseTwoExtraction(serviceLocations: ServiceLocation[]): ParsedTariff[]
         };
 
         if (row.values.length >= 6) {
+          tariff[`${zone.dbPrefix}_sal`] = row.values[0];
           tariff[`${zone.dbPrefix}_rec`] = row.values[1];
           tariff[`${zone.dbPrefix}_arr`] = row.values[2];
-          tariff[`${zone.dbPrefix}_sal`] = row.values[4];
-          tariff[`${zone.dbPrefix}_int`] = row.values[5];
+          tariff[`${zone.dbPrefix}_int`] = row.values[3];
         } else if (row.values.length >= 4) {
           tariff[`${zone.dbPrefix}_sal`] = row.values[0];
           tariff[`${zone.dbPrefix}_rec`] = row.values[1];
           tariff[`${zone.dbPrefix}_int`] = row.values[2];
           tariff[`${zone.dbPrefix}_arr`] = row.values[3];
+        } else if (row.values.length >= 3) {
+          tariff[`${zone.dbPrefix}_sal`] = row.values[0];
+          tariff[`${zone.dbPrefix}_rec`] = row.values[1];
+          tariff[`${zone.dbPrefix}_arr`] = row.values[2];
         }
 
         if (Object.keys(tariff).length > 3) {
           parsedTariffs.push(tariff);
           totalRows++;
-          console.log(`[Phase 2]     ✓ Tarifa creada: ${service.serviceName} ${zone.zoneName} ${row.weightFrom}-${row.weightTo}kg`);
+          console.log(`[Phase 2]     ✓ Tarifa creada: ${service.serviceName} ${zone.zoneName} ${row.weightFrom}-${row.weightTo}kg con ${row.values.length} valores`);
         }
       }
     }
@@ -550,20 +583,20 @@ function validateExtraction(serviceLocations: ServiceLocation[], parsedTariffs: 
     warnings.push('No se extrajeron tarifas del PDF');
   }
 
-  if (parsedTariffs.length < 100) {
-    warnings.push(`Se extrajeron solo ${parsedTariffs.length} tarifas (esperado: 120-150+)`);
+  if (parsedTariffs.length < 50 && parsedTariffs.length > 0) {
+    warnings.push(`Se extrajeron solo ${parsedTariffs.length} tarifas. Esto puede indicar que faltan datos.`);
   }
 
   const missingServices = SERVICE_MAPPINGS
     .filter(m => !serviceLocations.some(s => s.serviceName === m.dbName))
     .map(m => m.dbName);
 
-  if (missingServices.length > 0) {
+  if (missingServices.length > 0 && missingServices.length < SERVICE_MAPPINGS.length) {
     warnings.push(`Servicios no encontrados: ${missingServices.join(', ')}`);
   }
 
   return {
-    valid: warnings.length === 0,
+    valid: parsedTariffs.length > 0,
     warnings,
     stats
   };
@@ -637,15 +670,23 @@ Deno.serve(async (req: Request) => {
     console.log('[PDF Parser] Validación:', validation);
 
     if (parsedTariffs.length === 0) {
+      const suggestions = [];
+
+      if (serviceLocations.length === 0) {
+        suggestions.push("No se detectaron nombres de servicios. Verifica que el PDF contiene servicios como: Express08:30, Express10:30, Express14:00, Express19:00, BusinessParcel, EuroBusinessParcel, EconomyParcel");
+      } else {
+        suggestions.push(`Se detectaron ${serviceLocations.length} servicios pero no se pudieron extraer tarifas`);
+      }
+
+      suggestions.push("Verifica que el PDF contiene tablas con rangos de peso (1kg, 3kg, 5kg, 10kg, 15kg, etc.)");
+      suggestions.push("Las tablas deben incluir zonas de destino (Provincial, Regional, Nacional)");
+      suggestions.push("Los precios deben estar claramente separados en columnas");
+
       return new Response(
         JSON.stringify({
           error: "No se pudieron extraer tarifas del PDF",
-          details: "El PDF no tiene el formato esperado de tarifas GLS",
-          suggestions: [
-            "Verifica que el PDF contiene tablas de tarifas GLS España 2025",
-            "El PDF debe incluir nombres de servicios (Business Parcel, Express, etc.)",
-            "Las tablas deben tener rangos de peso y precios claramente definidos"
-          ],
+          details: `Procesadas ${lines.length} líneas del PDF pero no se encontraron datos válidos de tarifas`,
+          suggestions,
           debugInfo: {
             textLength: pdfText.length,
             pages,
@@ -654,7 +695,7 @@ Deno.serve(async (req: Request) => {
             servicesDetected: serviceLocations.length,
             validation: validation.stats,
             warnings: validation.warnings,
-            sampleText: pdfText.substring(0, 1500)
+            sampleText: pdfText.substring(0, 2000)
           }
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
