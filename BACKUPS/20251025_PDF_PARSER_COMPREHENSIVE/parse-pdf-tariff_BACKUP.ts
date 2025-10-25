@@ -19,47 +19,47 @@ const SERVICE_MAPPINGS: ServiceMapping[] = [
   {
     pdfName: "Express08:30",
     dbName: "Urg8:30H Courier",
-    keywords: ["express 08:30", "express08:30", "express 8:30", "express8:30", "08:30", "8:30", "express 8"]
+    keywords: ["express 08:30", "express08:30", "express 8:30", "express8:30", "08:30", "8:30"]
   },
   {
     pdfName: "Express10:30",
     dbName: "Urg10H Courier",
-    keywords: ["express 10:30", "express10:30", "express 10", "10:30", "express10"]
+    keywords: ["express 10:30", "express10:30", "express 10", "10:30"]
   },
   {
     pdfName: "Express14:00",
     dbName: "Urg14H Courier",
-    keywords: ["express 14:00", "express14:00", "express 14", "14:00", "express14"]
+    keywords: ["express 14:00", "express14:00", "express 14", "14:00"]
   },
   {
     pdfName: "Express19:00",
     dbName: "Urg19H Courier",
-    keywords: ["express 19:00", "express19:00", "express 19", "19:00", "express19"]
+    keywords: ["express 19:00", "express19:00", "express 19", "19:00"]
   },
   {
     pdfName: "BusinessParcel",
     dbName: "Business Parcel",
-    keywords: ["business parcel", "businessparcel", "business", "parcel", "businesspa"]
+    keywords: ["business parcel", "businessparcel", "business", "parcel"]
   },
   {
     pdfName: "EuroBusinessParcel",
     dbName: "EuroBusiness Parcel",
-    keywords: ["euro business parcel", "eurobusiness", "euro business", "eurobs"]
+    keywords: ["euro business parcel", "eurobusiness", "euro business"]
   },
   {
     pdfName: "EconomyParcel",
     dbName: "Economy Parcel",
-    keywords: ["economy parcel", "economyparcel", "economy", "economypa"]
+    keywords: ["economy parcel", "economyparcel", "economy"]
   },
   {
     pdfName: "Maritimo",
     dbName: "Marítimo",
-    keywords: ["maritimo", "marítimo", "maritim", "mar timo", "mar"]
+    keywords: ["maritimo", "marítimo", "maritim"]
   },
   {
     pdfName: "ParcelShop",
     dbName: "Parcel Shop",
-    keywords: ["parcel shop", "parcelshop", "shop", "parcelsh"]
+    keywords: ["parcel shop", "parcelshop", "shop"]
   },
 ];
 
@@ -77,8 +77,7 @@ const WEIGHT_RANGES: WeightRange[] = [
       /^[0-9.,\s]*1\s*kg/i,
       /hasta\s*1/i,
       /0\s*[-–]\s*1/i,
-      /^1$/,
-      /\b1\s*kg\b/i
+      /^1$/
     ]
   },
   {
@@ -88,8 +87,7 @@ const WEIGHT_RANGES: WeightRange[] = [
       /^[0-9.,\s]*3\s*kg/i,
       /1\s*[-–]\s*3/i,
       /de\s*1\s*a\s*3/i,
-      /^3$/,
-      /\b3\s*kg\b/i
+      /^3$/
     ]
   },
   {
@@ -99,8 +97,7 @@ const WEIGHT_RANGES: WeightRange[] = [
       /^[0-9.,\s]*5\s*kg/i,
       /3\s*[-–]\s*5/i,
       /de\s*3\s*a\s*5/i,
-      /^5$/,
-      /\b5\s*kg\b/i
+      /^5$/
     ]
   },
   {
@@ -110,8 +107,7 @@ const WEIGHT_RANGES: WeightRange[] = [
       /^[0-9.,\s]*10\s*kg/i,
       /5\s*[-–]\s*10/i,
       /de\s*5\s*a\s*10/i,
-      /^10$/,
-      /\b10\s*kg\b/i
+      /^10$/
     ]
   },
   {
@@ -121,8 +117,7 @@ const WEIGHT_RANGES: WeightRange[] = [
       /^[0-9.,\s]*15\s*kg/i,
       /10\s*[-–]\s*15/i,
       /de\s*10\s*a\s*15/i,
-      /^15$/,
-      /\b15\s*kg\b/i
+      /^15$/
     ]
   },
   {
@@ -134,8 +129,7 @@ const WEIGHT_RANGES: WeightRange[] = [
       />\s*15/i,
       /mayor.*pallet/i,
       /m[aá]s\s*de\s*15/i,
-      /^999$/,
-      /\bpor\s*kg/i
+      /^999$/
     ]
   },
 ];
@@ -145,245 +139,6 @@ interface ParsedTariff {
   weight_from: string;
   weight_to: string;
   [key: string]: string | number | null;
-}
-
-function decompressFlateDecode(data: Uint8Array): Uint8Array {
-  try {
-    const decompressed = new DecompressionStream('deflate');
-    const writer = decompressed.writable.getWriter();
-    writer.write(data);
-    writer.close();
-
-    const reader = decompressed.readable.getReader();
-    const chunks: Uint8Array[] = [];
-
-    return new Promise((resolve, reject) => {
-      const pump = async () => {
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            if (value) chunks.push(value);
-          }
-
-          const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-          const result = new Uint8Array(totalLength);
-          let offset = 0;
-          for (const chunk of chunks) {
-            result.set(chunk, offset);
-            offset += chunk.length;
-          }
-          resolve(result);
-        } catch (error) {
-          reject(error);
-        }
-      };
-      pump();
-    });
-  } catch (error) {
-    console.error('[PDF Parser] Decompression error:', error);
-    return data;
-  }
-}
-
-function extractEncodedText(text: string): string {
-  let decoded = text;
-
-  decoded = decoded
-    .replace(/\\n/g, '\n')
-    .replace(/\\r/g, '\r')
-    .replace(/\\t/g, '\t')
-    .replace(/\\\(/g, '(')
-    .replace(/\\\)/g, ')')
-    .replace(/\\\\/g, '\\')
-    .replace(/\\b/g, '\b')
-    .replace(/\\f/g, '\f');
-
-  decoded = decoded.replace(/\\(\d{3})/g, (match, octal) => {
-    const code = parseInt(octal, 8);
-    return String.fromCharCode(code);
-  });
-
-  decoded = decoded.replace(/<([0-9A-Fa-f]+)>/g, (match, hex) => {
-    let result = '';
-    for (let i = 0; i < hex.length; i += 2) {
-      const byte = hex.substr(i, 2);
-      result += String.fromCharCode(parseInt(byte, 16));
-    }
-    return result;
-  });
-
-  return decoded;
-}
-
-async function extractTextFromPDF(uint8Array: Uint8Array): Promise<{ text: string; confidence: 'high' | 'medium' | 'low' }> {
-  const pdfSignature = uint8Array.slice(0, 5);
-  const signatureStr = new TextDecoder('utf-8').decode(pdfSignature);
-
-  if (!signatureStr.startsWith('%PDF-')) {
-    throw new Error('El archivo no es un PDF válido');
-  }
-
-  try {
-    const textDecoder = new TextDecoder("latin1", { fatal: false });
-    let pdfText = textDecoder.decode(uint8Array);
-
-    const extractedChunks: string[] = [];
-    let confidence: 'high' | 'medium' | 'low' = 'low';
-
-    const objectPattern = /(\d+)\s+(\d+)\s+obj\s*([\s\S]*?)\s*endobj/g;
-    let objectMatch;
-    let totalObjectsProcessed = 0;
-    let totalTextExtracted = 0;
-
-    while ((objectMatch = objectPattern.exec(pdfText)) !== null) {
-      totalObjectsProcessed++;
-      const objectContent = objectMatch[3];
-
-      const streamMatch = /stream\s*([\s\S]*?)\s*endstream/g.exec(objectContent);
-      if (!streamMatch) {
-        const simpleTextPattern = /\(((?:[^()\\]|\\[()\\nrtfb]|\\[0-9]{3})*)\)\s*Tj/g;
-        let textMatch;
-
-        while ((textMatch = simpleTextPattern.exec(objectContent)) !== null) {
-          const extracted = extractEncodedText(textMatch[1]);
-          if (extracted.length > 0 && /[a-zA-Z0-9]/.test(extracted)) {
-            extractedChunks.push(extracted);
-            totalTextExtracted++;
-          }
-        }
-        continue;
-      }
-
-      const streamContent = streamMatch[1];
-
-      const filterMatch = /\/Filter\s*\/FlateDecode/i.exec(objectContent);
-      if (filterMatch) {
-        try {
-          const streamStartIndex = pdfText.indexOf('stream', objectMatch.index) + 6;
-          while (pdfText.charCodeAt(streamStartIndex) === 13 || pdfText.charCodeAt(streamStartIndex) === 10) {
-            streamStartIndex++;
-          }
-          const streamEndIndex = pdfText.indexOf('endstream', streamStartIndex);
-
-          const compressedData = uint8Array.slice(streamStartIndex, streamEndIndex);
-          const decompressed = await decompressFlateDecode(compressedData);
-          const decompressedText = new TextDecoder('latin1').decode(decompressed);
-
-          const tjPattern = /\(((?:[^()\\]|\\[()\\nrtfb]|\\[0-9]{3})*)\)\s*Tj/g;
-          let tjMatch;
-          while ((tjMatch = tjPattern.exec(decompressedText)) !== null) {
-            const extracted = extractEncodedText(tjMatch[1]);
-            if (extracted.length > 0) {
-              extractedChunks.push(extracted);
-              totalTextExtracted++;
-            }
-          }
-
-          const tjArrayPattern = /\[((?:[^\[\]]|\\\[|\\\])*)\]\s*TJ/g;
-          let tjArrayMatch;
-          while ((tjArrayMatch = tjArrayPattern.exec(decompressedText)) !== null) {
-            const arrayContent = tjArrayMatch[1];
-            const stringMatches = arrayContent.match(/\(((?:[^()\\]|\\[()\\nrtfb]|\\[0-9]{3})*)\)/g);
-
-            if (stringMatches) {
-              for (const str of stringMatches) {
-                const cleaned = str.replace(/^\(|\)$/g, '');
-                const extracted = extractEncodedText(cleaned);
-                if (extracted.length > 0) {
-                  extractedChunks.push(extracted);
-                  totalTextExtracted++;
-                }
-              }
-            }
-          }
-        } catch (decompError) {
-          console.error('[PDF Parser] Decompression failed for object:', decompError);
-        }
-        continue;
-      }
-
-      const textObjectPattern = /\(((?:[^()\\]|\\[()\\nrtfb]|\\[0-9]{3})*)\)\s*Tj/g;
-      let textMatch;
-
-      while ((textMatch = textObjectPattern.exec(streamContent)) !== null) {
-        const extracted = extractEncodedText(textMatch[1]);
-        if (extracted.length > 0 && /[a-zA-Z0-9]/.test(extracted)) {
-          extractedChunks.push(extracted);
-          totalTextExtracted++;
-        }
-      }
-
-      const tjArrayPattern = /\[((?:[^\[\]]|\\\[|\\\])*)\]\s*TJ/g;
-      let tjMatch;
-
-      while ((tjMatch = tjArrayPattern.exec(streamContent)) !== null) {
-        const arrayContent = tjMatch[1];
-        const stringMatches = arrayContent.match(/\(((?:[^()\\]|\\[()\\nrtfb]|\\[0-9]{3})*)\)/g);
-
-        if (stringMatches) {
-          for (const str of stringMatches) {
-            const cleaned = str.replace(/^\(|\)$/g, '');
-            const extracted = extractEncodedText(cleaned);
-            if (extracted.length > 0) {
-              extractedChunks.push(extracted);
-              totalTextExtracted++;
-            }
-          }
-        }
-      }
-    }
-
-    const extractedText = extractedChunks.join(' ');
-
-    if (extractedText.length > 1000 && totalTextExtracted > 50) {
-      confidence = 'high';
-    } else if (extractedText.length > 300 && totalTextExtracted > 20) {
-      confidence = 'medium';
-    } else {
-      confidence = 'low';
-    }
-
-    console.log(`[PDF Parser] Extraction stats:`, {
-      totalBytes: uint8Array.length,
-      objectsProcessed: totalObjectsProcessed,
-      textChunksExtracted: totalTextExtracted,
-      totalTextLength: extractedText.length,
-      confidence
-    });
-
-    if (extractedText.length < 100) {
-      const fallbackPattern = /BT\s+([\s\S]*?)\s+ET/g;
-      let fallbackMatch;
-      const fallbackChunks: string[] = [];
-
-      while ((fallbackMatch = fallbackPattern.exec(pdfText)) !== null) {
-        const btContent = fallbackMatch[1];
-        const simpleText = btContent.match(/\(([^)]+)\)/g);
-        if (simpleText) {
-          fallbackChunks.push(...simpleText.map(t => extractEncodedText(t.replace(/[()]/g, ''))));
-        }
-      }
-
-      if (fallbackChunks.length > 0) {
-        return { text: fallbackChunks.join(' '), confidence: 'medium' };
-      }
-
-      const rawText = pdfText.replace(/[^\x20-\x7E\xA0-\xFF\n]/g, ' ');
-      return { text: rawText, confidence: 'low' };
-    }
-
-    return { text: extractedText, confidence };
-  } catch (error) {
-    throw new Error(`Error al extraer texto del PDF: ${error.message}`);
-  }
-}
-
-function normalizeSpaces(text: string): string {
-  return text
-    .replace(/\s+/g, ' ')
-    .replace(/\n\s*\n/g, '\n')
-    .trim();
 }
 
 function mapServiceName(text: string): string | null {
@@ -426,34 +181,152 @@ function parseNumericValue(value: string): number | null {
   return isNaN(parsed) ? null : parsed;
 }
 
-function extractTableStructure(lines: string[]): { rows: string[][], headers: string[] } {
-  const rows: string[][] = [];
-  let headers: string[] = [];
+function extractTextFromPDF(uint8Array: Uint8Array): { text: string; confidence: 'high' | 'medium' | 'low' } {
+  const pdfSignature = uint8Array.slice(0, 5);
+  const signatureStr = new TextDecoder('utf-8').decode(pdfSignature);
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (line.trim().length === 0) continue;
+  if (!signatureStr.startsWith('%PDF-')) {
+    throw new Error('El archivo no es un PDF válido');
+  }
 
-    const parts = line.split(/\s{2,}|\t+/).map(p => p.trim()).filter(p => p.length > 0);
+  try {
+    const textDecoder = new TextDecoder("utf-8", { fatal: false });
+    let pdfText = textDecoder.decode(uint8Array);
 
-    if (parts.length > 5) {
-      if (parts.some(p => /provincial|regional|nacional|portugal/i.test(p))) {
-        headers = parts;
-        console.log(`[PDF Parser] Table headers detected at line ${i}:`, headers);
+    pdfText = pdfText.replace(/\0/g, ' ');
+    pdfText = pdfText.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F]/g, ' ');
+
+    const extractedChunks: string[] = [];
+    let confidence: 'high' | 'medium' | 'low' = 'low';
+
+    const streamPattern = /stream\s*([\s\S]*?)\s*endstream/g;
+    let streamMatch;
+    let totalStreamsFound = 0;
+
+    while ((streamMatch = streamPattern.exec(pdfText)) !== null) {
+      totalStreamsFound++;
+      const streamContent = streamMatch[1];
+
+      if (streamContent.includes('FlateDecode') || streamContent.includes('Fl')) {
         continue;
       }
 
-      if (parts.some(p => /^\d+([.,]\d+)?\s*kg/i.test(p) || /^\d+$/.test(p))) {
-        rows.push(parts);
+      const textObjectPattern = /\(((?:[^()\\]|\\[()\\nrtfb])*)\)\s*Tj/g;
+      let textMatch;
+
+      while ((textMatch = textObjectPattern.exec(streamContent)) !== null) {
+        let extractedText = textMatch[1];
+
+        extractedText = extractedText
+          .replace(/\\n/g, '\n')
+          .replace(/\\r/g, '\r')
+          .replace(/\\t/g, '\t')
+          .replace(/\\\(/g, '(')
+          .replace(/\\\)/g, ')')
+          .replace(/\\\\/g, '\\');
+
+        if (extractedText.length > 0 && /[a-zA-Z0-9]/.test(extractedText)) {
+          extractedChunks.push(extractedText);
+        }
       }
+
+      const tjArrayPattern = /\[((?:[^\[\]]|\\\[|\\\])*)\]\s*TJ/g;
+      let tjMatch;
+
+      while ((tjMatch = tjArrayPattern.exec(streamContent)) !== null) {
+        const arrayContent = tjMatch[1];
+        const stringMatches = arrayContent.match(/\(((?:[^()\\]|\\[()\\nrtfb])*)\)/g);
+
+        if (stringMatches) {
+          for (const str of stringMatches) {
+            const cleaned = str
+              .replace(/^\(|\)$/g, '')
+              .replace(/\\n/g, '\n')
+              .replace(/\\r/g, '\r')
+              .replace(/\\t/g, '\t')
+              .replace(/\\\(/g, '(')
+              .replace(/\\\)/g, ')')
+              .replace(/\\\\/g, '\\');
+
+            if (cleaned.length > 0 && /[a-zA-Z0-9]/.test(cleaned)) {
+              extractedChunks.push(cleaned);
+            }
+          }
+        }
+      }
+    }
+
+    const extractedText = extractedChunks.join(' ');
+
+    if (extractedText.length > 500) {
+      confidence = 'high';
+    } else if (extractedText.length > 100) {
+      confidence = 'medium';
+    } else {
+      confidence = 'low';
+    }
+
+    console.log(`[PDF Parser] Extraction stats:`, {
+      totalBytes: uint8Array.length,
+      streamsFound: totalStreamsFound,
+      chunksExtracted: extractedChunks.length,
+      textLength: extractedText.length,
+      confidence
+    });
+
+    if (extractedText.length < 50) {
+      const fallbackPattern = /BT\s+([\s\S]*?)\s+ET/g;
+      let fallbackMatch;
+      const fallbackChunks: string[] = [];
+
+      while ((fallbackMatch = fallbackPattern.exec(pdfText)) !== null) {
+        const btContent = fallbackMatch[1];
+        const simpleText = btContent.match(/\(([^)]+)\)/g);
+        if (simpleText) {
+          fallbackChunks.push(...simpleText.map(t => t.replace(/[()]/g, '')));
+        }
+      }
+
+      if (fallbackChunks.length > 0) {
+        return { text: fallbackChunks.join(' '), confidence: 'medium' };
+      }
+
+      const rawText = pdfText.replace(/[^\x20-\x7E\xA0-\xFF\n]/g, '');
+      return { text: rawText, confidence: 'low' };
+    }
+
+    return { text: extractedText, confidence };
+  } catch (error) {
+    throw new Error(`Error al extraer texto del PDF: ${error.message}`);
+  }
+}
+
+function normalizeSpaces(text: string): string {
+  return text
+    .replace(/\s+/g, ' ')
+    .replace(/\n\s*\n/g, '\n')
+    .trim();
+}
+
+function extractTablesFromText(text: string): string[][] {
+  const lines = text.split('\n').map(line => normalizeSpaces(line));
+  const tables: string[][] = [];
+
+  for (const line of lines) {
+    if (line.trim().length === 0) continue;
+
+    const parts = line.split(/\s{2,}|\t+/);
+    if (parts.length > 3) {
+      tables.push(parts.map(p => p.trim()).filter(p => p.length > 0));
     }
   }
 
-  return { rows, headers };
+  return tables;
 }
 
 Deno.serve(async (req: Request) => {
   console.log(`[PDF Parser] Nueva petición: ${req.method}`);
+  console.log(`[PDF Parser] Headers:`, Object.fromEntries(req.headers.entries()));
 
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -463,24 +336,38 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    console.log(`[PDF Parser] Content-Type: ${req.headers.get('content-type')}`);
     const formData = await req.formData();
+    console.log(`[PDF Parser] FormData keys:`, Array.from(formData.keys()));
     const pdfFile = formData.get("pdf") as File;
+    console.log(`[PDF Parser] Archivo recibido:`, {
+      name: pdfFile?.name,
+      size: pdfFile?.size,
+      type: pdfFile?.type
+    });
 
     if (!pdfFile) {
+      console.error('[PDF Parser] No se recibió archivo PDF en el FormData');
       return new Response(
         JSON.stringify({
           error: "No se proporcionó archivo PDF",
           details: "Por favor, selecciona un archivo PDF de tarifas GLS",
+          debug: {
+            formDataKeys: Array.from(formData.keys()),
+            contentType: req.headers.get('content-type')
+          }
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (!pdfFile.type || pdfFile.type !== 'application/pdf') {
+      console.error(`[PDF Parser] Tipo de archivo inválido: ${pdfFile.type}`);
       return new Response(
         JSON.stringify({
           error: "El archivo debe ser un PDF",
           details: `Tipo de archivo recibido: ${pdfFile.type || 'desconocido'}`,
+          hint: "Asegúrate de que el archivo tenga extensión .pdf"
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -501,20 +388,18 @@ Deno.serve(async (req: Request) => {
     const arrayBuffer = await pdfFile.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
 
-    const { text: pdfText, confidence } = await extractTextFromPDF(uint8Array);
+    const { text: pdfText, confidence } = extractTextFromPDF(uint8Array);
 
     console.log(`[PDF Parser] Texto extraído (${pdfText.length} caracteres) con confianza: ${confidence}`);
-    console.log(`[PDF Parser] Primeros 800 caracteres:`, pdfText.substring(0, 800));
+    console.log(`[PDF Parser] Primeros 500 caracteres:`, pdfText.substring(0, 500));
 
     const normalizedText = normalizeSpaces(pdfText);
     const lines = normalizedText.split('\n').filter(line => line.trim().length > 0);
-
-    const { rows: tableRows, headers: tableHeaders } = extractTableStructure(lines);
+    const tables = extractTablesFromText(normalizedText);
 
     console.log(`[PDF Parser] Procesamiento:`, {
       totalLines: lines.length,
-      tableRowsDetected: tableRows.length,
-      tableHeaders: tableHeaders.length,
+      tablesDetected: tables.length,
       confidence
     });
 
@@ -626,9 +511,9 @@ Deno.serve(async (req: Request) => {
             processedLines,
             confidence,
             textLength: pdfText.length,
-            tableRowsDetected: tableRows.length,
-            sampleLines: lines.slice(0, 30),
-            extractedTextSample: pdfText.substring(0, 1500)
+            tablesDetected: tables.length,
+            sampleLines: lines.slice(0, 20),
+            extractedTextSample: pdfText.substring(0, 1000)
           }
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -677,7 +562,7 @@ Deno.serve(async (req: Request) => {
         stats: {
           textLength: pdfText.length,
           linesProcessed: processedLines,
-          tableRowsDetected: tableRows.length
+          tablesDetected: tables.length
         },
         preview: parsedTariffs.slice(0, 5)
       }),
