@@ -148,24 +148,29 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (new Date(userProfile.subscription_end_date) < new Date()) {
-      await supabaseAdmin.from('auth_logs').insert({
-        user_id: userProfile.id,
-        email: email.toLowerCase(),
-        event_type: 'access_denied',
-        ip_address: ipAddress,
-        user_agent: userAgent,
-        success: false,
-        error_message: 'Suscripción expirada',
-      });
+    if (userProfile.subscription_end_date) {
+      const endDate = new Date(userProfile.subscription_end_date);
+      const now = new Date();
 
-      return new Response(
-        JSON.stringify({ error: 'Tu suscripción ha expirado' }),
-        {
-          status: 403,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+      if (endDate < now) {
+        await supabaseAdmin.from('auth_logs').insert({
+          user_id: userProfile.id,
+          email: email.toLowerCase(),
+          event_type: 'access_denied',
+          ip_address: ipAddress,
+          user_agent: userAgent,
+          success: false,
+          error_message: 'Suscripción expirada',
+        });
+
+        return new Response(
+          JSON.stringify({ error: 'Tu suscripción ha expirado' }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
     }
 
     const { data: activeSessions, error: sessionsError } = await supabaseAdmin
@@ -372,9 +377,18 @@ Deno.serve(async (req: Request) => {
       }
     );
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('Unexpected error in verify-login-code:', error);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+
     return new Response(
-      JSON.stringify({ error: 'Error interno del servidor' }),
+      JSON.stringify({
+        error: 'Error interno del servidor',
+        details: error.message || 'Unknown error'
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
