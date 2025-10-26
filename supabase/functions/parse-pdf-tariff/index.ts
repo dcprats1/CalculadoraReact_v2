@@ -9,228 +9,194 @@ const corsHeaders = {
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
-interface ServiceMapping {
+interface CoordinateBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface TableCell {
+  column: string;
+  value: number | null;
+}
+
+interface TableRow {
+  weightFrom: string;
+  weightTo: string;
+  cells: Record<string, number | null>;
+}
+
+interface ServiceTableDefinition {
+  serviceName: string;
   dbName: string;
-  pdfPatterns: RegExp[];
-  keywords: string[];
-  priority: number;
+  page: number;
+  detectionPatterns: RegExp[];
+  columns: {
+    name: string;
+    dbSuffix: string;
+    xRange: [number, number];
+  }[];
+  weightColumn: {
+    xRange: [number, number];
+  };
+  zones: {
+    name: string;
+    dbPrefix: string;
+    yRange: [number, number];
+  }[];
 }
 
-const SERVICE_MAPPINGS: ServiceMapping[] = [
+const GLS_2025_TEMPLATE: ServiceTableDefinition[] = [
   {
+    serviceName: "Express 08:30",
     dbName: "Urg8:30H Courier",
-    pdfPatterns: [
-      /express\s*0?8:?30(?!.*glass|.*plus|.*premium)/i,
-      /urg\s*0?8:?30(?!.*glass|.*plus|.*premium)/i,
-      /express\s*8(?:\s|$)(?!.*glass|.*plus|.*premium)/i,
+    page: 4,
+    detectionPatterns: [/express\s*0?8:?30/i, /urg\s*0?8:?30/i],
+    columns: [
+      { name: "Recogida", dbSuffix: "_rec", xRange: [100, 200] },
+      { name: "Arrastre", dbSuffix: "_arr", xRange: [200, 300] },
+      { name: "Entrega", dbSuffix: "_ent", xRange: [300, 400] },
+      { name: "Salidas", dbSuffix: "_sal", xRange: [400, 500] },
+      { name: "Recogidas", dbSuffix: "_rec_extra", xRange: [500, 600] },
+      { name: "Interciudad", dbSuffix: "_int", xRange: [600, 700] },
     ],
-    keywords: ["express", "08", "8:30", "830"],
-    priority: 1
+    weightColumn: { xRange: [50, 100] },
+    zones: [
+      { name: "Provincial", dbPrefix: "provincial", yRange: [100, 250] },
+      { name: "Regional", dbPrefix: "regional", yRange: [250, 400] },
+      { name: "Nacional", dbPrefix: "nacional", yRange: [400, 550] },
+    ]
   },
   {
-    dbName: "Urg10H Courier",
-    pdfPatterns: [
-      /express\s*10:?30(?!.*glass|.*plus|.*premium)/i,
-      /urg\s*10(?!.*glass|.*plus|.*premium)/i,
-      /express\s*10(?:\s|$)(?!.*glass|.*plus|.*premium)/i,
-    ],
-    keywords: ["express", "10", "1030"],
-    priority: 2
-  },
-  {
+    serviceName: "Express 14:00",
     dbName: "Urg14H Courier",
-    pdfPatterns: [
-      /express\s*14:?00(?!.*glass|.*plus|.*premium)/i,
-      /urg\s*14(?!.*glass|.*plus|.*premium)/i,
-      /express\s*14(?:\s|$)(?!.*glass|.*plus|.*premium)/i,
+    page: 5,
+    detectionPatterns: [/express\s*14:?00/i, /urg\s*14/i],
+    columns: [
+      { name: "Recogida", dbSuffix: "_rec", xRange: [100, 200] },
+      { name: "Arrastre", dbSuffix: "_arr", xRange: [200, 300] },
+      { name: "Entrega", dbSuffix: "_ent", xRange: [300, 400] },
+      { name: "Salidas", dbSuffix: "_sal", xRange: [400, 500] },
+      { name: "Recogidas", dbSuffix: "_rec_extra", xRange: [500, 600] },
+      { name: "Interciudad", dbSuffix: "_int", xRange: [600, 700] },
     ],
-    keywords: ["express", "14", "1400"],
-    priority: 3
+    weightColumn: { xRange: [50, 100] },
+    zones: [
+      { name: "Provincial", dbPrefix: "provincial", yRange: [100, 250] },
+      { name: "Regional", dbPrefix: "regional", yRange: [250, 400] },
+      { name: "Nacional", dbPrefix: "nacional", yRange: [400, 550] },
+    ]
   },
   {
+    serviceName: "Express 19:00",
     dbName: "Urg19H Courier",
-    pdfPatterns: [
-      /express\s*19:?00(?!.*glass|.*plus|.*premium)/i,
-      /urg\s*19(?!.*glass|.*plus|.*premium)/i,
-      /express\s*19(?:\s|$)(?!.*glass|.*plus|.*premium)/i,
+    page: 6,
+    detectionPatterns: [/express\s*19:?00/i, /urg\s*19/i],
+    columns: [
+      { name: "Recogida", dbSuffix: "_rec", xRange: [100, 200] },
+      { name: "Arrastre", dbSuffix: "_arr", xRange: [200, 300] },
+      { name: "Entrega", dbSuffix: "_ent", xRange: [300, 400] },
+      { name: "Salidas", dbSuffix: "_sal", xRange: [400, 500] },
+      { name: "Recogidas", dbSuffix: "_rec_extra", xRange: [500, 600] },
+      { name: "Interciudad", dbSuffix: "_int", xRange: [600, 700] },
     ],
-    keywords: ["express", "19", "1900"],
-    priority: 4
+    weightColumn: { xRange: [50, 100] },
+    zones: [
+      { name: "Provincial", dbPrefix: "provincial", yRange: [100, 250] },
+      { name: "Regional", dbPrefix: "regional", yRange: [250, 400] },
+      { name: "Nacional", dbPrefix: "nacional", yRange: [400, 550] },
+    ]
   },
   {
+    serviceName: "Business Parcel",
     dbName: "Business Parcel",
-    pdfPatterns: [
-      /business\s*parcel(?!.*glass|.*plus|.*premium)/i,
-      /businessparcel(?!.*glass|.*plus|.*premium)/i,
+    page: 7,
+    detectionPatterns: [/business\s*parcel/i, /businessparcel/i],
+    columns: [
+      { name: "Recogida", dbSuffix: "_rec", xRange: [100, 200] },
+      { name: "Arrastre", dbSuffix: "_arr", xRange: [200, 300] },
+      { name: "Entrega", dbSuffix: "_ent", xRange: [300, 400] },
+      { name: "Salidas", dbSuffix: "_sal", xRange: [400, 500] },
+      { name: "Recogidas", dbSuffix: "_rec_extra", xRange: [500, 600] },
+      { name: "Interciudad", dbSuffix: "_int", xRange: [600, 700] },
     ],
-    keywords: ["business", "parcel"],
-    priority: 5
+    weightColumn: { xRange: [50, 100] },
+    zones: [
+      { name: "Provincial", dbPrefix: "provincial", yRange: [100, 250] },
+      { name: "Regional", dbPrefix: "regional", yRange: [250, 400] },
+      { name: "Nacional", dbPrefix: "nacional", yRange: [400, 550] },
+    ]
   },
   {
+    serviceName: "Eurobusiness Parcel",
     dbName: "Eurobusiness Parcel",
-    pdfPatterns: [
-      /euro\s*business\s*parcel(?!.*glass|.*plus|.*premium)/i,
-      /eurobusiness(?!.*glass|.*plus|.*premium)/i,
+    page: 7,
+    detectionPatterns: [/euro\s*business/i, /eurobusiness/i],
+    columns: [
+      { name: "Recogida", dbSuffix: "_rec", xRange: [100, 200] },
+      { name: "Arrastre", dbSuffix: "_arr", xRange: [200, 300] },
+      { name: "Entrega", dbSuffix: "_ent", xRange: [300, 400] },
+      { name: "Salidas", dbSuffix: "_sal", xRange: [400, 500] },
+      { name: "Recogidas", dbSuffix: "_rec_extra", xRange: [500, 600] },
+      { name: "Interciudad", dbSuffix: "_int", xRange: [600, 700] },
     ],
-    keywords: ["euro", "business"],
-    priority: 6
+    weightColumn: { xRange: [50, 100] },
+    zones: [
+      { name: "Provincial", dbPrefix: "provincial", yRange: [100, 250] },
+      { name: "Regional", dbPrefix: "regional", yRange: [250, 400] },
+      { name: "Nacional", dbPrefix: "nacional", yRange: [400, 550] },
+    ]
   },
   {
+    serviceName: "Economy Parcel",
     dbName: "Economy Parcel",
-    pdfPatterns: [
-      /economy\s*parcel(?!.*glass|.*plus|.*premium)/i,
-      /economyparcel(?!.*glass|.*plus|.*premium)/i,
+    page: 8,
+    detectionPatterns: [/economy\s*parcel/i, /economyparcel/i],
+    columns: [
+      { name: "Recogida", dbSuffix: "_rec", xRange: [100, 200] },
+      { name: "Arrastre", dbSuffix: "_arr", xRange: [200, 300] },
+      { name: "Entrega", dbSuffix: "_ent", xRange: [300, 400] },
+      { name: "Salidas", dbSuffix: "_sal", xRange: [400, 500] },
+      { name: "Recogidas", dbSuffix: "_rec_extra", xRange: [500, 600] },
+      { name: "Interciudad", dbSuffix: "_int", xRange: [600, 700] },
     ],
-    keywords: ["economy", "parcel"],
-    priority: 7
+    weightColumn: { xRange: [50, 100] },
+    zones: [
+      { name: "Provincial", dbPrefix: "provincial", yRange: [100, 250] },
+      { name: "Regional", dbPrefix: "regional", yRange: [250, 400] },
+      { name: "Nacional", dbPrefix: "nacional", yRange: [400, 550] },
+    ]
   },
   {
+    serviceName: "Shop Return Service",
     dbName: "Parcel Shop",
-    pdfPatterns: [
-      /parcel\s*shop(?!.*glass|.*plus|.*premium)/i,
-      /shop\s*(?:return|delivery)(?!.*glass|.*plus|.*premium)/i,
+    page: 8,
+    detectionPatterns: [/shop\s*return/i, /parcel\s*shop/i],
+    columns: [
+      { name: "Recogida", dbSuffix: "_rec", xRange: [100, 200] },
+      { name: "Arrastre", dbSuffix: "_arr", xRange: [200, 300] },
+      { name: "Entrega", dbSuffix: "_ent", xRange: [300, 400] },
+      { name: "Salidas", dbSuffix: "_sal", xRange: [400, 500] },
+      { name: "Recogidas", dbSuffix: "_rec_extra", xRange: [500, 600] },
+      { name: "Interciudad", dbSuffix: "_int", xRange: [600, 700] },
     ],
-    keywords: ["parcel", "shop"],
-    priority: 8
-  },
-  {
-    dbName: "Marítimo",
-    pdfPatterns: [
-      /mar[ií]timo(?!.*glass|.*plus|.*premium)/i,
-      /maritimo(?!.*glass|.*plus|.*premium)/i,
-    ],
-    keywords: ["maritimo", "marítimo"],
-    priority: 9
+    weightColumn: { xRange: [50, 100] },
+    zones: [
+      { name: "Provincial", dbPrefix: "provincial", yRange: [100, 250] },
+      { name: "Regional", dbPrefix: "regional", yRange: [250, 400] },
+      { name: "Nacional", dbPrefix: "nacional", yRange: [400, 550] },
+    ]
   },
 ];
 
-interface ZoneMapping {
-  dbPrefix: string;
-  displayName: string;
-  patterns: RegExp[];
-}
-
-const ZONE_MAPPINGS: ZoneMapping[] = [
-  {
-    dbPrefix: "provincial",
-    displayName: "Provincial",
-    patterns: [/\bprovincial\b/i, /\bprov\.?\b/i]
-  },
-  {
-    dbPrefix: "regional",
-    displayName: "Regional",
-    patterns: [/\bregional\b/i, /\breg\.?\b/i]
-  },
-  {
-    dbPrefix: "nacional",
-    displayName: "Nacional",
-    patterns: [/\bnacional\b/i, /\bnac\.?\b/i, /\binterciudad\b/i]
-  },
-  {
-    dbPrefix: "portugal",
-    displayName: "Portugal",
-    patterns: [/\bportugal\b/i, /\bport\.?\b/i, /\b-?pt-?\b/i]
-  },
-  {
-    dbPrefix: "baleares_mayores",
-    displayName: "Baleares Mayores",
-    patterns: [/\bbaleares\s+mayores\b/i, /\bbal\.?\s*may\.?\b/i, /\bmallorca\b/i, /\bmenorca\b/i, /\bibiza\b/i]
-  },
-  {
-    dbPrefix: "baleares_menores",
-    displayName: "Baleares Menores",
-    patterns: [/\bbaleares\s+menores\b/i, /\bbal\.?\s*men\.?\b/i, /\bformentera\b/i]
-  },
-  {
-    dbPrefix: "canarias_mayores",
-    displayName: "Canarias Mayores",
-    patterns: [/\bcanarias\s+mayores\b/i, /\bcan\.?\s*may\.?\b/i, /\btenerife\b/i, /\bgran\s+canaria\b/i]
-  },
-  {
-    dbPrefix: "canarias_menores",
-    displayName: "Canarias Menores",
-    patterns: [/\bcanarias\s+menores\b/i, /\bcan\.?\s*men\.?\b/i, /\blanzarote\b/i, /\bfuerteventura\b/i, /\bla\s+palma\b/i, /\bla\s+gomera\b/i, /\bel\s+hierro\b/i]
-  },
-  {
-    dbPrefix: "azores_mayores",
-    displayName: "Azores Mayores",
-    patterns: [/\bazores\s+mayores\b/i, /\baz\.?\s*may\.?\b/i]
-  },
-  {
-    dbPrefix: "azores_menores",
-    displayName: "Azores Menores",
-    patterns: [/\bazores\s+menores\b/i, /\baz\.?\s*men\.?\b/i]
-  },
-  {
-    dbPrefix: "madeira_mayores",
-    displayName: "Madeira Mayores",
-    patterns: [/\bmadeira\s+mayores\b/i, /\bmad\.?\s*may\.?\b/i]
-  },
-  {
-    dbPrefix: "madeira_menores",
-    displayName: "Madeira Menores",
-    patterns: [/\bmadeira\s+menores\b/i, /\bmad\.?\s*men\.?\b/i]
-  },
-  {
-    dbPrefix: "ceuta",
-    displayName: "Ceuta",
-    patterns: [/\bceuta\b/i]
-  },
-  {
-    dbPrefix: "melilla",
-    displayName: "Melilla",
-    patterns: [/\bmelilla\b/i]
-  },
-  {
-    dbPrefix: "andorra",
-    displayName: "Andorra",
-    patterns: [/\bandorra\b/i, /\band\.?\b/i]
-  },
-  {
-    dbPrefix: "gibraltar",
-    displayName: "Gibraltar",
-    patterns: [/\bgibraltar\b/i, /\bgib\.?\b/i]
-  },
-];
-
-interface WeightRange {
-  from: string;
-  to: string;
-  patterns: RegExp[];
-}
-
-const WEIGHT_RANGES: WeightRange[] = [
-  { from: "0", to: "1", patterns: [/(?:^|\s)1\s*kg/i, /^1$/] },
-  { from: "1", to: "3", patterns: [/(?:^|\s)3\s*kg/i, /^3$/] },
-  { from: "3", to: "5", patterns: [/(?:^|\s)5\s*kg/i, /^5$/] },
-  { from: "5", to: "10", patterns: [/(?:^|\s)10\s*kg/i, /^10$/] },
-  { from: "10", to: "15", patterns: [/(?:^|\s)15\s*kg/i, /^15$/] },
-  { from: "15", to: "999", patterns: [/\+?\s*kg/i, /adicional/i, /(?:^|\s)\+kg/i] },
-];
-
-interface DestinationConfig {
-  dbPrefix: string;
-  displayName: string;
-  fields: string[];
-}
-
-const DESTINATION_CONFIGS: DestinationConfig[] = [
-  { dbPrefix: "provincial", displayName: "Provincial", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "regional", displayName: "Regional", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "nacional", displayName: "Nacional", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "portugal", displayName: "Portugal", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "canarias_mayores", displayName: "Canarias Mayores", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "canarias_menores", displayName: "Canarias Menores", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "baleares_mayores", displayName: "Baleares Mayores", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "baleares_menores", displayName: "Baleares Menores", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "ceuta", displayName: "Ceuta", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "melilla", displayName: "Melilla", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "andorra", displayName: "Andorra", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "gibraltar", displayName: "Gibraltar", fields: ["_sal", "_rec", "_int", "_arr"] },
-  { dbPrefix: "azores_mayores", displayName: "Azores Mayores", fields: ["_sal", "_rec", "_int"] },
-  { dbPrefix: "azores_menores", displayName: "Azores Menores", fields: ["_sal", "_rec", "_int"] },
-  { dbPrefix: "madeira_mayores", displayName: "Madeira Mayores", fields: ["_sal", "_rec", "_int"] },
-  { dbPrefix: "madeira_menores", displayName: "Madeira Menores", fields: ["_sal", "_rec", "_int"] },
+const WEIGHT_RANGES = [
+  { from: "0", to: "1", patterns: [/^1\s*kg/i, /^1$/] },
+  { from: "1", to: "3", patterns: [/^3\s*kg/i, /^3$/] },
+  { from: "3", to: "5", patterns: [/^5\s*kg/i, /^5$/] },
+  { from: "5", to: "10", patterns: [/^10\s*kg/i, /^10$/] },
+  { from: "10", to: "15", patterns: [/^15\s*kg/i, /^15$/] },
+  { from: "15", to: "999", patterns: [/\+?\s*kg/i, /adicional/i, /^\+kg/i] },
 ];
 
 const VALID_DB_FIELDS = new Set([
@@ -253,38 +219,25 @@ const VALID_DB_FIELDS = new Set([
   'madeira_menores_sal', 'madeira_menores_rec', 'madeira_menores_int',
 ]);
 
-interface ColumnMapping {
-  name: string;
-  fieldSuffix: string;
-  patterns: RegExp[];
+interface TextItem {
+  str: string;
+  transform: number[];
+  width: number;
+  height: number;
 }
 
-const COLUMN_MAPPINGS: ColumnMapping[] = [
-  { name: "Arrastre", fieldSuffix: "_arr", patterns: [/arrastre/i, /\barr\b/i] },
-  { name: "Salidas", fieldSuffix: "_sal", patterns: [/salidas?/i, /\bsal\b/i] },
-  { name: "Recogidas", fieldSuffix: "_rec", patterns: [/recogidas/i, /\brec\b/i] },
-  { name: "Interciudad", fieldSuffix: "_int", patterns: [/interciudad/i, /\bint\b/i] },
-];
-
-interface ParsedTariff {
-  service_name: string;
-  weight_from: string;
-  weight_to: string;
-  [key: string]: string | number | null;
+interface PageData {
+  pageNum: number;
+  items: TextItem[];
+  width: number;
+  height: number;
 }
 
-interface TableBlock {
-  serviceName: string;
-  startLine: number;
-  endLine: number;
-  lines: string[];
-}
-
-async function extractTextFromPDF(uint8Array: Uint8Array): Promise<{ text: string; pages: number }> {
+async function extractStructuredTextFromPDF(uint8Array: Uint8Array): Promise<PageData[]> {
   try {
-    console.log('[PDF Parser] Cargando PDF.js...');
+    console.log('[PDF Determinista] Cargando PDF.js...');
     const { getDocument, version } = await import("npm:pdfjs-dist@4.0.379/legacy/build/pdf.mjs");
-    console.log(`[PDF Parser] PDF.js v${version} cargado`);
+    console.log(`[PDF Determinista] PDF.js v${version} cargado`);
 
     const loadingTask = getDocument({
       data: uint8Array,
@@ -295,528 +248,275 @@ async function extractTextFromPDF(uint8Array: Uint8Array): Promise<{ text: strin
 
     const pdfDocument = await loadingTask.promise;
     const numPages = pdfDocument.numPages;
-    console.log(`[PDF Parser] PDF cargado: ${numPages} páginas`);
+    console.log(`[PDF Determinista] PDF cargado: ${numPages} páginas`);
 
-    let fullText = '';
+    const pages: PageData[] = [];
 
     for (let pageNum = 1; pageNum <= numPages; pageNum++) {
       const page = await pdfDocument.getPage(pageNum);
       const textContent = await page.getTextContent();
+      const viewport = page.getViewport({ scale: 1.0 });
 
-      interface TextItem {
-        str: string;
-        transform: number[];
-      }
+      const items = textContent.items.map((item: any) => ({
+        str: item.str,
+        transform: item.transform,
+        width: item.width,
+        height: item.height,
+      }));
 
-      const items = textContent.items as TextItem[];
+      pages.push({
+        pageNum,
+        items,
+        width: viewport.width,
+        height: viewport.height,
+      });
 
-      const lineGroups = new Map<number, string[]>();
-      const LINE_THRESHOLD = 5;
-
-      for (const item of items) {
-        if (!item.str || item.str.trim().length === 0) continue;
-
-        const yCoord = Math.round(item.transform[5]);
-
-        let targetY = yCoord;
-        for (const existingY of lineGroups.keys()) {
-          if (Math.abs(existingY - yCoord) <= LINE_THRESHOLD) {
-            targetY = existingY;
-            break;
-          }
-        }
-
-        if (!lineGroups.has(targetY)) {
-          lineGroups.set(targetY, []);
-        }
-        lineGroups.get(targetY)!.push(item.str);
-      }
-
-      const sortedYCoords = Array.from(lineGroups.keys()).sort((a, b) => b - a);
-
-      const pageLines: string[] = [];
-      for (const yCoord of sortedYCoords) {
-        const lineText = lineGroups.get(yCoord)!.join(' ').trim();
-        if (lineText.length > 0) {
-          pageLines.push(lineText);
-        }
-      }
-
-      const pageText = pageLines.join('\n');
-      fullText += pageText + '\n';
-
-      console.log(`[PDF Parser] Página ${pageNum}/${numPages}: ${pageLines.length} líneas extraídas, ${pageText.length} caracteres`);
+      console.log(`[PDF Determinista] Página ${pageNum}/${numPages}: ${items.length} elementos de texto extraídos`);
     }
 
-    console.log(`[PDF Parser] Extracción completada: ${fullText.length} caracteres`);
-
-    const debugLines = fullText.split('\n').slice(0, 30);
-    console.log(`[PDF Parser] DEBUG - Primeras 30 líneas extraídas:`);
-    debugLines.forEach((line, idx) => {
-      console.log(`  ${idx + 1}: "${line.substring(0, 100)}"`);
-    });
-
-    return { text: fullText, pages: numPages };
+    return pages;
 
   } catch (error) {
-    console.error('[PDF Parser] Error con PDF.js:', error);
-    throw new Error(`Error al extraer texto del PDF: ${error.message}`);
+    console.error('[PDF Determinista] Error con PDF.js:', error);
+    throw new Error(`Error al extraer texto estructurado del PDF: ${error.message}`);
   }
 }
 
-function detectServiceInText(text: string): string | null {
-  const normalized = text.toLowerCase().replace(/\s+/g, ' ');
+function detectPDFVersion(pages: PageData[]): string {
+  console.log('[Detector Versión] Analizando versión del PDF...');
 
-  const hasRejectedSuffix = /glass|plus|premium/i.test(text);
-  if (hasRejectedSuffix) {
-    console.log(`[Detector] ✗ Servicio rechazado por sufijo no permitido: ${text.substring(0, 60)}`);
-    return null;
+  const firstPageText = pages[0]?.items.map(item => item.str).join(' ').toLowerCase() || '';
+
+  const yearPatterns = [
+    { year: '2025', pattern: /2025/ },
+    { year: '2024', pattern: /2024/ },
+    { year: '2026', pattern: /2026/ },
+  ];
+
+  for (const { year, pattern } of yearPatterns) {
+    if (pattern.test(firstPageText)) {
+      console.log(`[Detector Versión] ✓ PDF detectado como versión ${year}`);
+      return year;
+    }
   }
 
-  for (const mapping of SERVICE_MAPPINGS) {
-    for (const pattern of mapping.pdfPatterns) {
-      if (pattern.test(normalized)) {
-        console.log(`[Detector] ✓ Servicio detectado: ${mapping.dbName} con patrón ${pattern}`);
-        return mapping.dbName;
+  console.log('[Detector Versión] ⚠ No se detectó año, asumiendo 2025');
+  return '2025';
+}
+
+function findTextInCoordinates(
+  items: TextItem[],
+  xRange: [number, number],
+  yRange: [number, number]
+): string[] {
+  const found: string[] = [];
+
+  for (const item of items) {
+    const x = item.transform[4];
+    const y = item.transform[5];
+
+    if (x >= xRange[0] && x <= xRange[1] && y >= yRange[0] && y <= yRange[1]) {
+      if (item.str.trim().length > 0) {
+        found.push(item.str.trim());
       }
     }
+  }
 
-    let keywordMatches = 0;
-    for (const keyword of mapping.keywords) {
-      if (normalized.includes(keyword.toLowerCase())) {
-        keywordMatches++;
+  return found;
+}
+
+function parseNumber(text: string): number | null {
+  const cleaned = text.replace(/,/g, '.').replace(/[^0-9.]/g, '');
+  const num = parseFloat(cleaned);
+  return (!isNaN(num) && num > 0 && num < 10000) ? num : null;
+}
+
+function extractWeight(text: string): { from: string; to: string } | null {
+  for (const range of WEIGHT_RANGES) {
+    for (const pattern of range.patterns) {
+      if (pattern.test(text)) {
+        return { from: range.from, to: range.to };
       }
     }
+  }
+  return null;
+}
 
-    if (keywordMatches >= 2) {
-      console.log(`[Detector] ✓ Servicio detectado: ${mapping.dbName} por keywords`);
-      return mapping.dbName;
+function detectService(pageData: PageData): ServiceTableDefinition | null {
+  const pageText = pageData.items.map(item => item.str).join(' ').toLowerCase();
+
+  for (const template of GLS_2025_TEMPLATE) {
+    if (template.page === pageData.pageNum) {
+      for (const pattern of template.detectionPatterns) {
+        if (pattern.test(pageText)) {
+          console.log(`[Detector Servicio] ✓ Servicio "${template.serviceName}" detectado en página ${pageData.pageNum}`);
+          return template;
+        }
+      }
     }
+  }
+
+  const anyTemplateForPage = GLS_2025_TEMPLATE.filter(t => t.page === pageData.pageNum);
+  if (anyTemplateForPage.length > 0) {
+    console.log(`[Detector Servicio] Página ${pageData.pageNum} tiene plantillas pero no se detectó servicio específico`);
   }
 
   return null;
 }
 
-function identifyTableBlocks(lines: string[]): TableBlock[] {
-  console.log('[TableBlocks] ===== IDENTIFICANDO BLOQUES DE TABLAS =====');
-  const blocks: TableBlock[] = [];
-  let currentBlock: TableBlock | null = null;
+function calibrateCoordinates(pageData: PageData, template: ServiceTableDefinition): ServiceTableDefinition {
+  console.log('[Calibrador] Calibrando coordenadas basándose en el texto real...');
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const windowText = lines.slice(i, Math.min(i + 3, lines.length)).join(' ');
+  const calibratedTemplate = JSON.parse(JSON.stringify(template));
 
-    const detectedService = detectServiceInText(windowText);
+  const detectedHeaders: Array<{text: string, x: number, columnName: string}> = [];
 
-    if (detectedService) {
-      if (currentBlock) {
-        currentBlock.endLine = i - 1;
-        if (currentBlock.lines.length > 0) {
-          blocks.push(currentBlock);
-          console.log(`[TableBlocks] Bloque guardado: ${currentBlock.serviceName} (${currentBlock.lines.length} líneas)`);
-        }
-      }
+  for (const item of pageData.items) {
+    const text = item.str.toLowerCase();
+    const x = item.transform[4];
 
-      currentBlock = {
-        serviceName: detectedService,
-        startLine: i,
-        endLine: i,
-        lines: []
-      };
-
-      console.log(`[TableBlocks] ✓ Nuevo bloque iniciado en línea ${i}: ${detectedService}`);
-      continue;
-    }
-
-    if (currentBlock) {
-      const isTableRow = /\d+(\.\d+)?/.test(line) ||
-                        /kg/i.test(line) ||
-                        /provincial|regional|nacional|portugal/i.test(line);
-
-      if (isTableRow) {
-        currentBlock.lines.push(line);
-        currentBlock.endLine = i;
-      } else if (line.trim().length < 5) {
-        continue;
-      } else {
-        const nextService = detectServiceInText(lines.slice(i, Math.min(i + 2, lines.length)).join(' '));
-        if (nextService) {
-          currentBlock.endLine = i - 1;
-          if (currentBlock.lines.length > 0) {
-            blocks.push(currentBlock);
-            console.log(`[TableBlocks] Bloque guardado: ${currentBlock.serviceName} (${currentBlock.lines.length} líneas)`);
-          }
-          currentBlock = null;
-        }
-      }
+    if (/(recogida|recog)/i.test(text)) {
+      detectedHeaders.push({text: 'Recogida', x, columnName: 'Recogida'});
+    } else if (/arrastre/i.test(text)) {
+      detectedHeaders.push({text: 'Arrastre', x, columnName: 'Arrastre'});
+    } else if (/(entrega|entr)/i.test(text)) {
+      detectedHeaders.push({text: 'Entrega', x, columnName: 'Entrega'});
+    } else if (/(salidas|salid)/i.test(text)) {
+      detectedHeaders.push({text: 'Salidas', x, columnName: 'Salidas'});
+    } else if (/(interciudad|inter)/i.test(text)) {
+      detectedHeaders.push({text: 'Interciudad', x, columnName: 'Interciudad'});
     }
   }
 
-  if (currentBlock && currentBlock.lines.length > 0) {
-    blocks.push(currentBlock);
-    console.log(`[TableBlocks] Bloque final guardado: ${currentBlock.serviceName} (${currentBlock.lines.length} líneas)`);
+  if (detectedHeaders.length >= 3) {
+    console.log(`[Calibrador] ✓ ${detectedHeaders.length} encabezados detectados, ajustando coordenadas...`);
+
+    for (const header of detectedHeaders) {
+      const columnDef = calibratedTemplate.columns.find(col => col.name === header.columnName);
+      if (columnDef) {
+        const oldRange = columnDef.xRange;
+        columnDef.xRange = [header.x - 20, header.x + 80];
+        console.log(`[Calibrador]   ${header.columnName}: [${oldRange[0]}, ${oldRange[1]}] → [${columnDef.xRange[0]}, ${columnDef.xRange[1]}]`);
+      }
+    }
+  } else {
+    console.log(`[Calibrador] Solo ${detectedHeaders.length} encabezados detectados, usando coordenadas de plantilla`);
   }
 
-  console.log(`[TableBlocks] Total bloques identificados: ${blocks.length}`);
-  return blocks;
+  return calibratedTemplate;
 }
 
-function detectZoneInLine(line: string): string | null {
-  const normalized = line.toLowerCase();
+function extractTableDataWithCoordinates(pageData: PageData, template: ServiceTableDefinition): any[] {
+  console.log(`[Extractor Coordenadas] ===== EXTRAYENDO ${template.serviceName} =====`);
 
-  for (const zone of ZONE_MAPPINGS) {
-    for (const pattern of zone.patterns) {
-      if (pattern.test(normalized)) {
-        return zone.dbPrefix;
-      }
-    }
-  }
+  const calibrated = calibrateCoordinates(pageData, template);
 
-  return null;
-}
+  const results: any[] = [];
 
-function detectWeightInLine(line: string): { from: string; to: string } | null {
-  const parts = line.split(/\s+/);
+  for (const zone of calibrated.zones) {
+    console.log(`[Extractor Coordenadas] Procesando zona: ${zone.name} (Y: ${zone.yRange[0]}-${zone.yRange[1]})`);
 
-  for (const part of parts) {
-    const normalized = part.toLowerCase().trim();
-    for (const range of WEIGHT_RANGES) {
-      for (const pattern of range.patterns) {
-        if (pattern.test(normalized)) {
-          return { from: range.from, to: range.to };
-        }
-      }
-    }
-  }
+    const yMin = zone.yRange[0];
+    const yMax = zone.yRange[1];
+    const rowHeight = (yMax - yMin) / 6;
 
-  return null;
-}
+    for (let i = 0; i < 6; i++) {
+      const weightRange = WEIGHT_RANGES[i];
+      const rowYMin = yMax - ((i + 1) * rowHeight);
+      const rowYMax = yMax - (i * rowHeight);
 
-/**
- * Extrae TODOS los valores numéricos de una línea de tabla
- * No asume ninguna estructura fija - extrae todos los números encontrados
- *
- * @param line - Línea de texto con valores numéricos separados por espacios
- * @returns Array con todos los valores numéricos detectados
- *
- * El mapeo correcto a los campos se hará posteriormente basándose en los encabezados detectados
- */
-function extractNumericValues(line: string): number[] {
-  const parts = line.split(/\s+/);
-  const allNumbers: number[] = [];
-  const numbersWithPositions: Array<{value: number, position: number}> = [];
+      console.log(`[Extractor Coordenadas]   Fila ${i + 1}/6: ${weightRange.from}-${weightRange.to}kg (Y: ${rowYMin.toFixed(0)}-${rowYMax.toFixed(0)})`);
 
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
-    const cleaned = part.replace(/,/g, '.').replace(/[^0-9.]/g, '');
-    const num = parseFloat(cleaned);
-
-    if (!isNaN(num) && num > 0 && num < 10000) {
-      allNumbers.push(num);
-      numbersWithPositions.push({value: num, position: i});
-    }
-  }
-
-  console.log(`[NumericExtractor] Línea completa: "${line.substring(0, 120)}"`);
-  console.log(`[NumericExtractor] Total números detectados: ${allNumbers.length} → [${allNumbers.join(', ')}]`);
-  console.log(`[NumericExtractor] Posiciones: ${numbersWithPositions.map(n => `pos[${n.position}]=${n.value}`).join(', ')}`);
-
-  return allNumbers;
-}
-
-interface ExtractedData {
-  serviceName: string;
-  weightFrom: string;
-  weightTo: string;
-  zone: string;
-  values: number[];
-  detectedColumns?: string[];
-  headerLine?: string;
-}
-
-/**
- * Detecta las columnas presentes en el bloque buscando líneas de encabezado
- * Retorna el orden de aparición de las columnas basándose en la posición horizontal del texto
- */
-function detectColumnsInBlock(block: TableBlock): { columns: string[], headerLine: string | null } {
-  console.log(`[ColumnDetector] ===== DETECTANDO ESTRUCTURA DE COLUMNAS =====`);
-  console.log(`[ColumnDetector] Escaneando bloque: ${block.serviceName} (${block.lines.length} líneas)`);
-
-  const detectedColumnsMap = new Map<string, number>();
-  let headerLine: string | null = null;
-
-  for (let i = 0; i < Math.min(block.lines.length, 15); i++) {
-    const line = block.lines[i];
-    const normalizedLine = line.toLowerCase();
-
-    const hasMultipleHeaders = COLUMN_MAPPINGS.filter(col =>
-      col.patterns.some(pattern => pattern.test(normalizedLine))
-    ).length >= 2;
-
-    if (hasMultipleHeaders) {
-      console.log(`[ColumnDetector] ✓ Línea de encabezado encontrada en línea ${i}: "${line}"`);
-      headerLine = line;
-
-      for (const colMapping of COLUMN_MAPPINGS) {
-        for (const pattern of colMapping.patterns) {
-          const match = normalizedLine.match(pattern);
-          if (match && match.index !== undefined) {
-            const position = match.index;
-            if (!detectedColumnsMap.has(colMapping.fieldSuffix)) {
-              detectedColumnsMap.set(colMapping.fieldSuffix, position);
-              console.log(`[ColumnDetector]   → ${colMapping.name} (${colMapping.fieldSuffix}) detectado en posición ${position}`);
-            }
-            break;
-          }
-        }
-      }
-      break;
-    }
-  }
-
-  if (detectedColumnsMap.size === 0) {
-    console.log(`[ColumnDetector] ⚠ No se detectó línea de encabezado, usando orden por defecto`);
-    return {
-      columns: ["_arr", "_sal", "_rec", "_int"],
-      headerLine: null
-    };
-  }
-
-  const sortedColumns = Array.from(detectedColumnsMap.entries())
-    .sort((a, b) => a[1] - b[1])
-    .map(entry => entry[0]);
-
-  console.log(`[ColumnDetector] ===== RESULTADO DETECCIÓN =====`);
-  console.log(`[ColumnDetector] Columnas detectadas en orden de aparición: [${sortedColumns.join(", ")}]`);
-  console.log(`[ColumnDetector] Total columnas detectadas: ${sortedColumns.length}`);
-
-  return { columns: sortedColumns, headerLine };
-}
-
-function extractTariffsFromBlock(block: TableBlock): ExtractedData[] {
-  console.log(`[Extractor] ===== EXTRAYENDO TARIFAS DE ${block.serviceName} =====`);
-
-  const { columns: detectedColumns, headerLine } = detectColumnsInBlock(block);
-  const extractedData: ExtractedData[] = [];
-  let currentZone: string | null = null;
-  let warningCount = 0;
-
-  console.log(`[Extractor] Estructura de columnas para ${block.serviceName}: [${detectedColumns.join(', ')}]`);
-
-  for (let i = 0; i < block.lines.length; i++) {
-    const line = block.lines[i];
-
-    const zone = detectZoneInLine(line);
-    if (zone) {
-      if (currentZone) {
-        console.log(`[ZoneSwitch] Cambiando de zona: ${currentZone} → ${zone}`);
-      }
-      currentZone = zone;
-      console.log(`[Extractor]   ✓ Zona detectada: ${zone} en línea: ${line.substring(0, 60)}`);
-      continue;
-    }
-
-    const weight = detectWeightInLine(line);
-    if (weight) {
-      if (!currentZone) {
-        console.log(`[Warning] Peso detectado sin zona asignada en línea: "${line.substring(0, 80)}"`);
-        warningCount++;
-        continue;
-      }
-
-      const values = extractNumericValues(line);
-
-      if (values.length > 0) {
-        const numExpectedColumns = detectedColumns.length;
-        const numValuesFound = values.length;
-
-        console.log(`[Extractor] Fila ${i}: ${weight.from}-${weight.to}kg ${currentZone}`);
-        console.log(`[Extractor]   → Columnas esperadas: ${numExpectedColumns} [${detectedColumns.join(', ')}]`);
-        console.log(`[Extractor]   → Valores encontrados: ${numValuesFound} [${values.join(', ')}]`);
-
-        const mappedValues = values.slice(0, numExpectedColumns);
-
-        extractedData.push({
-          serviceName: block.serviceName,
-          weightFrom: weight.from,
-          weightTo: weight.to,
-          zone: currentZone,
-          values: mappedValues,
-          detectedColumns: detectedColumns,
-          headerLine: headerLine || undefined
-        });
-
-        console.log(`[Extractor]   ✓ Datos mapeados: ${detectedColumns.map((col, idx) => `${col}=${mappedValues[idx] || 'N/A'}`).join(', ')}`);
-
-        if (numValuesFound > numExpectedColumns) {
-          console.log(`[Extractor]   ⚠ ${numValuesFound - numExpectedColumns} valores extra ignorados: [${values.slice(numExpectedColumns).join(', ')}]`);
-        } else if (numValuesFound < numExpectedColumns) {
-          console.log(`[Extractor]   ⚠ Solo ${numValuesFound}/${numExpectedColumns} valores encontrados`);
-        }
-      }
-    }
-  }
-
-  console.log(`[Extractor] ===== RESUMEN EXTRACCIÓN ${block.serviceName} =====`);
-  console.log(`[Extractor] Total filas extraídas: ${extractedData.length}`);
-  if (warningCount > 0) {
-    console.log(`[Extractor] ⚠ Total warnings en este bloque: ${warningCount}`);
-  }
-  return extractedData;
-}
-
-/**
- * Consolida tarifas usando estructura de plantilla como marco de referencia.
- *
- * ENFOQUE BASADO EN PLANTILLA:
- * 1. Para cada servicio detectado, crear 6 registros (uno por cada rango de peso de la plantilla)
- * 2. Para cada registro, inicializar todos los campos de destino como NULL
- * 3. Rellenar solo los campos que tengan datos en el PDF
- * 4. Mapear valores según las columnas detectadas en el PDF
- *
- * VENTAJAS:
- * - Estructura consistente siempre (6 rangos x N destinos x 4 campos)
- * - Fácil identificar qué datos faltan (campos NULL)
- * - Compatible con la estructura de custom_tariffs
- */
-function consolidateTariffs(allExtractedData: ExtractedData[]): ParsedTariff[] {
-  console.log(`[Consolidator] ===== CONSOLIDANDO CON ESTRUCTURA DE PLANTILLA =====`);
-  console.log(`[Consolidator] Total datos extraídos: ${allExtractedData.length}`);
-
-  const serviceMap = new Map<string, Map<string, ParsedTariff>>();
-
-  const detectedServices = new Set(allExtractedData.map(d => d.serviceName));
-
-  for (const serviceName of detectedServices) {
-    const weightMap = new Map<string, ParsedTariff>();
-
-    for (const weightRange of WEIGHT_RANGES) {
-      const rangeKey = `${weightRange.from}_${weightRange.to}`;
-      const tariffRecord: ParsedTariff = {
-        service_name: serviceName,
+      const rowData: Record<string, number | null> = {
+        service_name: template.dbName,
         weight_from: weightRange.from,
         weight_to: weightRange.to,
       };
 
-      for (const destConfig of DESTINATION_CONFIGS) {
-        for (const fieldSuffix of destConfig.fields) {
-          tariffRecord[`${destConfig.dbPrefix}${fieldSuffix}`] = null;
+      for (const col of calibrated.columns) {
+        const fieldName = `${zone.dbPrefix}${col.dbSuffix}`;
+
+        if (!VALID_DB_FIELDS.has(fieldName)) {
+          continue;
+        }
+
+        const cellTexts = findTextInCoordinates(
+          pageData.items,
+          col.xRange,
+          [rowYMin, rowYMax]
+        );
+
+        let cellValue: number | null = null;
+        for (const text of cellTexts) {
+          const parsed = parseNumber(text);
+          if (parsed !== null) {
+            cellValue = parsed;
+            break;
+          }
+        }
+
+        rowData[fieldName] = cellValue;
+
+        if (cellValue !== null) {
+          console.log(`[Extractor Coordenadas]     ${col.name} → ${fieldName} = ${cellValue}`);
         }
       }
 
-      weightMap.set(rangeKey, tariffRecord);
+      results.push(rowData);
     }
-
-    serviceMap.set(serviceName, weightMap);
-    console.log(`[Consolidator] ✓ Plantilla inicializada para ${serviceName}: ${WEIGHT_RANGES.length} rangos de peso`);
   }
 
-  for (const data of allExtractedData) {
-    const rangeKey = `${data.weightFrom}_${data.weightTo}`;
-    const weightMap = serviceMap.get(data.serviceName);
+  console.log(`[Extractor Coordenadas] ✓ ${results.length} filas extraídas de ${template.serviceName}`);
+  return results;
+}
 
-    if (!weightMap) {
-      console.warn(`[Consolidator] ⚠ Servicio no encontrado: ${data.serviceName}`);
-      continue;
-    }
+function validateExtractedData(data: any[]): {valid: boolean, warnings: string[]} {
+  console.log('[Validador] ===== VALIDANDO DATOS EXTRAÍDOS =====');
 
-    const tariff = weightMap.get(rangeKey);
-    if (!tariff) {
-      console.warn(`[Consolidator] ⚠ Rango de peso no encontrado en plantilla: ${rangeKey}`);
-      continue;
-    }
+  const warnings: string[] = [];
+  let validCount = 0;
 
-    const detectedColumns = data.detectedColumns || ["_arr", "_sal", "_rec", "_int"];
+  for (const row of data) {
+    let hasAnyValue = false;
+    let suspiciousCount = 0;
 
-    console.log(`[Mapping] ===== MAPEANDO FILA =====`);
-    console.log(`[Mapping] Servicio: ${data.serviceName} | Peso: ${data.weightFrom}-${data.weightTo}kg | Zona: ${data.zone}`);
-    console.log(`[Mapping] Columnas detectadas: [${detectedColumns.join(', ')}]`);
-    console.log(`[Mapping] Valores extraídos: [${data.values.join(', ')}]`);
-    if (data.headerLine) {
-      console.log(`[Mapping] Línea de encabezado usada: "${data.headerLine}"`);
-    }
+    for (const [key, value] of Object.entries(row)) {
+      if (key === 'service_name' || key === 'weight_from' || key === 'weight_to') continue;
 
-    const numColumns = Math.min(detectedColumns.length, data.values.length);
-    const mappingResult: Record<string, number> = {};
+      if (value !== null && typeof value === 'number') {
+        hasAnyValue = true;
 
-    for (let i = 0; i < numColumns; i++) {
-      const columnSuffix = detectedColumns[i];
-      const fieldName = `${data.zone}${columnSuffix}`;
-      const value = data.values[i];
-
-      if (tariff.hasOwnProperty(fieldName) || fieldName.includes('_')) {
-        tariff[fieldName] = value;
-        mappingResult[fieldName] = value;
-        console.log(`[Consolidator]   ${i+1}. ${columnSuffix} → ${fieldName} = ${value}`);
-      } else {
-        console.warn(`[Consolidator]   ⚠ Campo no existe en plantilla: ${fieldName}`);
+        if (value < 0.01) {
+          warnings.push(`${row.service_name} ${row.weight_from}kg: ${key}=${value} (valor muy bajo)`);
+          suspiciousCount++;
+        } else if (value > 500) {
+          warnings.push(`${row.service_name} ${row.weight_from}kg: ${key}=${value} (valor muy alto)`);
+          suspiciousCount++;
+        }
       }
     }
 
-    const arrValue = mappingResult[`${data.zone}_arr`];
-    const salValue = mappingResult[`${data.zone}_sal`];
-    const recValue = mappingResult[`${data.zone}_rec`];
-    const intValue = mappingResult[`${data.zone}_int`];
-
-    console.log(`[Mapping] Resultado final: arr=${arrValue || 'null'}, sal=${salValue || 'null'}, rec=${recValue || 'null'}, int=${intValue || 'null'}`);
-
-    if (arrValue && salValue && arrValue > salValue) {
-      console.log(`[ValidationWarning] ⚠⚠⚠ VALOR SOSPECHOSO: arr (${arrValue}) > sal (${salValue})`);
-      console.log(`[ValidationWarning]   Servicio: ${data.serviceName}, Peso: ${data.weightFrom}kg, Zona: ${data.zone}`);
-      console.log(`[ValidationWarning]   Verifica que el orden de columnas sea correcto: [${detectedColumns.join(', ')}]`);
-    }
-    if (salValue && recValue && salValue > recValue) {
-      console.log(`[ValidationWarning] ⚠⚠⚠ VALOR SOSPECHOSO: sal (${salValue}) > rec (${recValue})`);
-    }
-    if (recValue && intValue && recValue > intValue) {
-      console.log(`[ValidationWarning] ⚠⚠⚠ VALOR SOSPECHOSO: rec (${recValue}) > int (${intValue})`);
-    }
-
-    if (data.values.length > detectedColumns.length) {
-      console.log(`[Consolidator]   ⚠ ${data.values.length - detectedColumns.length} valores extra ignorados: [${data.values.slice(detectedColumns.length).join(', ')}]`);
+    if (hasAnyValue && suspiciousCount < 3) {
+      validCount++;
     }
   }
 
-  const allTariffs: ParsedTariff[] = [];
-  for (const [serviceName, weightMap] of serviceMap.entries()) {
-    for (const [rangeKey, tariff] of weightMap.entries()) {
-      allTariffs.push(tariff);
-    }
+  const validPercentage = (validCount / data.length) * 100;
+  console.log(`[Validador] Filas válidas: ${validCount}/${data.length} (${validPercentage.toFixed(1)}%)`);
+  console.log(`[Validador] Warnings: ${warnings.length}`);
+
+  if (warnings.length > 0 && warnings.length <= 10) {
+    warnings.forEach(w => console.log(`[Validador] ⚠ ${w}`));
   }
 
-  console.log(`[Consolidator] ===== RESUMEN CONSOLIDACIÓN =====`);
-  console.log(`[Consolidator] Datos de entrada: ${allExtractedData.length}`);
-  console.log(`[Consolidator] Registros generados: ${allTariffs.length}`);
-
-  const serviceBreakdown = allTariffs.reduce((acc, t) => {
-    acc[t.service_name] = (acc[t.service_name] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  console.log(`[Consolidator] Desglose por servicio:`);
-  Object.entries(serviceBreakdown).forEach(([service, count]) => {
-    console.log(`[Consolidator]   - ${service}: ${count} rangos de peso`);
-  });
-
-  const filledFieldsCount = allTariffs.reduce((count, t) => {
-    return count + Object.keys(t).filter(k => k !== 'service_name' && k !== 'weight_from' && k !== 'weight_to' && t[k] !== null).length;
-  }, 0);
-  const nullFieldsCount = allTariffs.reduce((count, t) => {
-    return count + Object.keys(t).filter(k => k !== 'service_name' && k !== 'weight_from' && k !== 'weight_to' && t[k] === null).length;
-  }, 0);
-  console.log(`[Consolidator] Total campos rellenados: ${filledFieldsCount}`);
-  console.log(`[Consolidator] Total campos NULL: ${nullFieldsCount}`);
-
-  const previewTariff = allTariffs.find(t => t.service_name === 'Business Parcel' && t.weight_from === '0' && t.weight_to === '1');
-  if (previewTariff) {
-    console.log(`[Preview] Business Parcel 1kg Provincial: arr=${previewTariff['provincial_arr']}, sal=${previewTariff['provincial_sal']}, rec=${previewTariff['provincial_rec']}, int=${previewTariff['provincial_int']}`);
-  }
-
-  return allTariffs;
+  return {
+    valid: validPercentage >= 50,
+    warnings: warnings.slice(0, 20)
+  };
 }
 
 Deno.serve(async (req: Request) => {
-  console.log(`[PDF Parser] Nueva petición: ${req.method}`);
+  console.log(`[PDF Determinista] Nueva petición: ${req.method}`);
 
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -859,74 +559,66 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log(`[PDF Parser] Procesando: ${pdfFile.name} (${pdfFile.size} bytes)`);
+    console.log(`[PDF Determinista] Procesando: ${pdfFile.name} (${pdfFile.size} bytes)`);
 
     const arrayBuffer = await pdfFile.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
 
-    const { text: pdfText, pages } = await extractTextFromPDF(uint8Array);
-    console.log(`[PDF Parser] Texto extraído: ${pdfText.length} caracteres, ${pages} páginas`);
+    const pages = await extractStructuredTextFromPDF(uint8Array);
+    console.log(`[PDF Determinista] ${pages.length} páginas extraídas con coordenadas`);
 
-    const lines = pdfText
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0);
+    const version = detectPDFVersion(pages);
+    console.log(`[PDF Determinista] Versión detectada: ${version}`);
 
-    console.log(`[PDF Parser] Total líneas a procesar: ${lines.length}`);
+    const allExtractedData: any[] = [];
+    const servicesDetected: string[] = [];
 
-    const tableBlocks = identifyTableBlocks(lines);
+    for (const pageData of pages) {
+      const template = detectService(pageData);
 
-    if (tableBlocks.length === 0) {
+      if (template) {
+        console.log(`[PDF Determinista] ✓ Procesando ${template.serviceName} en página ${pageData.pageNum}`);
+        servicesDetected.push(template.serviceName);
+
+        const extractedRows = extractTableDataWithCoordinates(pageData, template);
+        allExtractedData.push(...extractedRows);
+      }
+    }
+
+    if (allExtractedData.length === 0) {
       return new Response(
         JSON.stringify({
-          error: "No se detectaron tablas de tarifas en el PDF",
-          details: `Se procesaron ${lines.length} líneas pero no se encontraron servicios reconocidos`,
+          error: "No se detectaron servicios de tarifas en el PDF",
+          details: `Se procesaron ${pages.length} páginas pero no se encontraron servicios reconocidos`,
           suggestions: [
-            "Verifica que el PDF contiene servicios GLS España 2025",
-            "Los servicios esperados son: Express08:30, Express10:30, Express14:00, Express19:00, BusinessParcel, EuroBusinessParcel, EconomyParcel, ParcelShop, Marítimo"
+            "Verifica que el PDF sea de GLS España 2025",
+            "Los servicios esperados son: Express 08:30, Express 14:00, Express 19:00, Business Parcel, etc."
           ],
           debugInfo: {
-            totalLines: lines.length,
-            totalPages: pages,
-            sampleLines: lines.slice(0, 20)
+            totalPages: pages.length,
+            pdfVersion: version
           }
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const allExtractedData: ExtractedData[] = [];
+    console.log(`[PDF Determinista] Total datos extraídos: ${allExtractedData.length} filas`);
+    console.log(`[PDF Determinista] Servicios detectados: ${servicesDetected.join(', ')}`);
 
-    console.log(`[PDF Parser] ===== EXTRAYENDO DATOS DE ${tableBlocks.length} BLOQUES DE SERVICIOS =====`);
-    for (const block of tableBlocks) {
-      console.log(`[PDF Parser] Extrayendo datos de servicio: ${block.serviceName}`);
-      const blockData = extractTariffsFromBlock(block);
-      allExtractedData.push(...blockData);
-      console.log(`[PDF Parser] Subtotal datos extraídos: ${allExtractedData.length}`);
-    }
+    const validation = validateExtractedData(allExtractedData);
 
-    console.log(`[PDF Parser] ===== CONSOLIDANDO TARIFAS =====`);
-    const allTariffs = consolidateTariffs(allExtractedData);
-
-    if (allTariffs.length === 0) {
+    if (!validation.valid) {
       return new Response(
         JSON.stringify({
-          error: "No se pudieron extraer tarifas de las tablas detectadas",
-          details: `Se detectaron ${tableBlocks.length} servicios pero no se encontraron datos válidos`,
-          debugInfo: {
-            blocksDetected: tableBlocks.map(b => ({
-              service: b.serviceName,
-              lines: b.lines.length
-            })),
-            sampleBlock: tableBlocks[0]?.lines.slice(0, 10)
-          }
+          error: "Los datos extraídos no pasaron la validación",
+          details: "Menos del 50% de las filas contienen datos válidos",
+          warnings: validation.warnings,
+          extracted: allExtractedData.length
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    console.log(`[PDF Parser] ===== RESUMEN DE EXTRACCIÓN =====`);
-    console.log(`[PDF Parser] Total tarifas consolidadas: ${allTariffs.length}`);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -940,92 +632,65 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log('[PDF Parser] Limpiando tabla tariffspdf antes de insertar...');
-    const { error: deleteError, count: deletedCount } = await supabase
+    console.log('[PDF Determinista] Limpiando tabla tariffspdf...');
+    const { error: deleteError } = await supabase
       .from("tariffspdf")
       .delete()
-      .neq("id", "00000000-0000-0000-0000-000000000000")
-      .select('*', { count: 'exact', head: true });
+      .neq("id", "00000000-0000-0000-0000-000000000000");
 
     if (deleteError) {
-      console.warn(`[PDF Parser] Advertencia al limpiar: ${deleteError.message}`);
-    } else {
-      console.log(`[PDF Parser] ✓ Tabla limpiada: ${deletedCount || 0} registros eliminados`);
+      console.warn(`[PDF Determinista] Advertencia al limpiar: ${deleteError.message}`);
     }
 
-    const sanitizedTariffs = allTariffs.map(tariff => {
-      const cleaned: Record<string, any> = {};
-      let removedFields = 0;
-
-      for (const [key, value] of Object.entries(tariff)) {
-        if (VALID_DB_FIELDS.has(key)) {
-          cleaned[key] = value;
-        } else {
-          console.log(`[PDF Parser] ⚠ Campo no válido ignorado: ${key} = ${value}`);
-          removedFields++;
-        }
-      }
-
-      if (removedFields > 0) {
-        console.log(`[PDF Parser] Tarifa ${tariff.service_name} ${tariff.weight_from}-${tariff.weight_to}: ${removedFields} campos no válidos eliminados`);
-      }
-
-      return cleaned;
-    });
-
-    console.log(`[PDF Parser] Insertando ${sanitizedTariffs.length} tarifas sanitizadas...`);
+    console.log(`[PDF Determinista] Insertando ${allExtractedData.length} tarifas...`);
     const { data: insertedData, error: insertError } = await supabase
       .from("tariffspdf")
-      .insert(sanitizedTariffs)
+      .insert(allExtractedData)
       .select();
 
     if (insertError) {
-      console.error(`[PDF Parser] Error al insertar: ${insertError.message}`);
+      console.error(`[PDF Determinista] Error al insertar: ${insertError.message}`);
       return new Response(
         JSON.stringify({
           error: "Error al insertar tarifas en la base de datos",
           details: insertError.message,
-          parsedCount: allTariffs.length
+          parsedCount: allExtractedData.length
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`[PDF Parser] ✓ Inserción completada: ${insertedData?.length || 0} registros`);
+    console.log(`[PDF Determinista] ✓ Inserción completada: ${insertedData?.length || 0} registros`);
 
     const { count: verificationCount } = await supabase
       .from("tariffspdf")
       .select('*', { count: 'exact', head: true });
 
-    console.log(`[PDF Parser] ✓ Verificación post-inserción: ${verificationCount || 0} registros en tabla`);
-
-    const uniqueServices = Array.from(new Set(allTariffs.map(t => t.service_name)));
-    const serviceStats = uniqueServices.map(service => ({
-      service,
-      weightRanges: allTariffs.filter(t => t.service_name === service).length,
-      zones: Object.keys(allTariffs.find(t => t.service_name === service) || {})
-        .filter(k => k.endsWith('_sal'))
-        .map(k => k.replace('_sal', ''))
-    }));
+    console.log(`[PDF Determinista] ✓ Verificación: ${verificationCount || 0} registros en tabla`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Se importaron ${insertedData?.length || 0} tarifas consolidadas correctamente`,
+        message: `Se importaron ${insertedData?.length || 0} tarifas correctamente usando sistema determinista`,
         imported: insertedData?.length || 0,
         verified: verificationCount || 0,
-        pages,
-        uniqueServices: uniqueServices.length,
-        serviceStats,
-        dataExtracted: allExtractedData.length,
-        preview: allTariffs.slice(0, 10)
+        pages: pages.length,
+        pdfVersion: version,
+        servicesDetected,
+        method: "Extracción determinista con coordenadas",
+        validation: {
+          valid: validation.valid,
+          warningCount: validation.warnings.length,
+          warnings: validation.warnings.slice(0, 5)
+        },
+        preview: allExtractedData.slice(0, 5)
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
   } catch (error) {
-    console.error(`[PDF Parser] Error fatal: ${error.message}`);
-    console.error(`[PDF Parser] Stack:`, error.stack);
+    console.error(`[PDF Determinista] Error fatal: ${error.message}`);
+    console.error(`[PDF Determinista] Stack:`, error.stack);
     return new Response(
       JSON.stringify({
         error: "Error interno del servidor",
