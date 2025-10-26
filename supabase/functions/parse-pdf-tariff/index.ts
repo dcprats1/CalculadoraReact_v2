@@ -863,7 +863,7 @@ function extractTableDataWithTextZones(pageData: PageData, template: ServiceTabl
 
   const sortedRows = Array.from(rowGroups.entries()).sort((a, b) => b[0] - a[0]);
 
-  const weightBasedResults = new Map<string, Record<string, any>>>();
+  const weightBasedResults = new Map<string, Record<string, any>>();
 
   for (let i = 0; i < WEIGHT_RANGES.length; i++) {
     const weightRange = WEIGHT_RANGES[i];
@@ -951,70 +951,6 @@ function extractTableDataWithTextZones(pageData: PageData, template: ServiceTabl
 
   console.log(`[Extractor Texto] ✓ ${nonEmptyRows.length} filas con datos válidos`);
 
-  return results;
-}
-
-function extractTableDataWithCoordinates(pageData: PageData, template: ServiceTableDefinition): any[] {
-  console.log(`[Extractor Coordenadas] ===== EXTRAYENDO ${template.serviceName} =====`);
-
-  const calibrated = calibrateCoordinates(pageData, template);
-
-  const results: any[] = [];
-
-  for (const zone of calibrated.zones) {
-        console.log(`[Extractor Coordenadas] Procesando zona: ${zone.name} (Y: ${zone.yRange[0]}-${zone.yRange[1]})`);
-
-    const yMin = zone.yRange[0];
-    const yMax = zone.yRange[1];
-    const rowHeight = (yMax - yMin) / 6;
-
-    for (let i = 0; i < 6; i++) {
-      const weightRange = WEIGHT_RANGES[i];
-      const rowYMin = yMax - ((i + 1) * rowHeight);
-      const rowYMax = yMax - (i * rowHeight);
-
-      console.log(`[Extractor Coordenadas]   Fila ${i + 1}/6: ${weightRange.from}-${weightRange.to}kg (Y: ${rowYMin.toFixed(0)}-${rowYMax.toFixed(0)})`);
-
-      const rowData: Record<string, number | null> = {
-        service_name: template.dbName,
-        weight_from: weightRange.from,
-        weight_to: weightRange.to,
-      };
-
-      for (const col of calibrated.columns) {
-        const fieldName = `${zone.dbPrefix}${col.dbSuffix}`;
-
-        if (!VALID_DB_FIELDS.has(fieldName)) {
-          continue;
-        }
-
-        const cellTexts = findTextInCoordinates(
-          pageData.items,
-          col.xRange,
-          [rowYMin, rowYMax]
-        );
-
-        let cellValue: number | null = null;
-        for (const text of cellTexts) {
-          const parsed = parseNumber(text);
-          if (parsed !== null) {
-            cellValue = parsed;
-            break;
-          }
-        }
-
-        rowData[fieldName] = cellValue;
-
-        if (cellValue !== null) {
-          console.log(`[Extractor Coordenadas]     ${col.name} → ${fieldName} = ${cellValue}`);
-        }
-      }
-
-      results.push(rowData);
-    }
-  }
-
-  console.log(`[Extractor Coordenadas] ✓ ${results.length} filas extraídas de ${template.serviceName}`);
   return results;
 }
 
@@ -1107,11 +1043,12 @@ function validateExtractedData(data: any[]): {valid: boolean, warnings: string[]
 }
 
 Deno.serve(async (req: Request) => {
-  console.log(`[PDF Parser] Nueva petición: ${req.method}`);
+  console.log(`[PDF Parser] Nueva petición: ${req.method} desde ${req.headers.get('origin') || 'sin origin'}`);
 
   if (req.method === "OPTIONS") {
+    console.log('[PDF Parser] Respondiendo a preflight OPTIONS request');
     return new Response(null, {
-      status: 200,
+      status: 204,
       headers: corsHeaders,
     });
   }
