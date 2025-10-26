@@ -368,7 +368,7 @@ async function extractStructuredTextFromPDF(uint8Array: Uint8Array): Promise<Pag
     });
 
     const pdfDocument = await loadingTask.promise;
-    const numPages = pdfDocument.numPages;
+        const numPages = pdfDocument.numPages;
     console.log(`[PDF Parser] PDF cargado: ${numPages} páginas`);
 
     const pages: PageData[] = [];
@@ -485,11 +485,7 @@ function detectService(pageData: PageData): ServiceTableDefinition | null {
   return null;
 }
 
-function calibrateCoordinates(pageData: PageData, template: ServiceTableDefinition): ServiceTableDefinition {
-  console.log('[Calibrador] Calibrando coordenadas basándose en el texto real...');
-
-  const calibratedTemplate = JSON.parse(JSON.stringify(template));
-
+function detectHeaders(pageData: PageData): Array<{text: string, x: number, columnName: string}> {
   const detectedHeaders: Array<{text: string, x: number, columnName: string}> = [];
 
   for (const item of pageData.items) {
@@ -509,6 +505,15 @@ function calibrateCoordinates(pageData: PageData, template: ServiceTableDefiniti
     }
   }
 
+  return detectedHeaders;
+}
+
+function calibrateCoordinates(pageData: PageData, template: ServiceTableDefinition): ServiceTableDefinition {
+  console.log('[Calibrador] Calibrando coordenadas basándose en el texto real...');
+
+  const calibratedTemplate = JSON.parse(JSON.stringify(template));
+
+  const detectedHeaders = detectHeaders(pageData);
   if (detectedHeaders.length >= 3) {
     console.log(`[Calibrador] ✓ ${detectedHeaders.length} encabezados detectados, ajustando coordenadas...`);
 
@@ -747,7 +752,7 @@ function extractTableDataWithTextZones(pageData: PageData, template: ServiceTabl
 
   const sortedRows = Array.from(rowGroups.entries()).sort((a, b) => b[0] - a[0]);
 
-  const weightBasedResults = new Map<string, Record<string, any>>();
+  const weightBasedResults = new Map<string, Record<string, any>>>();
 
   for (let i = 0; i < WEIGHT_RANGES.length; i++) {
     const weightRange = WEIGHT_RANGES[i];
@@ -833,7 +838,7 @@ function extractTableDataWithCoordinates(pageData: PageData, template: ServiceTa
   const results: any[] = [];
 
   for (const zone of calibrated.zones) {
-    console.log(`[Extractor Coordenadas] Procesando zona: ${zone.name} (Y: ${zone.yRange[0]}-${zone.yRange[1]})`);
+        console.log(`[Extractor Coordenadas] Procesando zona: ${zone.name} (Y: ${zone.yRange[0]}-${zone.yRange[1]})`);
 
     const yMin = zone.yRange[0];
     const yMax = zone.yRange[1];
@@ -904,7 +909,6 @@ function validateExtractedData(data: any[]): {valid: boolean, warnings: string[]
     }
     const stats = serviceStats.get(serviceName)!;
     stats.total++;
-
     let hasAnyValue = false;
     let suspiciousCount = 0;
     let fieldCount = 0;
