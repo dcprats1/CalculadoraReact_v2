@@ -651,39 +651,15 @@ function classifyRowsByZone(block: TableBlock, template: ServiceTableDefinition)
           console.log(`[Clasificador Zonas] ✓ Zona ${currentZone.zoneName} finalizada: filas ${currentZone.startRowIndex} a ${currentZone.endRowIndex}`);
         }
 
-        let nextDataRowIndex = i + 1;
-        while (nextDataRowIndex < sortedRows.length) {
-          const [nextY, nextItems] = sortedRows[nextDataRowIndex];
-          const nextRowText = nextItems.map(item => item.str).join(' ').trim();
-
-          const hasWeightPattern = WEIGHT_RANGES.some(wr =>
-            wr.patterns.some(pattern => pattern.test(nextRowText))
-          );
-
-          const hasNumericData = nextItems.some(item => {
-            const parsed = parseNumber(item.str);
-            return parsed !== null && parsed > 0;
-          });
-
-          if (hasWeightPattern || hasNumericData) {
-            console.log(`[Clasificador Zonas]     Primera fila de datos detectada en índice ${nextDataRowIndex}: "${nextRowText}"`);
-            break;
-          }
-
-          console.log(`[Clasificador Zonas]     Saltando fila de encabezado/vacía en índice ${nextDataRowIndex}: "${nextRowText}"`);
-          nextDataRowIndex++;
-        }
-
         currentZone = {
           zoneName: zoneConfig.name,
           dbPrefix: zoneConfig.dbPrefix,
-          startRowIndex: nextDataRowIndex,
+          startRowIndex: i + 1,
           endRowIndex: sortedRows.length - 1,
           rowTexts: []
         };
 
         console.log(`[Clasificador Zonas] ✓ Nueva zona detectada: ${zoneConfig.name} en fila ${i} (Y=${y}): "${rowText}"`);
-        console.log(`[Clasificador Zonas] ✓ Datos comienzan en índice ${nextDataRowIndex}`);
         zoneDetected = true;
         break;
       }
@@ -723,6 +699,7 @@ function extractTableDataWithTextZones(pageData: PageData, template: ServiceTabl
   }
 
   const calibrated = calibrateCoordinates(pageData, template);
+  const results: any[] = [];
 
   const sortedItems = [...block.items].sort((a, b) => b.transform[5] - a.transform[5]);
   const rowGroups = new Map<number, TextItem[]>();
@@ -747,37 +724,21 @@ function extractTableDataWithTextZones(pageData: PageData, template: ServiceTabl
 
   const sortedRows = Array.from(rowGroups.entries()).sort((a, b) => b[0] - a[0]);
 
-  const weightBasedResults = new Map<string, Record<string, any>>();
-
-  for (let i = 0; i < WEIGHT_RANGES.length; i++) {
-    const weightRange = WEIGHT_RANGES[i];
-    const weightKey = `${weightRange.from}-${weightRange.to}`;
-
-    weightBasedResults.set(weightKey, {
-      service_name: template.dbName,
-      weight_from: weightRange.from,
-      weight_to: weightRange.to,
-    });
-  }
-
-  console.log(`[Extractor Texto] Inicializados ${weightBasedResults.size} registros base por rango de peso`);
-
   for (const zone of detectedZones) {
     console.log(`[Extractor Texto] Procesando zona: ${zone.zoneName}`);
 
     const zoneDataRows = sortedRows.slice(zone.startRowIndex, zone.endRowIndex + 1);
-
-    console.log(`[Extractor Texto]   Zona ${zone.zoneName}: ${zoneDataRows.length} filas disponibles (índices ${zone.startRowIndex} a ${zone.endRowIndex})`);
-
-    const dataRowsCount = Math.min(WEIGHT_RANGES.length, zoneDataRows.length);
+    const dataRowsCount = Math.min(6, zoneDataRows.length);
 
     for (let i = 0; i < dataRowsCount; i++) {
       const weightRange = WEIGHT_RANGES[i];
-      const weightKey = `${weightRange.from}-${weightRange.to}`;
       const [rowY, rowItems] = zoneDataRows[i] || [0, []];
 
-      const rowData = weightBasedResults.get(weightKey);
-      if (!rowData) continue;
+      const rowData: Record<string, any> = {
+        service_name: template.dbName,
+        weight_from: weightRange.from,
+        weight_to: weightRange.to,
+      };
 
       for (const col of calibrated.columns) {
         const fieldName = `${zone.dbPrefix}${col.dbSuffix}`;
@@ -806,22 +767,12 @@ function extractTableDataWithTextZones(pageData: PageData, template: ServiceTabl
           console.log(`[Extractor Texto]     ${zone.zoneName} ${weightRange.from}-${weightRange.to}kg ${col.name} → ${fieldName} = ${cellValue}`);
         }
       }
+
+      results.push(rowData);
     }
   }
 
-  const results = Array.from(weightBasedResults.values());
-
-  console.log(`[Extractor Texto] ✓ ${results.length} filas unificadas extraídas de ${template.serviceName}`);
-
-  const nonEmptyRows = results.filter(row => {
-    const hasData = Object.entries(row).some(([key, value]) =>
-      key !== 'service_name' && key !== 'weight_from' && key !== 'weight_to' && value !== null && value !== undefined
-    );
-    return hasData;
-  });
-
-  console.log(`[Extractor Texto] ✓ ${nonEmptyRows.length} filas con datos válidos`);
-
+  console.log(`[Extractor Texto] ✓ ${results.length} filas extraídas de ${template.serviceName}`);
   return results;
 }
 
@@ -894,13 +845,13 @@ function validateExtractedData(data: any[]): {valid: boolean, warnings: string[]
 
   const warnings: string[] = [];
   let validCount = 0;
-  const serviceStats = new Map<string, { total: number, withData: number, multiZone: number }>();
+  const serviceStats = new Map<string, { total: number, withData: number }>();
   const zoneStats = new Map<string, number>();
 
   for (const row of data) {
     const serviceName = row.service_name;
     if (!serviceStats.has(serviceName)) {
-      serviceStats.set(serviceName, { total: 0, withData: 0, multiZone: 0 });
+      serviceStats.set(serviceName, { total: 0, withData: 0 });
     }
     const stats = serviceStats.get(serviceName)!;
     stats.total++;
@@ -908,7 +859,6 @@ function validateExtractedData(data: any[]): {valid: boolean, warnings: string[]
     let hasAnyValue = false;
     let suspiciousCount = 0;
     let fieldCount = 0;
-    const zonesWithData = new Set<string>();
 
     for (const [key, value] of Object.entries(row)) {
       if (key === 'service_name' || key === 'weight_from' || key === 'weight_to') continue;
@@ -919,7 +869,6 @@ function validateExtractedData(data: any[]): {valid: boolean, warnings: string[]
         hasAnyValue = true;
 
         const zonePrefix = key.split('_')[0];
-        zonesWithData.add(zonePrefix);
         zoneStats.set(zonePrefix, (zoneStats.get(zonePrefix) || 0) + 1);
 
         if (value < 0.01) {
@@ -936,12 +885,6 @@ function validateExtractedData(data: any[]): {valid: boolean, warnings: string[]
       validCount++;
       stats.withData++;
     }
-
-    if (zonesWithData.size >= 2) {
-      stats.multiZone++;
-    } else if (zonesWithData.size === 1) {
-      warnings.push(`${serviceName} ${row.weight_from}-${row.weight_to}kg: Solo tiene datos de 1 zona (${Array.from(zonesWithData)[0]})`);
-    }
   }
 
   const validPercentage = (validCount / data.length) * 100;
@@ -951,7 +894,6 @@ function validateExtractedData(data: any[]): {valid: boolean, warnings: string[]
   console.log(`[Validador] Estadísticas por servicio:`);
   for (const [service, stats] of serviceStats.entries()) {
     console.log(`[Validador]   ${service}: ${stats.withData}/${stats.total} filas con datos`);
-    console.log(`[Validador]     Filas con múltiples zonas: ${stats.multiZone}/${stats.withData}`);
   }
 
   console.log(`[Validador] Datos por zona:`);
@@ -970,8 +912,7 @@ function validateExtractedData(data: any[]): {valid: boolean, warnings: string[]
       services: Array.from(serviceStats.entries()).map(([name, s]) => ({
         name,
         total: s.total,
-        withData: s.withData,
-        multiZone: s.multiZone
+        withData: s.withData
       })),
       zones: Array.from(zoneStats.entries()).map(([zone, count]) => ({ zone, count }))
     }
