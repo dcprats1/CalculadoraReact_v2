@@ -42,6 +42,8 @@ export function TariffPdfUploader({ onDataImported }: TariffPdfUploaderProps = {
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [currentPhase, setCurrentPhase] = useState<Phase>('upload');
+  const [uploadProgress, setUploadProgress] = useState<string>('');
+  const [elapsedTime, setElapsedTime] = useState<number>(0);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -124,6 +126,16 @@ export function TariffPdfUploader({ onDataImported }: TariffPdfUploaderProps = {
 
     setIsUploading(true);
     setUploadResult(null);
+    setUploadProgress('Preparando archivo...');
+    setElapsedTime(0);
+
+    const startTime = Date.now();
+    let progressInterval: NodeJS.Timeout | null = null;
+
+    progressInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      setElapsedTime(elapsed);
+    }, 1000);
 
     try {
       console.log('[TariffPdfUploader] Iniciando subida de archivo:', {
@@ -146,10 +158,17 @@ export function TariffPdfUploader({ onDataImported }: TariffPdfUploaderProps = {
 
       console.log('[TariffPdfUploader] Enviando petición a:', `${supabaseUrl}/functions/v1/parse-pdf-tariff`);
 
+      setUploadProgress('Enviando PDF al servidor...');
+
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 120000);
+      const timeoutId = setTimeout(() => {
+        console.warn('[TariffPdfUploader] Timeout alcanzado después de 5 minutos');
+        controller.abort();
+      }, 300000);
 
       try {
+        setUploadProgress('Procesando PDF (esto puede tardar varios minutos)...');
+
         const response = await fetch(
           `${supabaseUrl}/functions/v1/parse-pdf-tariff`,
           {
@@ -162,6 +181,8 @@ export function TariffPdfUploader({ onDataImported }: TariffPdfUploaderProps = {
           }
         );
         clearTimeout(timeoutId);
+        if (progressInterval) clearInterval(progressInterval);
+        setUploadProgress('Procesando respuesta...');
 
       console.log('[TariffPdfUploader] Respuesta recibida:', {
         status: response.status,
@@ -217,13 +238,15 @@ export function TariffPdfUploader({ onDataImported }: TariffPdfUploaderProps = {
       }
       } catch (fetchError) {
         clearTimeout(timeoutId);
+        if (progressInterval) clearInterval(progressInterval);
         if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-          throw new Error('Timeout: El servidor tardó más de 2 minutos en responder');
+          throw new Error(`Timeout: El servidor no respondió en 5 minutos. El archivo puede ser demasiado grande o complejo. Tiempo transcurrido: ${Math.floor((Date.now() - startTime) / 1000)}s`);
         }
         throw fetchError;
       }
     } catch (error) {
       console.error('[TariffPdfUploader] Error capturado:', error);
+      if (progressInterval) clearInterval(progressInterval);
       setUploadResult({
         success: false,
         message: 'Error al conectar con el servidor',
@@ -231,6 +254,8 @@ export function TariffPdfUploader({ onDataImported }: TariffPdfUploaderProps = {
       });
     } finally {
       setIsUploading(false);
+      setUploadProgress('');
+      if (progressInterval) clearInterval(progressInterval);
     }
   };
 
@@ -356,24 +381,47 @@ export function TariffPdfUploader({ onDataImported }: TariffPdfUploaderProps = {
         </div>
 
         {selectedFile && !uploadResult && (
-          <div className="flex justify-end">
-            <button
-              onClick={handleUpload}
-              disabled={isUploading}
-              className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-            >
-              {isUploading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Procesando PDF...</span>
-                </>
-              ) : (
-                <>
-                  <Upload className="w-4 h-4" />
-                  <span>Importar Tarifas</span>
-                </>
-              )}
-            </button>
+          <div className="space-y-3">
+            {isUploading && uploadProgress && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <Loader2 className="w-5 h-5 text-blue-600 animate-spin flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-blue-900">{uploadProgress}</p>
+                    <p className="text-xs text-blue-700 mt-1">
+                      Tiempo transcurrido: {Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}
+                      {elapsedTime > 120 && (
+                        <span className="ml-2 text-yellow-700">
+                          (El procesamiento puede tardar hasta 5 minutos)
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="w-full bg-blue-200 rounded-full h-2 overflow-hidden">
+                  <div className="bg-blue-600 h-full rounded-full animate-pulse" style={{ width: '100%' }}></div>
+                </div>
+              </div>
+            )}
+            <div className="flex justify-end">
+              <button
+                onClick={handleUpload}
+                disabled={isUploading}
+                className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Procesando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4" />
+                    <span>Importar Tarifas</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         )}
 
