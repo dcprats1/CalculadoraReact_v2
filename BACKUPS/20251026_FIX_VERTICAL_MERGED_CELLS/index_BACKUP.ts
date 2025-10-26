@@ -724,67 +724,19 @@ function classifyRowsByZone(block: TableBlock, template: ServiceTableDefinition)
           console.log(`[Clasificador Zonas] ✓ Zona ${currentZone.zoneName} finalizada: filas ${currentZone.startRowIndex} a ${currentZone.endRowIndex}`);
         }
 
-        // CRÍTICO: Verificar si la etiqueta de zona es una celda combinada vertical
-        // Las etiquetas como "Provincial" aparecen en el margen izquierdo (X < 80)
-        // mientras que los datos reales están en columnas (X > 100)
-        const zoneItems = items.filter(item => {
-          const x = item.transform[4];
-          const text = item.str.toLowerCase().trim();
-          // Buscar el texto de la zona en el margen izquierdo
-          for (const pattern of zoneConfig.textPatterns) {
-            if (pattern.test(text) && x < 80) {
-              return true;
-            }
+        let nextDataRowIndex = i + 1;
+
+        while (nextDataRowIndex < sortedRows.length) {
+          const [nextY, nextItems] = sortedRows[nextDataRowIndex];
+          const nextRowText = nextItems.map(item => item.str).join(' ').trim();
+
+          if (nextRowText.length > 0) {
+            break;
           }
-          for (const keyword of zoneConfig.keywords) {
-            if (text.includes(keyword.toLowerCase()) && x < 80) {
-              return true;
-            }
-          }
-          return false;
-        });
-
-        // Verificar si hay datos en la misma fila (X > 100)
-        const dataItems = items.filter(item => {
-          const x = item.transform[4];
-          return x >= 100 && item.str.trim().length > 0;
-        });
-
-        const isVerticalMergedCell = zoneItems.length > 0 && dataItems.length > 0;
-
-        let nextDataRowIndex: number;
-
-        if (isVerticalMergedCell) {
-          // La etiqueta de zona está en el MISMO nivel Y que los datos
-          // Los datos comienzan en ESTA fila, no en la siguiente
-          nextDataRowIndex = i;
-          console.log(`[Clasificador Zonas] ✓✓ Celda combinada vertical detectada: "${zoneConfig.name}" en margen izquierdo (X < 80)`);
-          console.log(`[Clasificador Zonas]   → La fila ${i} contiene TANTO la etiqueta como datos reales`);
-          console.log(`[Clasificador Zonas]   → Elementos de zona: ${zoneItems.length}, Elementos de datos: ${dataItems.length}`);
-
-          // Log de coordenadas para debugging
-          zoneItems.forEach(item => {
-            console.log(`[Clasificador Zonas]     Etiqueta zona: "${item.str}" en X=${item.transform[4].toFixed(1)}`);
-          });
-          dataItems.slice(0, 3).forEach(item => {
-            console.log(`[Clasificador Zonas]     Dato: "${item.str}" en X=${item.transform[4].toFixed(1)}`);
-          });
-        } else {
-          // La etiqueta de zona es un encabezado tradicional
-          // Buscar la siguiente fila no vacía
-          nextDataRowIndex = i + 1;
-
-          while (nextDataRowIndex < sortedRows.length) {
-            const [nextY, nextItems] = sortedRows[nextDataRowIndex];
-            const nextRowText = nextItems.map(item => item.str).join(' ').trim();
-
-            if (nextRowText.length > 0) {
-              break;
-            }
-            nextDataRowIndex++;
-          }
-          console.log(`[Clasificador Zonas]   → Encabezado tradicional: primera fila de datos en índice ${nextDataRowIndex}`);
+          nextDataRowIndex++;
         }
+
+        console.log(`[Clasificador Zonas]   → Primera fila no vacía después del encabezado: índice ${nextDataRowIndex}`);
 
         currentZone = {
           zoneName: zoneConfig.name,
