@@ -43,24 +43,8 @@ interface ServiceTableDefinition {
   zones: {
     name: string;
     dbPrefix: string;
-    textPatterns: RegExp[];
-    keywords: string[];
+    yRange: [number, number];
   }[];
-}
-
-interface DetectedZone {
-  zoneName: string;
-  dbPrefix: string;
-  startRowIndex: number;
-  endRowIndex: number;
-  rowTexts: string[];
-}
-
-interface TableBlock {
-  serviceName: string;
-  startY: number;
-  endY: number;
-  items: TextItem[];
 }
 
 const GLS_2025_TEMPLATE: ServiceTableDefinition[] = [
@@ -79,24 +63,9 @@ const GLS_2025_TEMPLATE: ServiceTableDefinition[] = [
     ],
     weightColumn: { xRange: [50, 100] },
     zones: [
-      {
-        name: "Provincial",
-        dbPrefix: "provincial",
-        textPatterns: [/provincial/i, /PROVINCIAL/],
-        keywords: ["provincial", "Provincial"]
-      },
-      {
-        name: "Regional",
-        dbPrefix: "regional",
-        textPatterns: [/regional/i, /REGIONAL/],
-        keywords: ["regional", "Regional"]
-      },
-      {
-        name: "Nacional",
-        dbPrefix: "nacional",
-        textPatterns: [/nacional/i, /NACIONAL/],
-        keywords: ["nacional", "Nacional"]
-      },
+      { name: "Provincial", dbPrefix: "provincial", yRange: [100, 250] },
+      { name: "Regional", dbPrefix: "regional", yRange: [250, 400] },
+      { name: "Nacional", dbPrefix: "nacional", yRange: [400, 550] },
     ]
   },
   {
@@ -114,24 +83,9 @@ const GLS_2025_TEMPLATE: ServiceTableDefinition[] = [
     ],
     weightColumn: { xRange: [50, 100] },
     zones: [
-      {
-        name: "Provincial",
-        dbPrefix: "provincial",
-        textPatterns: [/provincial/i, /PROVINCIAL/],
-        keywords: ["provincial", "Provincial"]
-      },
-      {
-        name: "Regional",
-        dbPrefix: "regional",
-        textPatterns: [/regional/i, /REGIONAL/],
-        keywords: ["regional", "Regional"]
-      },
-      {
-        name: "Nacional",
-        dbPrefix: "nacional",
-        textPatterns: [/nacional/i, /NACIONAL/],
-        keywords: ["nacional", "Nacional"]
-      },
+      { name: "Provincial", dbPrefix: "provincial", yRange: [100, 250] },
+      { name: "Regional", dbPrefix: "regional", yRange: [250, 400] },
+      { name: "Nacional", dbPrefix: "nacional", yRange: [400, 550] },
     ]
   },
   {
@@ -149,24 +103,9 @@ const GLS_2025_TEMPLATE: ServiceTableDefinition[] = [
     ],
     weightColumn: { xRange: [50, 100] },
     zones: [
-      {
-        name: "Provincial",
-        dbPrefix: "provincial",
-        textPatterns: [/provincial/i, /PROVINCIAL/],
-        keywords: ["provincial", "Provincial"]
-      },
-      {
-        name: "Regional",
-        dbPrefix: "regional",
-        textPatterns: [/regional/i, /REGIONAL/],
-        keywords: ["regional", "Regional"]
-      },
-      {
-        name: "Nacional",
-        dbPrefix: "nacional",
-        textPatterns: [/nacional/i, /NACIONAL/],
-        keywords: ["nacional", "Nacional"]
-      },
+      { name: "Provincial", dbPrefix: "provincial", yRange: [100, 250] },
+      { name: "Regional", dbPrefix: "regional", yRange: [250, 400] },
+      { name: "Nacional", dbPrefix: "nacional", yRange: [400, 550] },
     ]
   },
   {
@@ -184,24 +123,9 @@ const GLS_2025_TEMPLATE: ServiceTableDefinition[] = [
     ],
     weightColumn: { xRange: [50, 100] },
     zones: [
-      {
-        name: "Provincial",
-        dbPrefix: "provincial",
-        textPatterns: [/provincial/i, /PROVINCIAL/],
-        keywords: ["provincial", "Provincial"]
-      },
-      {
-        name: "Regional",
-        dbPrefix: "regional",
-        textPatterns: [/regional/i, /REGIONAL/],
-        keywords: ["regional", "Regional"]
-      },
-      {
-        name: "Nacional",
-        dbPrefix: "nacional",
-        textPatterns: [/nacional/i, /NACIONAL/],
-        keywords: ["nacional", "Nacional"]
-      },
+      { name: "Provincial", dbPrefix: "provincial", yRange: [100, 250] },
+      { name: "Regional", dbPrefix: "regional", yRange: [250, 400] },
+      { name: "Nacional", dbPrefix: "nacional", yRange: [400, 550] },
     ]
   },
   {
@@ -219,24 +143,9 @@ const GLS_2025_TEMPLATE: ServiceTableDefinition[] = [
     ],
     weightColumn: { xRange: [50, 100] },
     zones: [
-      {
-        name: "Provincial",
-        dbPrefix: "provincial",
-        textPatterns: [/provincial/i, /PROVINCIAL/],
-        keywords: ["provincial", "Provincial"]
-      },
-      {
-        name: "Regional",
-        dbPrefix: "regional",
-        textPatterns: [/regional/i, /REGIONAL/],
-        keywords: ["regional", "Regional"]
-      },
-      {
-        name: "Nacional",
-        dbPrefix: "nacional",
-        textPatterns: [/nacional/i, /NACIONAL/],
-        keywords: ["nacional", "Nacional"]
-      },
+      { name: "Provincial", dbPrefix: "provincial", yRange: [100, 250] },
+      { name: "Regional", dbPrefix: "regional", yRange: [250, 400] },
+      { name: "Nacional", dbPrefix: "nacional", yRange: [400, 550] },
     ]
   },
   {
@@ -254,24 +163,9 @@ const GLS_2025_TEMPLATE: ServiceTableDefinition[] = [
     ],
     weightColumn: { xRange: [50, 100] },
     zones: [
-      {
-        name: "Provincial",
-        dbPrefix: "provincial",
-        textPatterns: [/provincial/i, /PROVINCIAL/],
-        keywords: ["provincial", "Provincial"]
-      },
-      {
-        name: "Regional",
-        dbPrefix: "regional",
-        textPatterns: [/regional/i, /REGIONAL/],
-        keywords: ["regional", "Regional"]
-      },
-      {
-        name: "Nacional",
-        dbPrefix: "nacional",
-        textPatterns: [/nacional/i, /NACIONAL/],
-        keywords: ["nacional", "Nacional"]
-      },
+      { name: "Provincial", dbPrefix: "provincial", yRange: [100, 250] },
+      { name: "Regional", dbPrefix: "regional", yRange: [250, 400] },
+      { name: "Nacional", dbPrefix: "nacional", yRange: [400, 550] },
     ]
   },
   {
@@ -289,24 +183,9 @@ const GLS_2025_TEMPLATE: ServiceTableDefinition[] = [
     ],
     weightColumn: { xRange: [50, 100] },
     zones: [
-      {
-        name: "Provincial",
-        dbPrefix: "provincial",
-        textPatterns: [/provincial/i, /PROVINCIAL/],
-        keywords: ["provincial", "Provincial"]
-      },
-      {
-        name: "Regional",
-        dbPrefix: "regional",
-        textPatterns: [/regional/i, /REGIONAL/],
-        keywords: ["regional", "Regional"]
-      },
-      {
-        name: "Nacional",
-        dbPrefix: "nacional",
-        textPatterns: [/nacional/i, /NACIONAL/],
-        keywords: ["nacional", "Nacional"]
-      },
+      { name: "Provincial", dbPrefix: "provincial", yRange: [100, 250] },
+      { name: "Regional", dbPrefix: "regional", yRange: [250, 400] },
+      { name: "Nacional", dbPrefix: "nacional", yRange: [400, 550] },
     ]
   },
 ];
@@ -356,9 +235,9 @@ interface PageData {
 
 async function extractStructuredTextFromPDF(uint8Array: Uint8Array): Promise<PageData[]> {
   try {
-    console.log('[PDF Parser] Cargando PDF.js...');
+    console.log('[PDF Determinista] Cargando PDF.js...');
     const { getDocument, version } = await import("npm:pdfjs-dist@4.0.379/legacy/build/pdf.mjs");
-    console.log(`[PDF Parser] PDF.js v${version} cargado`);
+    console.log(`[PDF Determinista] PDF.js v${version} cargado`);
 
     const loadingTask = getDocument({
       data: uint8Array,
@@ -369,7 +248,7 @@ async function extractStructuredTextFromPDF(uint8Array: Uint8Array): Promise<Pag
 
     const pdfDocument = await loadingTask.promise;
     const numPages = pdfDocument.numPages;
-    console.log(`[PDF Parser] PDF cargado: ${numPages} páginas`);
+    console.log(`[PDF Determinista] PDF cargado: ${numPages} páginas`);
 
     const pages: PageData[] = [];
 
@@ -392,13 +271,13 @@ async function extractStructuredTextFromPDF(uint8Array: Uint8Array): Promise<Pag
         height: viewport.height,
       });
 
-      console.log(`[PDF Parser] Página ${pageNum}/${numPages}: ${items.length} elementos de texto extraídos`);
+      console.log(`[PDF Determinista] Página ${pageNum}/${numPages}: ${items.length} elementos de texto extraídos`);
     }
 
     return pages;
 
   } catch (error) {
-    console.error('[PDF Parser] Error con PDF.js:', error);
+    console.error('[PDF Determinista] Error con PDF.js:', error);
     throw new Error(`Error al extraer texto estructurado del PDF: ${error.message}`);
   }
 }
@@ -527,255 +406,6 @@ function calibrateCoordinates(pageData: PageData, template: ServiceTableDefiniti
   return calibratedTemplate;
 }
 
-function findServiceBlock(pageData: PageData, template: ServiceTableDefinition): TableBlock | null {
-  console.log(`[Detector Bloque] Buscando bloque para servicio: ${template.serviceName}`);
-
-  let serviceHeaderY: number | null = null;
-  let nextServiceY: number | null = null;
-
-  for (const item of pageData.items) {
-    const text = item.str.toLowerCase();
-    const y = item.transform[5];
-
-    if (!serviceHeaderY) {
-      for (const pattern of template.detectionPatterns) {
-        if (pattern.test(text)) {
-          serviceHeaderY = y;
-          console.log(`[Detector Bloque] ✓ Encabezado encontrado en Y=${y}: "${item.str}"`);
-          break;
-        }
-      }
-    }
-
-    if (serviceHeaderY && y < serviceHeaderY - 20) {
-      const allTemplates = GLS_2025_TEMPLATE.filter(t => t.page === pageData.pageNum && t.serviceName !== template.serviceName);
-      for (const otherTemplate of allTemplates) {
-        for (const pattern of otherTemplate.detectionPatterns) {
-          if (pattern.test(text)) {
-            nextServiceY = y;
-            console.log(`[Detector Bloque] ✓ Siguiente servicio encontrado en Y=${y}: "${item.str}"`);
-            break;
-          }
-        }
-        if (nextServiceY) break;
-      }
-      if (nextServiceY) break;
-    }
-  }
-
-  if (!serviceHeaderY) {
-    console.log(`[Detector Bloque] ✗ No se encontró encabezado del servicio`);
-    return null;
-  }
-
-  const endY = nextServiceY || (serviceHeaderY - 350);
-  const startY = serviceHeaderY;
-
-  const blockItems = pageData.items.filter(item => {
-    const y = item.transform[5];
-    return y <= startY && y >= endY;
-  });
-
-  console.log(`[Detector Bloque] ✓ Bloque definido: Y ${startY} → ${endY} (${blockItems.length} elementos)`);
-
-  return {
-    serviceName: template.serviceName,
-    startY,
-    endY,
-    items: blockItems
-  };
-}
-
-function detectZoneInText(text: string, zoneConfig: ServiceTableDefinition['zones'][0]): boolean {
-  const normalizedText = text.toLowerCase().trim();
-
-  for (const pattern of zoneConfig.textPatterns) {
-    if (pattern.test(normalizedText)) {
-      return true;
-    }
-  }
-
-  for (const keyword of zoneConfig.keywords) {
-    if (normalizedText.includes(keyword.toLowerCase())) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function classifyRowsByZone(block: TableBlock, template: ServiceTableDefinition): DetectedZone[] {
-  console.log(`[Clasificador Zonas] Clasificando filas del bloque ${template.serviceName}`);
-
-  const sortedItems = [...block.items].sort((a, b) => b.transform[5] - a.transform[5]);
-
-  const detectedZones: DetectedZone[] = [];
-  let currentZone: DetectedZone | null = null;
-
-  const rowGroups = new Map<number, TextItem[]>();
-  const tolerance = 3;
-
-  for (const item of sortedItems) {
-    const y = Math.round(item.transform[5]);
-    let foundGroup = false;
-
-    for (const [groupY, items] of rowGroups.entries()) {
-      if (Math.abs(groupY - y) <= tolerance) {
-        items.push(item);
-        foundGroup = true;
-        break;
-      }
-    }
-
-    if (!foundGroup) {
-      rowGroups.set(y, [item]);
-    }
-  }
-
-  const sortedRows = Array.from(rowGroups.entries()).sort((a, b) => b[0] - a[0]);
-
-  console.log(`[Clasificador Zonas] Agrupadas ${sortedRows.length} filas del bloque`);
-
-  for (let i = 0; i < sortedRows.length; i++) {
-    const [y, items] = sortedRows[i];
-    const rowText = items.map(item => item.str).join(' ').trim();
-
-    if (rowText.length === 0) continue;
-
-    let zoneDetected = false;
-    for (const zoneConfig of template.zones) {
-      if (detectZoneInText(rowText, zoneConfig)) {
-        if (currentZone) {
-          currentZone.endRowIndex = i - 1;
-          detectedZones.push(currentZone);
-          console.log(`[Clasificador Zonas] ✓ Zona ${currentZone.zoneName} finalizada: filas ${currentZone.startRowIndex} a ${currentZone.endRowIndex}`);
-        }
-
-        currentZone = {
-          zoneName: zoneConfig.name,
-          dbPrefix: zoneConfig.dbPrefix,
-          startRowIndex: i + 1,
-          endRowIndex: sortedRows.length - 1,
-          rowTexts: []
-        };
-
-        console.log(`[Clasificador Zonas] ✓ Nueva zona detectada: ${zoneConfig.name} en fila ${i} (Y=${y}): "${rowText}"`);
-        zoneDetected = true;
-        break;
-      }
-    }
-
-    if (!zoneDetected && currentZone) {
-      currentZone.rowTexts.push(rowText);
-    }
-  }
-
-  if (currentZone) {
-    detectedZones.push(currentZone);
-    console.log(`[Clasificador Zonas] ✓ Zona ${currentZone.zoneName} finalizada: filas ${currentZone.startRowIndex} a ${currentZone.endRowIndex}`);
-  }
-
-  console.log(`[Clasificador Zonas] ✓ Total de zonas detectadas: ${detectedZones.length}`);
-  detectedZones.forEach((zone, idx) => {
-    console.log(`[Clasificador Zonas]   ${idx + 1}. ${zone.zoneName}: ${zone.rowTexts.length} filas de datos`);
-  });
-
-  return detectedZones;
-}
-
-function extractTableDataWithTextZones(pageData: PageData, template: ServiceTableDefinition): any[] {
-  console.log(`[Extractor Texto] ===== EXTRAYENDO ${template.serviceName} CON ZONAS POR TEXTO =====`);
-
-  const block = findServiceBlock(pageData, template);
-  if (!block) {
-    console.log(`[Extractor Texto] ✗ No se pudo encontrar bloque de servicio`);
-    return [];
-  }
-
-  const detectedZones = classifyRowsByZone(block, template);
-  if (detectedZones.length === 0) {
-    console.log(`[Extractor Texto] ✗ No se detectaron zonas en el bloque`);
-    return [];
-  }
-
-  const calibrated = calibrateCoordinates(pageData, template);
-  const results: any[] = [];
-
-  const sortedItems = [...block.items].sort((a, b) => b.transform[5] - a.transform[5]);
-  const rowGroups = new Map<number, TextItem[]>();
-  const tolerance = 3;
-
-  for (const item of sortedItems) {
-    const y = Math.round(item.transform[5]);
-    let foundGroup = false;
-
-    for (const [groupY, items] of rowGroups.entries()) {
-      if (Math.abs(groupY - y) <= tolerance) {
-        items.push(item);
-        foundGroup = true;
-        break;
-      }
-    }
-
-    if (!foundGroup) {
-      rowGroups.set(y, [item]);
-    }
-  }
-
-  const sortedRows = Array.from(rowGroups.entries()).sort((a, b) => b[0] - a[0]);
-
-  for (const zone of detectedZones) {
-    console.log(`[Extractor Texto] Procesando zona: ${zone.zoneName}`);
-
-    const zoneDataRows = sortedRows.slice(zone.startRowIndex, zone.endRowIndex + 1);
-    const dataRowsCount = Math.min(6, zoneDataRows.length);
-
-    for (let i = 0; i < dataRowsCount; i++) {
-      const weightRange = WEIGHT_RANGES[i];
-      const [rowY, rowItems] = zoneDataRows[i] || [0, []];
-
-      const rowData: Record<string, any> = {
-        service_name: template.dbName,
-        weight_from: weightRange.from,
-        weight_to: weightRange.to,
-      };
-
-      for (const col of calibrated.columns) {
-        const fieldName = `${zone.dbPrefix}${col.dbSuffix}`;
-
-        if (!VALID_DB_FIELDS.has(fieldName)) {
-          continue;
-        }
-
-        const cellItems = rowItems.filter(item => {
-          const x = item.transform[4];
-          return x >= col.xRange[0] && x <= col.xRange[1];
-        });
-
-        let cellValue: number | null = null;
-        for (const item of cellItems) {
-          const parsed = parseNumber(item.str);
-          if (parsed !== null) {
-            cellValue = parsed;
-            break;
-          }
-        }
-
-        rowData[fieldName] = cellValue;
-
-        if (cellValue !== null) {
-          console.log(`[Extractor Texto]     ${zone.zoneName} ${weightRange.from}-${weightRange.to}kg ${col.name} → ${fieldName} = ${cellValue}`);
-        }
-      }
-
-      results.push(rowData);
-    }
-  }
-
-  console.log(`[Extractor Texto] ✓ ${results.length} filas extraídas de ${template.serviceName}`);
-  return results;
-}
-
 function extractTableDataWithCoordinates(pageData: PageData, template: ServiceTableDefinition): any[] {
   console.log(`[Extractor Coordenadas] ===== EXTRAYENDO ${template.serviceName} =====`);
 
@@ -840,42 +470,27 @@ function extractTableDataWithCoordinates(pageData: PageData, template: ServiceTa
   return results;
 }
 
-function validateExtractedData(data: any[]): {valid: boolean, warnings: string[], stats: any} {
+function validateExtractedData(data: any[]): {valid: boolean, warnings: string[]} {
   console.log('[Validador] ===== VALIDANDO DATOS EXTRAÍDOS =====');
 
   const warnings: string[] = [];
   let validCount = 0;
-  const serviceStats = new Map<string, { total: number, withData: number }>();
-  const zoneStats = new Map<string, number>();
 
   for (const row of data) {
-    const serviceName = row.service_name;
-    if (!serviceStats.has(serviceName)) {
-      serviceStats.set(serviceName, { total: 0, withData: 0 });
-    }
-    const stats = serviceStats.get(serviceName)!;
-    stats.total++;
-
     let hasAnyValue = false;
     let suspiciousCount = 0;
-    let fieldCount = 0;
 
     for (const [key, value] of Object.entries(row)) {
       if (key === 'service_name' || key === 'weight_from' || key === 'weight_to') continue;
 
-      fieldCount++;
-
       if (value !== null && typeof value === 'number') {
         hasAnyValue = true;
 
-        const zonePrefix = key.split('_')[0];
-        zoneStats.set(zonePrefix, (zoneStats.get(zonePrefix) || 0) + 1);
-
         if (value < 0.01) {
-          warnings.push(`${serviceName} ${row.weight_from}kg: ${key}=${value} (valor muy bajo)`);
+          warnings.push(`${row.service_name} ${row.weight_from}kg: ${key}=${value} (valor muy bajo)`);
           suspiciousCount++;
         } else if (value > 500) {
-          warnings.push(`${serviceName} ${row.weight_from}kg: ${key}=${value} (valor muy alto)`);
+          warnings.push(`${row.service_name} ${row.weight_from}kg: ${key}=${value} (valor muy alto)`);
           suspiciousCount++;
         }
       }
@@ -883,7 +498,6 @@ function validateExtractedData(data: any[]): {valid: boolean, warnings: string[]
 
     if (hasAnyValue && suspiciousCount < 3) {
       validCount++;
-      stats.withData++;
     }
   }
 
@@ -891,36 +505,18 @@ function validateExtractedData(data: any[]): {valid: boolean, warnings: string[]
   console.log(`[Validador] Filas válidas: ${validCount}/${data.length} (${validPercentage.toFixed(1)}%)`);
   console.log(`[Validador] Warnings: ${warnings.length}`);
 
-  console.log(`[Validador] Estadísticas por servicio:`);
-  for (const [service, stats] of serviceStats.entries()) {
-    console.log(`[Validador]   ${service}: ${stats.withData}/${stats.total} filas con datos`);
-  }
-
-  console.log(`[Validador] Datos por zona:`);
-  for (const [zone, count] of zoneStats.entries()) {
-    console.log(`[Validador]   ${zone}: ${count} valores extraídos`);
-  }
-
   if (warnings.length > 0 && warnings.length <= 10) {
     warnings.forEach(w => console.log(`[Validador] ⚠ ${w}`));
   }
 
   return {
     valid: validPercentage >= 50,
-    warnings: warnings.slice(0, 20),
-    stats: {
-      services: Array.from(serviceStats.entries()).map(([name, s]) => ({
-        name,
-        total: s.total,
-        withData: s.withData
-      })),
-      zones: Array.from(zoneStats.entries()).map(([zone, count]) => ({ zone, count }))
-    }
+    warnings: warnings.slice(0, 20)
   };
 }
 
 Deno.serve(async (req: Request) => {
-  console.log(`[PDF Parser] Nueva petición: ${req.method}`);
+  console.log(`[PDF Determinista] Nueva petición: ${req.method}`);
 
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -963,16 +559,16 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log(`[PDF Parser] Procesando: ${pdfFile.name} (${pdfFile.size} bytes)`);
+    console.log(`[PDF Determinista] Procesando: ${pdfFile.name} (${pdfFile.size} bytes)`);
 
     const arrayBuffer = await pdfFile.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
 
     const pages = await extractStructuredTextFromPDF(uint8Array);
-    console.log(`[PDF Parser] ${pages.length} páginas extraídas con coordenadas`);
+    console.log(`[PDF Determinista] ${pages.length} páginas extraídas con coordenadas`);
 
     const version = detectPDFVersion(pages);
-    console.log(`[PDF Parser] Versión detectada: ${version}`);
+    console.log(`[PDF Determinista] Versión detectada: ${version}`);
 
     const allExtractedData: any[] = [];
     const servicesDetected: string[] = [];
@@ -981,10 +577,10 @@ Deno.serve(async (req: Request) => {
       const template = detectService(pageData);
 
       if (template) {
-        console.log(`[PDF Parser] ✓ Procesando ${template.serviceName} en página ${pageData.pageNum}`);
+        console.log(`[PDF Determinista] ✓ Procesando ${template.serviceName} en página ${pageData.pageNum}`);
         servicesDetected.push(template.serviceName);
 
-        const extractedRows = extractTableDataWithTextZones(pageData, template);
+        const extractedRows = extractTableDataWithCoordinates(pageData, template);
         allExtractedData.push(...extractedRows);
       }
     }
@@ -1007,8 +603,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log(`[PDF Parser] Total datos extraídos: ${allExtractedData.length} filas`);
-    console.log(`[PDF Parser] Servicios detectados: ${servicesDetected.join(', ')}`);
+    console.log(`[PDF Determinista] Total datos extraídos: ${allExtractedData.length} filas`);
+    console.log(`[PDF Determinista] Servicios detectados: ${servicesDetected.join(', ')}`);
 
     const validation = validateExtractedData(allExtractedData);
 
@@ -1018,8 +614,7 @@ Deno.serve(async (req: Request) => {
           error: "Los datos extraídos no pasaron la validación",
           details: "Menos del 50% de las filas contienen datos válidos",
           warnings: validation.warnings,
-          extracted: allExtractedData.length,
-          stats: validation.stats
+          extracted: allExtractedData.length
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -1037,24 +632,24 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log('[PDF Parser] Limpiando tabla tariffspdf...');
+    console.log('[PDF Determinista] Limpiando tabla tariffspdf...');
     const { error: deleteError } = await supabase
       .from("tariffspdf")
       .delete()
       .neq("id", "00000000-0000-0000-0000-000000000000");
 
     if (deleteError) {
-      console.warn(`[PDF Parser] Advertencia al limpiar: ${deleteError.message}`);
+      console.warn(`[PDF Determinista] Advertencia al limpiar: ${deleteError.message}`);
     }
 
-    console.log(`[PDF Parser] Insertando ${allExtractedData.length} tarifas...`);
+    console.log(`[PDF Determinista] Insertando ${allExtractedData.length} tarifas...`);
     const { data: insertedData, error: insertError } = await supabase
       .from("tariffspdf")
       .insert(allExtractedData)
       .select();
 
     if (insertError) {
-      console.error(`[PDF Parser] Error al insertar: ${insertError.message}`);
+      console.error(`[PDF Determinista] Error al insertar: ${insertError.message}`);
       return new Response(
         JSON.stringify({
           error: "Error al insertar tarifas en la base de datos",
@@ -1065,29 +660,28 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log(`[PDF Parser] ✓ Inserción completada: ${insertedData?.length || 0} registros`);
+    console.log(`[PDF Determinista] ✓ Inserción completada: ${insertedData?.length || 0} registros`);
 
     const { count: verificationCount } = await supabase
       .from("tariffspdf")
       .select('*', { count: 'exact', head: true });
 
-    console.log(`[PDF Parser] ✓ Verificación: ${verificationCount || 0} registros en tabla`);
+    console.log(`[PDF Determinista] ✓ Verificación: ${verificationCount || 0} registros en tabla`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Se importaron ${insertedData?.length || 0} tarifas correctamente usando detección por texto`,
+        message: `Se importaron ${insertedData?.length || 0} tarifas correctamente usando sistema determinista`,
         imported: insertedData?.length || 0,
         verified: verificationCount || 0,
         pages: pages.length,
         pdfVersion: version,
         servicesDetected,
-        method: "Extracción basada en patrones de texto",
+        method: "Extracción determinista con coordenadas",
         validation: {
           valid: validation.valid,
           warningCount: validation.warnings.length,
-          warnings: validation.warnings.slice(0, 5),
-          stats: validation.stats
+          warnings: validation.warnings.slice(0, 5)
         },
         preview: allExtractedData.slice(0, 5)
       }),
@@ -1095,8 +689,8 @@ Deno.serve(async (req: Request) => {
     );
 
   } catch (error) {
-    console.error(`[PDF Parser] Error fatal: ${error.message}`);
-    console.error(`[PDF Parser] Stack:`, error.stack);
+    console.error(`[PDF Determinista] Error fatal: ${error.message}`);
+    console.error(`[PDF Determinista] Stack:`, error.stack);
     return new Response(
       JSON.stringify({
         error: "Error interno del servidor",
