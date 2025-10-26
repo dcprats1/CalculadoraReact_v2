@@ -312,68 +312,12 @@ const GLS_2025_TEMPLATE: ServiceTableDefinition[] = [
 ];
 
 const WEIGHT_RANGES = [
-  {
-    from: "0",
-    to: "1",
-    patterns: [
-      /^1\s*Kg\.?/i,
-      /^1\s*kg\.?/i,
-      /^\s*1\s+Kg/i,
-      /^1$/
-    ]
-  },
-  {
-    from: "1",
-    to: "3",
-    patterns: [
-      /^3\s*Kg\.?/i,
-      /^3\s*kg\.?/i,
-      /^\s*3\s+Kg/i,
-      /^3$/
-    ]
-  },
-  {
-    from: "3",
-    to: "5",
-    patterns: [
-      /^5\s*Kg\.?/i,
-      /^5\s*kg\.?/i,
-      /^\s*5\s+Kg/i,
-      /^5$/
-    ]
-  },
-  {
-    from: "5",
-    to: "10",
-    patterns: [
-      /^10\s*Kg\.?/i,
-      /^10\s*kg\.?/i,
-      /^\s*10\s+Kg/i,
-      /^10$/
-    ]
-  },
-  {
-    from: "10",
-    to: "15",
-    patterns: [
-      /^15\s*Kg\.?/i,
-      /^15\s*kg\.?/i,
-      /^\s*15\s+Kg/i,
-      /^15$/
-    ]
-  },
-  {
-    from: "15",
-    to: "999",
-    patterns: [
-      /^\+\s*Kg\.?/i,
-      /^\+\s*kg\.?/i,
-      /adicional/i,
-      /extra/i,
-      /más/i,
-      /^\+kg/i
-    ]
-  },
+  { from: "0", to: "1", patterns: [/^1\s*kg/i, /^1$/] },
+  { from: "1", to: "3", patterns: [/^3\s*kg/i, /^3$/] },
+  { from: "3", to: "5", patterns: [/^5\s*kg/i, /^5$/] },
+  { from: "5", to: "10", patterns: [/^10\s*kg/i, /^10$/] },
+  { from: "10", to: "15", patterns: [/^15\s*kg/i, /^15$/] },
+  { from: "15", to: "999", patterns: [/\+?\s*kg/i, /adicional/i, /^\+kg/i] },
 ];
 
 const VALID_DB_FIELDS = new Set([
@@ -717,39 +661,21 @@ function classifyRowsByZone(block: TableBlock, template: ServiceTableDefinition)
           const [nextY, nextItems] = sortedRows[nextDataRowIndex];
           const nextRowText = nextItems.map(item => item.str).join(' ').trim();
 
-          console.log(`[Clasificador Zonas]     Evaluando fila índice ${nextDataRowIndex}: "${nextRowText}"`);
-
-          let matchedPattern = null;
-          const hasWeightPattern = WEIGHT_RANGES.some(wr => {
-            const matched = wr.patterns.some(pattern => {
-              if (pattern.test(nextRowText)) {
-                matchedPattern = pattern.toString();
-                return true;
-              }
-              return false;
-            });
-            return matched;
-          });
+          const hasWeightPattern = WEIGHT_RANGES.some(wr =>
+            wr.patterns.some(pattern => pattern.test(nextRowText))
+          );
 
           const hasNumericData = nextItems.some(item => {
             const parsed = parseNumber(item.str);
             return parsed !== null && parsed > 0;
           });
 
-          if (hasWeightPattern) {
-            console.log(`[Clasificador Zonas]       ✓ Patrón de peso detectado: ${matchedPattern}`);
-          }
-          if (hasNumericData) {
-            console.log(`[Clasificador Zonas]       ✓ Datos numéricos válidos detectados`);
-          }
-
           if (hasWeightPattern || hasNumericData) {
-            console.log(`[Clasificador Zonas]     → Primera fila de datos confirmada en índice ${nextDataRowIndex}`);
+            console.log(`[Clasificador Zonas]     Primera fila de datos detectada en índice ${nextDataRowIndex}: "${nextRowText}"`);
             break;
           }
 
-          console.log(`[Clasificador Zonas]       ✗ Sin patrón de peso ni datos numéricos`);
-          console.log(`[Clasificador Zonas]     → Saltando fila de encabezado/vacía`);
+          console.log(`[Clasificador Zonas]     Saltando fila de encabezado/vacía en índice ${nextDataRowIndex}: "${nextRowText}"`);
           nextDataRowIndex++;
         }
 
@@ -854,15 +780,9 @@ function extractTableDataWithTextZones(pageData: PageData, template: ServiceTabl
       const weightRange = WEIGHT_RANGES[i];
       const weightKey = `${weightRange.from}-${weightRange.to}`;
       const [rowY, rowItems] = zoneDataRows[i] || [0, []];
-      const rowText = rowItems.map(item => item.str).join(' ').trim();
-
-      console.log(`[Extractor Texto]   Fila física índice ${zone.startRowIndex + i} asignada a rango ${weightRange.from}-${weightRange.to}kg`);
-      console.log(`[Extractor Texto]     Contenido: "${rowText}"`);
 
       const rowData = weightBasedResults.get(weightKey);
       if (!rowData) continue;
-
-      let extractedValues = 0;
 
       for (const col of calibrated.columns) {
         const fieldName = `${zone.dbPrefix}${col.dbSuffix}`;
@@ -888,15 +808,8 @@ function extractTableDataWithTextZones(pageData: PageData, template: ServiceTabl
         rowData[fieldName] = cellValue;
 
         if (cellValue !== null) {
-          extractedValues++;
-          console.log(`[Extractor Texto]       ${col.name} → ${fieldName} = ${cellValue}`);
+          console.log(`[Extractor Texto]     ${zone.zoneName} ${weightRange.from}-${weightRange.to}kg ${col.name} → ${fieldName} = ${cellValue}`);
         }
-      }
-
-      if (extractedValues === 0) {
-        console.log(`[Extractor Texto]     ⚠ ADVERTENCIA: No se extrajeron valores de esta fila`);
-      } else {
-        console.log(`[Extractor Texto]     ✓ Extraídos ${extractedValues} valores de la fila ${weightRange.from}-${weightRange.to}kg`);
       }
     }
   }
