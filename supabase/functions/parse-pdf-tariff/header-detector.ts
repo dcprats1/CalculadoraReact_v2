@@ -222,14 +222,14 @@ export class PDFTableHeaderDetector {
 
   private static readonly COLUMN_PATTERNS = {
     salidas: {
-      patterns: [/salidas?/i, /^sal$/i, /\bsal\b/i],
+      patterns: [/salidas/i, /^sal$/i, /\bsal\b/i],
       dbSuffix: '_sal',
       keywords: ['salidas', 'sal']
     },
-    recogida: {
-      patterns: [/recogidas?/i, /^rec$/i, /\brec\b/i],
+    recogidas: {
+      patterns: [/recogidas/i, /^rec$/i, /\brec\b/i],
       dbSuffix: '_rec',
-      keywords: ['recogida', 'rec']
+      keywords: ['recogidas', 'rec']
     },
     interciudad: {
       patterns: [/interciudad/i, /^int$/i, /\bint\b/i],
@@ -240,11 +240,6 @@ export class PDFTableHeaderDetector {
       patterns: [/arrastre/i, /^arr$/i, /\barr\b/i],
       dbSuffix: '_arr',
       keywords: ['arrastre', 'arr']
-    },
-    entrega: {
-      patterns: [/entregas?/i, /^ent$/i, /\bent\b/i],
-      dbSuffix: '_ent',
-      keywords: ['entrega', 'ent']
     },
     kilometros: {
       patterns: [/km/i, /kil[oó]metros?/i],

@@ -93,9 +93,8 @@ const WEIGHT_RANGES = [
 ];
 
 const COLUMN_HEADERS = [
-  { name: "Recogida", dbSuffix: "_rec", patterns: [/recogida/i] },
+  { name: "Recogidas", dbSuffix: "_rec", patterns: [/recogidas/i] },
   { name: "Arrastre", dbSuffix: "_arr", patterns: [/arrastre/i] },
-  { name: "Entrega", dbSuffix: "_ent", patterns: [/entrega/i] },
   { name: "Salidas", dbSuffix: "_sal", patterns: [/salidas/i] },
   { name: "Interciudad", dbSuffix: "_int", patterns: [/interciudad/i] }
 ];
