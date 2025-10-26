@@ -726,29 +726,26 @@ function classifyRowsByZone(block: TableBlock, template: ServiceTableDefinition)
 
         let nextDataRowIndex = i + 1;
         let skippedRows = 0;
-        const maxSkipRows = 8;
-
-        console.log(`[Clasificador Zonas]   → Buscando primera fila de datos después del encabezado de zona...`);
+        const maxSkipRows = 2;
 
         while (nextDataRowIndex < sortedRows.length && skippedRows < maxSkipRows) {
           const [nextY, nextItems] = sortedRows[nextDataRowIndex];
           const nextRowText = nextItems.map(item => item.str).join(' ').trim();
 
-          console.log(`[Clasificador Zonas]     [Fila ${nextDataRowIndex}] Evaluando: "${nextRowText}"`);
+          console.log(`[Clasificador Zonas]     Evaluando fila índice ${nextDataRowIndex}: "${nextRowText}"`);
 
           if (nextRowText.length === 0) {
-            console.log(`[Clasificador Zonas]       ✗ Fila vacía - saltando (no cuenta para límite)`);
+            console.log(`[Clasificador Zonas]       ✗ Fila vacía, saltando`);
             nextDataRowIndex++;
+            skippedRows++;
             continue;
           }
 
           let matchedPattern = null;
-          let matchedWeightRange = null;
           const hasWeightPattern = WEIGHT_RANGES.some(wr => {
             const matched = wr.patterns.some(pattern => {
               if (pattern.test(nextRowText)) {
                 matchedPattern = pattern.toString();
-                matchedWeightRange = `${wr.from}-${wr.to}kg`;
                 return true;
               }
               return false;
@@ -756,47 +753,26 @@ function classifyRowsByZone(block: TableBlock, template: ServiceTableDefinition)
             return matched;
           });
 
-          const hasFirstWeightPattern = WEIGHT_RANGES[0].patterns.some(pattern => pattern.test(nextRowText));
-
           const numericItems = nextItems.filter(item => {
             const parsed = parseNumber(item.str);
             return parsed !== null && parsed > 0;
           });
           const hasNumericData = numericItems.length >= 2;
 
-          const looksLikeHeader = /kg|peso|weight|tarifa|rate|provincial|regional|nacional|zone|recogida|recog|arrastre|arr|entrega|entr|salidas|salid|interciudad|inter/i.test(nextRowText);
-          const isColumnHeader = /recogida|recog|arrastre|arr|entrega|entr|salidas|salid|interciudad|inter/i.test(nextRowText);
+          const looksLikeHeader = /kg|peso|weight|tarifa|rate|provincial|regional|nacional|zone/i.test(nextRowText);
 
           if (hasWeightPattern) {
-            console.log(`[Clasificador Zonas]       ✓ Patrón de peso detectado: ${matchedWeightRange} (${matchedPattern})`);
-          }
-          if (hasFirstWeightPattern) {
-            console.log(`[Clasificador Zonas]       ✓✓ PRIMER RANGO DE PESO (0-1kg) detectado`);
+            console.log(`[Clasificador Zonas]       ✓ Patrón de peso detectado: ${matchedPattern}`);
           }
           if (hasNumericData) {
-            console.log(`[Clasificador Zonas]       ✓ Datos numéricos válidos: ${numericItems.length} valores encontrados`);
+            console.log(`[Clasificador Zonas]       ✓ Datos numéricos válidos detectados (${numericItems.length} valores)`);
           }
-          if (isColumnHeader) {
-            console.log(`[Clasificador Zonas]       ! Detectado encabezado de columna de costes (Recogida/Arrastre/Entrega/etc)`);
-          }
-          if (looksLikeHeader && !isColumnHeader) {
-            console.log(`[Clasificador Zonas]       ! Parece otro tipo de encabezado`);
-          }
-
-          if (isColumnHeader) {
-            console.log(`[Clasificador Zonas]       → Saltando encabezado de columna (${skippedRows + 1}/${maxSkipRows})`);
-            nextDataRowIndex++;
-            skippedRows++;
-            continue;
-          }
-
-          if (hasFirstWeightPattern && hasNumericData) {
-            console.log(`[Clasificador Zonas]     ✓✓ Primera fila de datos CONFIRMADA en índice ${nextDataRowIndex} (0-1kg con datos numéricos)`);
-            break;
+          if (looksLikeHeader) {
+            console.log(`[Clasificador Zonas]       ! Parece encabezado de tabla`);
           }
 
           if ((hasWeightPattern || hasNumericData) && !looksLikeHeader) {
-            console.log(`[Clasificador Zonas]     ✓ Primera fila de datos confirmada en índice ${nextDataRowIndex}`);
+            console.log(`[Clasificador Zonas]     → Primera fila de datos confirmada en índice ${nextDataRowIndex}`);
             break;
           }
 
@@ -807,8 +783,7 @@ function classifyRowsByZone(block: TableBlock, template: ServiceTableDefinition)
         }
 
         if (skippedRows >= maxSkipRows) {
-          console.log(`[Clasificador Zonas]     ⚠ ADVERTENCIA: Se alcanzó límite de ${maxSkipRows} filas saltadas`);
-          console.log(`[Clasificador Zonas]     ⚠ Usando fila ${nextDataRowIndex} como inicio de datos`);
+          console.log(`[Clasificador Zonas]     ⚠ ADVERTENCIA: Se alcanzó límite de filas saltadas (${maxSkipRows}), usando siguiente fila disponible`);
         }
 
         currentZone = {
@@ -841,12 +816,7 @@ function classifyRowsByZone(block: TableBlock, template: ServiceTableDefinition)
     const rowCount = zone.endRowIndex - zone.startRowIndex + 1;
     console.log(`[Clasificador Zonas]   ${idx + 1}. ${zone.zoneName}: índices ${zone.startRowIndex}-${zone.endRowIndex} (${rowCount} filas)`);
     if (rowCount < WEIGHT_RANGES.length) {
-      console.log(`[Clasificador Zonas]      ⚠⚠ ADVERTENCIA CRÍTICA: Se esperaban ${WEIGHT_RANGES.length} filas de peso, pero solo hay ${rowCount}`);
-      console.log(`[Clasificador Zonas]      ⚠⚠ Esto indica que se están saltando filas de datos. Verifica el inicio en índice ${zone.startRowIndex}`);
-    } else if (rowCount === WEIGHT_RANGES.length) {
-      console.log(`[Clasificador Zonas]      ✓✓ PERFECTO: Número correcto de filas (${WEIGHT_RANGES.length})`);
-    } else {
-      console.log(`[Clasificador Zonas]      ℹ Se encontraron ${rowCount} filas (${rowCount - WEIGHT_RANGES.length} más de lo esperado)`);
+      console.log(`[Clasificador Zonas]      ⚠ ADVERTENCIA: Se esperaban ${WEIGHT_RANGES.length} filas, pero solo hay ${rowCount}`);
     }
   });
 
