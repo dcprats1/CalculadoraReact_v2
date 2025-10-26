@@ -319,9 +319,7 @@ const WEIGHT_RANGES = [
       /^1\s*Kg\.?/i,
       /^1\s*kg\.?/i,
       /^\s*1\s+Kg/i,
-      /^1$/,
-      /\b1\s*kg\b/i,
-      /^0\s*-\s*1/i
+      /^1$/
     ]
   },
   {
@@ -331,9 +329,7 @@ const WEIGHT_RANGES = [
       /^3\s*Kg\.?/i,
       /^3\s*kg\.?/i,
       /^\s*3\s+Kg/i,
-      /^3$/,
-      /\b3\s*kg\b/i,
-      /^1\s*-\s*3/i
+      /^3$/
     ]
   },
   {
@@ -343,9 +339,7 @@ const WEIGHT_RANGES = [
       /^5\s*Kg\.?/i,
       /^5\s*kg\.?/i,
       /^\s*5\s+Kg/i,
-      /^5$/,
-      /\b5\s*kg\b/i,
-      /^3\s*-\s*5/i
+      /^5$/
     ]
   },
   {
@@ -355,9 +349,7 @@ const WEIGHT_RANGES = [
       /^10\s*Kg\.?/i,
       /^10\s*kg\.?/i,
       /^\s*10\s+Kg/i,
-      /^10$/,
-      /\b10\s*kg\b/i,
-      /^5\s*-\s*10/i
+      /^10$/
     ]
   },
   {
@@ -367,9 +359,7 @@ const WEIGHT_RANGES = [
       /^15\s*Kg\.?/i,
       /^15\s*kg\.?/i,
       /^\s*15\s+Kg/i,
-      /^15$/,
-      /\b15\s*kg\b/i,
-      /^10\s*-\s*15/i
+      /^15$/
     ]
   },
   {
@@ -381,9 +371,7 @@ const WEIGHT_RANGES = [
       /adicional/i,
       /extra/i,
       /más/i,
-      /^\+kg/i,
-      /^15\s*\+/i,
-      /mayor.*15/i
+      /^\+kg/i
     ]
   },
 ];
@@ -725,21 +713,11 @@ function classifyRowsByZone(block: TableBlock, template: ServiceTableDefinition)
         }
 
         let nextDataRowIndex = i + 1;
-        let skippedRows = 0;
-        const maxSkipRows = 2;
-
-        while (nextDataRowIndex < sortedRows.length && skippedRows < maxSkipRows) {
+        while (nextDataRowIndex < sortedRows.length) {
           const [nextY, nextItems] = sortedRows[nextDataRowIndex];
           const nextRowText = nextItems.map(item => item.str).join(' ').trim();
 
           console.log(`[Clasificador Zonas]     Evaluando fila índice ${nextDataRowIndex}: "${nextRowText}"`);
-
-          if (nextRowText.length === 0) {
-            console.log(`[Clasificador Zonas]       ✗ Fila vacía, saltando`);
-            nextDataRowIndex++;
-            skippedRows++;
-            continue;
-          }
 
           let matchedPattern = null;
           const hasWeightPattern = WEIGHT_RANGES.some(wr => {
@@ -753,37 +731,26 @@ function classifyRowsByZone(block: TableBlock, template: ServiceTableDefinition)
             return matched;
           });
 
-          const numericItems = nextItems.filter(item => {
+          const hasNumericData = nextItems.some(item => {
             const parsed = parseNumber(item.str);
             return parsed !== null && parsed > 0;
           });
-          const hasNumericData = numericItems.length >= 2;
-
-          const looksLikeHeader = /kg|peso|weight|tarifa|rate|provincial|regional|nacional|zone/i.test(nextRowText);
 
           if (hasWeightPattern) {
             console.log(`[Clasificador Zonas]       ✓ Patrón de peso detectado: ${matchedPattern}`);
           }
           if (hasNumericData) {
-            console.log(`[Clasificador Zonas]       ✓ Datos numéricos válidos detectados (${numericItems.length} valores)`);
-          }
-          if (looksLikeHeader) {
-            console.log(`[Clasificador Zonas]       ! Parece encabezado de tabla`);
+            console.log(`[Clasificador Zonas]       ✓ Datos numéricos válidos detectados`);
           }
 
-          if ((hasWeightPattern || hasNumericData) && !looksLikeHeader) {
+          if (hasWeightPattern || hasNumericData) {
             console.log(`[Clasificador Zonas]     → Primera fila de datos confirmada en índice ${nextDataRowIndex}`);
             break;
           }
 
-          console.log(`[Clasificador Zonas]       ✗ No es fila de datos válida`);
-          console.log(`[Clasificador Zonas]     → Saltando fila (${skippedRows + 1}/${maxSkipRows})`);
+          console.log(`[Clasificador Zonas]       ✗ Sin patrón de peso ni datos numéricos`);
+          console.log(`[Clasificador Zonas]     → Saltando fila de encabezado/vacía`);
           nextDataRowIndex++;
-          skippedRows++;
-        }
-
-        if (skippedRows >= maxSkipRows) {
-          console.log(`[Clasificador Zonas]     ⚠ ADVERTENCIA: Se alcanzó límite de filas saltadas (${maxSkipRows}), usando siguiente fila disponible`);
         }
 
         currentZone = {
@@ -813,11 +780,7 @@ function classifyRowsByZone(block: TableBlock, template: ServiceTableDefinition)
 
   console.log(`[Clasificador Zonas] ✓ Total de zonas detectadas: ${detectedZones.length}`);
   detectedZones.forEach((zone, idx) => {
-    const rowCount = zone.endRowIndex - zone.startRowIndex + 1;
-    console.log(`[Clasificador Zonas]   ${idx + 1}. ${zone.zoneName}: índices ${zone.startRowIndex}-${zone.endRowIndex} (${rowCount} filas)`);
-    if (rowCount < WEIGHT_RANGES.length) {
-      console.log(`[Clasificador Zonas]      ⚠ ADVERTENCIA: Se esperaban ${WEIGHT_RANGES.length} filas, pero solo hay ${rowCount}`);
-    }
+    console.log(`[Clasificador Zonas]   ${idx + 1}. ${zone.zoneName}: ${zone.rowTexts.length} filas de datos`);
   });
 
   return detectedZones;
