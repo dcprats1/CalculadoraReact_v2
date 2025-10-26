@@ -725,18 +725,91 @@ function classifyRowsByZone(block: TableBlock, template: ServiceTableDefinition)
         }
 
         let nextDataRowIndex = i + 1;
+        let skippedRows = 0;
+        const maxSkipRows = 8;
 
-        while (nextDataRowIndex < sortedRows.length) {
+        console.log(`[Clasificador Zonas]   → Buscando primera fila de datos después del encabezado de zona...`);
+
+        while (nextDataRowIndex < sortedRows.length && skippedRows < maxSkipRows) {
           const [nextY, nextItems] = sortedRows[nextDataRowIndex];
           const nextRowText = nextItems.map(item => item.str).join(' ').trim();
 
-          if (nextRowText.length > 0) {
+          console.log(`[Clasificador Zonas]     [Fila ${nextDataRowIndex}] Evaluando: "${nextRowText}"`);
+
+          if (nextRowText.length === 0) {
+            console.log(`[Clasificador Zonas]       ✗ Fila vacía - saltando (no cuenta para límite)`);
+            nextDataRowIndex++;
+            continue;
+          }
+
+          let matchedPattern = null;
+          let matchedWeightRange = null;
+          const hasWeightPattern = WEIGHT_RANGES.some(wr => {
+            const matched = wr.patterns.some(pattern => {
+              if (pattern.test(nextRowText)) {
+                matchedPattern = pattern.toString();
+                matchedWeightRange = `${wr.from}-${wr.to}kg`;
+                return true;
+              }
+              return false;
+            });
+            return matched;
+          });
+
+          const hasFirstWeightPattern = WEIGHT_RANGES[0].patterns.some(pattern => pattern.test(nextRowText));
+
+          const numericItems = nextItems.filter(item => {
+            const parsed = parseNumber(item.str);
+            return parsed !== null && parsed > 0;
+          });
+          const hasNumericData = numericItems.length >= 2;
+
+          const looksLikeHeader = /kg|peso|weight|tarifa|rate|provincial|regional|nacional|zone|recogida|recog|arrastre|arr|entrega|entr|salidas|salid|interciudad|inter/i.test(nextRowText);
+          const isColumnHeader = /recogida|recog|arrastre|arr|entrega|entr|salidas|salid|interciudad|inter/i.test(nextRowText);
+
+          if (hasWeightPattern) {
+            console.log(`[Clasificador Zonas]       ✓ Patrón de peso detectado: ${matchedWeightRange} (${matchedPattern})`);
+          }
+          if (hasFirstWeightPattern) {
+            console.log(`[Clasificador Zonas]       ✓✓ PRIMER RANGO DE PESO (0-1kg) detectado`);
+          }
+          if (hasNumericData) {
+            console.log(`[Clasificador Zonas]       ✓ Datos numéricos válidos: ${numericItems.length} valores encontrados`);
+          }
+          if (isColumnHeader) {
+            console.log(`[Clasificador Zonas]       ! Detectado encabezado de columna de costes (Recogida/Arrastre/Entrega/etc)`);
+          }
+          if (looksLikeHeader && !isColumnHeader) {
+            console.log(`[Clasificador Zonas]       ! Parece otro tipo de encabezado`);
+          }
+
+          if (isColumnHeader) {
+            console.log(`[Clasificador Zonas]       → Saltando encabezado de columna (${skippedRows + 1}/${maxSkipRows})`);
+            nextDataRowIndex++;
+            skippedRows++;
+            continue;
+          }
+
+          if (hasFirstWeightPattern && hasNumericData) {
+            console.log(`[Clasificador Zonas]     ✓✓ Primera fila de datos CONFIRMADA en índice ${nextDataRowIndex} (0-1kg con datos numéricos)`);
             break;
           }
+
+          if ((hasWeightPattern || hasNumericData) && !looksLikeHeader) {
+            console.log(`[Clasificador Zonas]     ✓ Primera fila de datos confirmada en índice ${nextDataRowIndex}`);
+            break;
+          }
+
+          console.log(`[Clasificador Zonas]       ✗ No es fila de datos válida`);
+          console.log(`[Clasificador Zonas]     → Saltando fila (${skippedRows + 1}/${maxSkipRows})`);
           nextDataRowIndex++;
+          skippedRows++;
         }
 
-        console.log(`[Clasificador Zonas]   → Primera fila no vacía después del encabezado: índice ${nextDataRowIndex}`);
+        if (skippedRows >= maxSkipRows) {
+          console.log(`[Clasificador Zonas]     ⚠ ADVERTENCIA: Se alcanzó límite de ${maxSkipRows} filas saltadas`);
+          console.log(`[Clasificador Zonas]     ⚠ Usando fila ${nextDataRowIndex} como inicio de datos`);
+        }
 
         currentZone = {
           zoneName: zoneConfig.name,
