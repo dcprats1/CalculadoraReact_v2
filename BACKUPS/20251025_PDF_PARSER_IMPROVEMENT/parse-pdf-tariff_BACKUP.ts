@@ -43,12 +43,12 @@ interface WeightRange {
 }
 
 const WEIGHT_RANGES: WeightRange[] = [
-  { from: "0", to: "1", patterns: ["1kg", "1 kg", "hasta 1", "0-1", "Hasta 1"] },
-  { from: "1", to: "3", patterns: ["3kg", "3 kg", "1-3", "De 1 a 3"] },
-  { from: "3", to: "5", patterns: ["5kg", "5 kg", "3-5", "De 3 a 5"] },
-  { from: "5", to: "10", patterns: ["10kg", "10 kg", "5-10", "De 5 a 10"] },
-  { from: "10", to: "15", patterns: ["15kg", "15 kg", "10-15", "De 10 a 15"] },
-  { from: "15", to: "999", patterns: ["+kg", "+ kg", "15+", ">15", "Mayor 1 pallet", "Más de 15"] },
+  { from: "0", to: "1", patterns: ["1Kg.", "1 Kg.", "hasta 1", "0-1", "Hasta 1"] },
+  { from: "1", to: "3", patterns: ["3Kg.", "3 Kg.", "1-3", "De 1 a 3"] },
+  { from: "3", to: "5", patterns: ["5Kg.", "5 Kg.", "3-5", "De 3 a 5"] },
+  { from: "5", to: "10", patterns: ["10Kg.", "10 Kg.", "5-10", "De 5 a 10"] },
+  { from: "10", to: "15", patterns: ["15Kg.", "15 Kg.", "10-15", "De 10 a 15"] },
+  { from: "15", to: "999", patterns: ["+Kg.", "+ Kg.", "15+", ">15", "Mayor 1 pallet", "Más de 15"] },
 ];
 
 interface ParsedTariff {
