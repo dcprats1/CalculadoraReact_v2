@@ -1,4 +1,3 @@
-// PdfToExcelConverter.tsx
 import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { Download, Loader2, FileSpreadsheet, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -89,12 +88,10 @@ export function PdfToExcelConverter() {
     try {
       const arrayBuffer = await file.arrayBuffer();
 
-      // SIN WORKER, SIN WARNINGS
       const loadingTask = getDocument({
         data: arrayBuffer,
         useWorkerFetch: false,
         verbosity: 0,
-        // Evita el warning "GlobalWorkerOptions.workerSrc"
         disableWorker: true,
       });
 
