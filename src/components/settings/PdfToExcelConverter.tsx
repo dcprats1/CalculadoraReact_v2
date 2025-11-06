@@ -27,34 +27,60 @@ export function PdfToExcelConverter() {
   const [parsedData, setParsedData] = useState<ParsedRow[]>([]);
   const [showPreview, setShowPreview] = useState(false);
 
-  const parseGlsTable = (text: string): ParsedRow[] => {
-    console.log('📄 Texto extraído del PDF (primeros 2000 chars):', text.substring(0, 2000));
+  const parseGlsTableFromItems = (textItems: any[]): ParsedRow[] => {
+    console.log('📄 Total de elementos de texto:', textItems.length);
+    console.log('📄 Primeros 10 elementos:', textItems.slice(0, 10));
 
-    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    // Agrupar elementos por línea vertical (Y)
+    const lineGroups = new Map<number, any[]>();
+    const TOLERANCE = 3;
+
+    textItems.forEach(item => {
+      const y = Math.round(item.transform[5] / TOLERANCE) * TOLERANCE;
+      if (!lineGroups.has(y)) {
+        lineGroups.set(y, []);
+      }
+      lineGroups.get(y)!.push(item);
+    });
+
+    // Ordenar cada grupo por X y convertir a texto
+    const lines: string[] = [];
+    Array.from(lineGroups.entries())
+      .sort((a, b) => b[0] - a[0])
+      .forEach(([y, items]) => {
+        const sortedItems = items.sort((a, b) => a.transform[4] - b.transform[4]);
+        const lineText = sortedItems.map(item => item.str).join(' ');
+        lines.push(lineText);
+      });
+
+    console.log('📄 Líneas extraídas:', lines.slice(0, 20));
+
     const result: ParsedRow[] = [];
     let currentService = '';
     let currentZone = '';
 
     for (const line of lines) {
-      if (/glass|cristal|seguro|insurance/i.test(line)) continue;
+      const trimmed = line.trim();
+      if (!trimmed || /glass|cristal|seguro|insurance/i.test(trimmed)) continue;
 
-      const serviceMatch = line.match(/(Business\s*Parcel|Economy\s*Parcel|Euro\s*Business\s*Parcel|Parcel\s*Shop|Express|Eurobusiness|Courier)/i);
+      // Detectar servicio
+      const serviceMatch = trimmed.match(/(Business\s*Parcel|Economy\s*Parcel|Euro\s*Business\s*Parcel|EuroBusinessParc|Parcel\s*Shop|Express|Eurobusiness|Courier)/i);
       if (serviceMatch) {
         currentService = serviceMatch[0].trim().replace(/\s+/g, ' ');
-        console.log('🚚 Servicio detectado:', currentService);
+        console.log('🚚 Servicio:', currentService);
         continue;
       }
 
-      const zoneMatch = line.match(/(Provincial|Regional|Nacional|Ceuta\s*&?\s*Melilla|Gibraltar|Andorra|Peninsula|Baleares)/i);
+      // Detectar zona
+      const zoneMatch = trimmed.match(/\b(PROVINCIAL|REGIONAL|NACIONAL|CEUTA|MELILLA|GIBRALTAR|ANDORRA|PENINSULA|BALEARES)\b/i);
       if (zoneMatch) {
-        currentZone = zoneMatch[1].trim().replace(/\s+/g, ' ');
-        console.log('📍 Zona detectada:', currentZone);
+        currentZone = zoneMatch[1].trim();
+        console.log('📍 Zona:', currentZone);
         continue;
       }
 
-      const weightMatch = line.match(/\b(\d+(?:-\d+)?)\s*kg\b/i) ||
-                          line.match(/\b(0-1|1-3|3-5|5-10|10-15|15\+?|\+15)\b/i);
-
+      // Detectar peso y números
+      const weightMatch = trimmed.match(/(\d+(?:-\d+)?)\s*kg/i) || trimmed.match(/\b(0-1|1-3|3-5|5-10|10-15|15\+?|\+15)\b/i);
       if (!weightMatch || !currentService || !currentZone) continue;
 
       let peso = weightMatch[1];
@@ -65,26 +91,27 @@ export function PdfToExcelConverter() {
       else if (peso === '15') peso = '10-15';
       else if (peso === '+' || peso === '+15' || peso === '15+') peso = '15-99';
 
-      const numbers = line.match(/\d+[.,]\d{2}/g);
+      const numbers = trimmed.match(/\d+\.\d{2}/g);
+      console.log('🔢 Línea con peso:', trimmed, '→ números:', numbers);
 
       if (numbers && numbers.length >= 6) {
         const row = {
           servicio: currentService,
           zona: currentZone,
           peso: peso + 'kg',
-          recogida: numbers[0].replace(',', '.'),
-          arrastre: numbers[1].replace(',', '.'),
-          entrega: numbers[2].replace(',', '.'),
-          salidas: numbers[3].replace(',', '.'),
-          recogidas: numbers[4].replace(',', '.'),
-          interciudad: numbers[5].replace(',', '.'),
+          recogida: numbers[0],
+          arrastre: numbers[1],
+          entrega: numbers[2],
+          salidas: numbers[3],
+          recogidas: numbers[4],
+          interciudad: numbers[5],
         };
-        console.log('✅ Fila parseada:', row);
+        console.log('✅ Fila:', row);
         result.push(row);
       }
     }
 
-    console.log(`📊 Total de filas parseadas: ${result.length}`);
+    console.log(`📊 Total filas: ${result.length}`);
     return result;
   };
 
@@ -109,21 +136,15 @@ export function PdfToExcelConverter() {
       });
 
       const pdf = await loadingTask.promise;
-      const allText: string[] = [];
+      const allItems: any[] = [];
 
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .join(' ')
-          .replace(/\s+/g, ' ')
-          .trim();
-        allText.push(pageText);
+        allItems.push(...textContent.items);
       }
 
-      const fullText = allText.join('\n');
-      const data = parseGlsTable(fullText);
+      const data = parseGlsTableFromItems(allItems);
 
       if (data.length === 0) {
         throw new Error('No se encontraron tarifas. Usa un PDF de GLS 2025.');
