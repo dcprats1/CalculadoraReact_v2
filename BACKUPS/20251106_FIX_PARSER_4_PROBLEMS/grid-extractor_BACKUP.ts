@@ -125,32 +125,14 @@ export class GridExtractor {
     }
     console.log(`[Grid Extractor] ✓ Columna de pesos: ${weightColumn}`);
 
-    const zoneBlocks = this.detectZoneBlocksImproved(table, weightColumn);
+    const zoneBlocks = this.detectZoneBlocks(table, weightColumn);
     console.log(`[Grid Extractor] ✓ Bloques de zona detectados: ${zoneBlocks.length}`);
-    for (const block of zoneBlocks) {
-      console.log(`[Grid Extractor]   - ${block.zoneName}: filas ${block.startRow} a ${block.endRow}`);
-    }
 
-    const consolidatedData = this.consolidateDataByWeight(table, zoneBlocks, columnMap, service, weightColumn);
-
-    console.log(`\n[Grid Extractor] ✓ Extraídos ${consolidatedData.length} registros de ${service.serviceName}`);
-    return consolidatedData;
-  }
-
-  private static consolidateDataByWeight(
-    table: VirtualTable,
-    zoneBlocks: Array<{zoneName: string, dbPrefix: string, startRow: number, endRow: number}>,
-    columnMap: Record<string, number>,
-    service: ServiceConfig,
-    weightColumn: number
-  ): any[] {
-    console.log(`\n[Grid Extractor] Consolidando datos por peso...`);
-
-    const dataByWeight = new Map<string, any>();
+    const extractedData: any[] = [];
 
     for (const zoneBlock of zoneBlocks) {
       console.log(`\n[Grid Extractor] Procesando zona: ${zoneBlock.zoneName}`);
-      console.log(`[Grid Extractor]   Filas: ${zoneBlock.startRow} a ${zoneBlock.endRow}`);
+      console.log(`[Grid Extractor]   Filas: ${zoneBlock.startRow} a ${zoneBlock.endRow} (${zoneBlock.endRow - zoneBlock.startRow + 1} filas)`);
 
       for (let weightIdx = 0; weightIdx < WEIGHT_RANGES.length; weightIdx++) {
         const weightRange = WEIGHT_RANGES[weightIdx];
@@ -161,19 +143,13 @@ export class GridExtractor {
           break;
         }
 
-        const weightKey = `${weightRange.from}-${weightRange.to}`;
+        const rowData: any = {
+          service_name: service.dbName,
+          weight_from: weightRange.from,
+          weight_to: weightRange.to
+        };
 
-        if (!dataByWeight.has(weightKey)) {
-          dataByWeight.set(weightKey, {
-            service_name: service.dbName,
-            weight_from: weightRange.from,
-            weight_to: weightRange.to
-          });
-        }
-
-        const rowData = dataByWeight.get(weightKey);
         const dataRow = table.rows[dataRowIdx];
-
         console.log(`[Grid Extractor]   Fila ${dataRowIdx} (peso ${weightRange.from}-${weightRange.to}kg):`);
 
         for (const [colName, colIdx] of Object.entries(columnMap)) {
@@ -190,69 +166,13 @@ export class GridExtractor {
             console.log(`[Grid Extractor]     ${colName} (col ${colIdx}): ${value} → ${fieldName}`);
           }
         }
+
+        extractedData.push(rowData);
       }
     }
 
-    const result = Array.from(dataByWeight.values());
-    console.log(`\n[Grid Extractor] Consolidación completada: ${result.length} registros`);
-
-    return result;
-  }
-
-  private static detectZoneBlocksImproved(table: VirtualTable, weightColumn: number): Array<{zoneName: string, dbPrefix: string, startRow: number, endRow: number}> {
-    const zoneBlocks: Array<{zoneName: string, dbPrefix: string, startRow: number, endRow: number}> = [];
-
-    console.log(`\n[Grid Extractor] Detectando bloques de zona (método mejorado)...`);
-
-    for (let rowIdx = 0; rowIdx < table.rowCount; rowIdx++) {
-      const currentRow = table.rows[rowIdx];
-
-      for (const zoneConfig of ZONES) {
-        let zoneDetected = false;
-
-        for (let colIdx = 0; colIdx < Math.min(3, currentRow.length); colIdx++) {
-          const cell = currentRow[colIdx];
-
-          for (const pattern of zoneConfig.detectionPatterns) {
-            if (pattern.test(cell.text)) {
-              console.log(`[Grid Extractor] Zona "${zoneConfig.zoneName}" detectada en fila ${rowIdx}, columna ${colIdx} (texto: "${cell.text}")`);
-              zoneDetected = true;
-              break;
-            }
-          }
-
-          if (zoneDetected) break;
-        }
-
-        if (zoneDetected) {
-          const weightCell = currentRow[weightColumn];
-          let startsOnSameRow = false;
-
-          for (const weightPattern of WEIGHT_RANGES[0].patterns) {
-            if (weightPattern.test(weightCell.text)) {
-              startsOnSameRow = true;
-              console.log(`[Grid Extractor]   ✓ Primera fila de datos (1kg) está en la MISMA fila ${rowIdx}`);
-              break;
-            }
-          }
-
-          const startRow = startsOnSameRow ? rowIdx : rowIdx + 1;
-          const endRow = startRow + WEIGHT_RANGES.length - 1;
-
-          zoneBlocks.push({
-            zoneName: zoneConfig.zoneName,
-            dbPrefix: zoneConfig.dbPrefix,
-            startRow: startRow,
-            endRow: Math.min(endRow, table.rowCount - 1)
-          });
-
-          console.log(`[Grid Extractor]   → Bloque: filas ${startRow} a ${Math.min(endRow, table.rowCount - 1)}`);
-          break;
-        }
-      }
-    }
-
-    return zoneBlocks;
+    console.log(`\n[Grid Extractor] ✓ Extraídos ${extractedData.length} registros de ${service.serviceName}`);
+    return extractedData;
   }
 
   private static detectService(table: VirtualTable): ServiceConfig | null {
@@ -294,5 +214,46 @@ export class GridExtractor {
       }
     }
     return null;
+  }
+
+  private static detectZoneBlocks(table: VirtualTable, weightColumn: number): Array<{zoneName: string, dbPrefix: string, startRow: number, endRow: number}> {
+    const zoneBlocks: Array<{zoneName: string, dbPrefix: string, startRow: number, endRow: number}> = [];
+
+    for (let rowIdx = 0; rowIdx < table.rowCount; rowIdx++) {
+      for (const zoneConfig of ZONES) {
+        for (const pattern of zoneConfig.detectionPatterns) {
+          const leftCell = table.rows[rowIdx][0];
+
+          if (pattern.test(leftCell.text)) {
+            console.log(`[Grid Extractor] Zona "${zoneConfig.zoneName}" encontrada en fila ${rowIdx}`);
+
+            const firstWeightCell = table.rows[rowIdx][weightColumn];
+            let startsOnSameRow = false;
+
+            for (const weightPattern of WEIGHT_RANGES[0].patterns) {
+              if (weightPattern.test(firstWeightCell.text)) {
+                startsOnSameRow = true;
+                console.log(`[Grid Extractor]   ✓ Primera fila de datos (1kg) está en la MISMA fila ${rowIdx}`);
+                break;
+              }
+            }
+
+            const startRow = startsOnSameRow ? rowIdx : rowIdx + 1;
+            const endRow = startRow + WEIGHT_RANGES.length - 1;
+
+            zoneBlocks.push({
+              zoneName: zoneConfig.zoneName,
+              dbPrefix: zoneConfig.dbPrefix,
+              startRow: startRow,
+              endRow: Math.min(endRow, table.rowCount - 1)
+            });
+
+            break;
+          }
+        }
+      }
+    }
+
+    return zoneBlocks;
   }
 }
