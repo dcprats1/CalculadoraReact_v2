@@ -4,8 +4,8 @@ import * as XLSX from 'xlsx';
 import { Download, Loader2, FileSpreadsheet, AlertCircle, CheckCircle2 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js';
 
-// Configurar worker desde node_modules
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+// Configurar worker desde CDN confiable
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 interface ParsedRow {
   servicio: string;
