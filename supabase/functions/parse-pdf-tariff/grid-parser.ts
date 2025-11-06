@@ -57,23 +57,49 @@ export class VirtualTableBuilder {
     const rowGroups = this.groupItemsByRow(sortedItems);
     const sortedRowEntries = Array.from(rowGroups.entries()).sort((a, b) => b[0] - a[0]);
 
+    console.log(`[Grid Builder] Escaneando ${sortedRowEntries.length} filas en busca de servicios...`);
+
     for (let i = 0; i < sortedRowEntries.length; i++) {
       const [y, items] = sortedRowEntries[i];
-      const rowText = items.map(item => item.str).join(' ').toLowerCase();
+      const rowText = items.map(item => item.str).join(' ');
+      const rowTextLower = rowText.toLowerCase();
 
+      if (i < 20) {
+        console.log(`[Grid Builder] Fila ${i}: "${rowText.substring(0, 80)}"`);
+      }
+
+      if (/glass|cristal/i.test(rowText)) {
+        console.log(`[Grid Builder] ⊗ Fila ${i} ignorada (Glass/Cristal): "${rowText.substring(0, 50)}"`);
+        continue;
+      }
+
+      let serviceDetected = false;
       for (const pattern of this.SERVICE_PATTERNS) {
-        if (pattern.test(rowText) && !/glass|cristal/i.test(rowText)) {
+        if (pattern.test(rowTextLower)) {
           serviceRows.push(i);
-          console.log(`[Grid Builder] Servicio detectado en fila ${i}: "${rowText.substring(0, 50)}..."`);
+          console.log(`[Grid Builder] ✓ Servicio detectado en fila ${i}: "${rowText.substring(0, 80)}"`);
+          serviceDetected = true;
           break;
         }
+      }
+
+      if (!serviceDetected && (rowTextLower.includes('express') || rowTextLower.includes('parcel') || rowTextLower.includes('shop'))) {
+        console.log(`[Grid Builder] ⚠ Posible servicio NO detectado en fila ${i}: "${rowText}"`);
       }
     }
 
     if (serviceRows.length === 0) {
-      console.log(`[Grid Builder] No se detectaron servicios, creando tabla única`);
+      console.log(`[Grid Builder] ⚠ No se detectaron servicios en ${sortedRowEntries.length} filas, creando tabla única`);
+      console.log(`[Grid Builder] Mostrando primeras 30 filas para debugging:`);
+      for (let i = 0; i < Math.min(30, sortedRowEntries.length); i++) {
+        const [y, items] = sortedRowEntries[i];
+        const rowText = items.map(item => item.str).join(' ');
+        console.log(`[Grid Builder]   [${i}]: ${rowText.substring(0, 100)}`);
+      }
       return [this.buildVirtualTable(pageData)];
     }
+
+    console.log(`[Grid Builder] ✓ Detectados ${serviceRows.length} servicios en página ${pageData.pageNum}`);
 
     const tables: VirtualTable[] = [];
     for (let i = 0; i < serviceRows.length; i++) {
@@ -81,7 +107,7 @@ export class VirtualTableBuilder {
       const endRow = i < serviceRows.length - 1 ? serviceRows[i + 1] : sortedRowEntries.length;
 
       const subTableRows = sortedRowEntries.slice(startRow, endRow);
-      console.log(`[Grid Builder] Creando sub-tabla ${i + 1}: filas ${startRow} a ${endRow - 1} (${endRow - startRow} filas)`);
+      console.log(`[Grid Builder] Creando sub-tabla ${i + 1}/${serviceRows.length}: filas ${startRow} a ${endRow - 1} (${endRow - startRow} filas)`);
 
       const subTable = this.buildTableFromRows(subTableRows, pageData, startRow);
       tables.push(subTable);
