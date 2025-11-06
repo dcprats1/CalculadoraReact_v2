@@ -28,27 +28,33 @@ export function PdfToExcelConverter() {
   const [showPreview, setShowPreview] = useState(false);
 
   const parseGlsTable = (text: string): ParsedRow[] => {
+    console.log('📄 Texto extraído del PDF (primeros 2000 chars):', text.substring(0, 2000));
+
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
     const result: ParsedRow[] = [];
     let currentService = '';
     let currentZone = '';
 
     for (const line of lines) {
-      if (/glass|cristal/i.test(line)) continue;
+      if (/glass|cristal|seguro|insurance/i.test(line)) continue;
 
-      const serviceMatch = line.match(/(Business ?Parcel|Economy ?Parcel|Euro ?Business ?Parcel|Parcel ?Shop|Express.*\d{2}:\d{2})/i);
+      const serviceMatch = line.match(/(Business\s*Parcel|Economy\s*Parcel|Euro\s*Business\s*Parcel|Parcel\s*Shop|Express|Eurobusiness|Courier)/i);
       if (serviceMatch) {
-        currentService = serviceMatch[0].trim();
+        currentService = serviceMatch[0].trim().replace(/\s+/g, ' ');
+        console.log('🚚 Servicio detectado:', currentService);
         continue;
       }
 
-      const zoneMatch = line.match(/^(Provincial|Regional|Nacional|Ceuta ?& ?Melilla|Gibraltar|Andorra)/i);
+      const zoneMatch = line.match(/(Provincial|Regional|Nacional|Ceuta\s*&?\s*Melilla|Gibraltar|Andorra|Peninsula|Baleares)/i);
       if (zoneMatch) {
-        currentZone = zoneMatch[1].replace(/ ?& ?/g, ' & ');
+        currentZone = zoneMatch[1].trim().replace(/\s+/g, ' ');
+        console.log('📍 Zona detectada:', currentZone);
         continue;
       }
 
-      const weightMatch = line.match(/(\d+(?:-\d+)?)\s*kg/i) || line.match(/(0-1|1-3|3-5|5-10|10-15|15\+?|\+)\s*kg?/i);
+      const weightMatch = line.match(/\b(\d+(?:-\d+)?)\s*kg\b/i) ||
+                          line.match(/\b(0-1|1-3|3-5|5-10|10-15|15\+?|\+15)\b/i);
+
       if (!weightMatch || !currentService || !currentZone) continue;
 
       let peso = weightMatch[1];
@@ -57,11 +63,12 @@ export function PdfToExcelConverter() {
       else if (peso === '5') peso = '3-5';
       else if (peso === '10') peso = '5-10';
       else if (peso === '15') peso = '10-15';
-      else if (peso === '+') peso = '15-99';
+      else if (peso === '+' || peso === '+15' || peso === '15+') peso = '15-99';
 
-      const numbers = line.match(/(\d+[.,]\d{2})/g);
+      const numbers = line.match(/\d+[.,]\d{2}/g);
+
       if (numbers && numbers.length >= 6) {
-        result.push({
+        const row = {
           servicio: currentService,
           zona: currentZone,
           peso: peso + 'kg',
@@ -71,9 +78,13 @@ export function PdfToExcelConverter() {
           salidas: numbers[3].replace(',', '.'),
           recogidas: numbers[4].replace(',', '.'),
           interciudad: numbers[5].replace(',', '.'),
-        });
+        };
+        console.log('✅ Fila parseada:', row);
+        result.push(row);
       }
     }
+
+    console.log(`📊 Total de filas parseadas: ${result.length}`);
     return result;
   };
 
