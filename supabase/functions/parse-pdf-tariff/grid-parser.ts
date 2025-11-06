@@ -30,6 +30,135 @@ interface VirtualTable {
 export class VirtualTableBuilder {
   private static readonly Y_TOLERANCE = 3;
   private static readonly X_COLUMN_WIDTH = 80;
+  private static readonly SERVICE_PATTERNS = [
+    /express.*0?8:?30/i, /urg.*0?8:?30/i,
+    /express.*14:?00/i, /urg.*14/i,
+    /express.*19:?00/i, /urg.*19/i,
+    /business.*parcel/i,
+    /euro.*business/i,
+    /economy.*parcel/i,
+    /parcel.*shop/i
+  ];
+
+  static buildMultipleTables(pageData: PageData): VirtualTable[] {
+    console.log(`[Grid Builder] Buscando múltiples tablas en página ${pageData.pageNum}`);
+
+    const sortedItems = [...pageData.items]
+      .filter(item => item.str.trim().length > 0)
+      .sort((a, b) => {
+        const yDiff = b.transform[5] - a.transform[5];
+        if (Math.abs(yDiff) > this.Y_TOLERANCE) {
+          return yDiff;
+        }
+        return a.transform[4] - b.transform[4];
+      });
+
+    const serviceRows: number[] = [];
+    const rowGroups = this.groupItemsByRow(sortedItems);
+    const sortedRowEntries = Array.from(rowGroups.entries()).sort((a, b) => b[0] - a[0]);
+
+    for (let i = 0; i < sortedRowEntries.length; i++) {
+      const [y, items] = sortedRowEntries[i];
+      const rowText = items.map(item => item.str).join(' ').toLowerCase();
+
+      for (const pattern of this.SERVICE_PATTERNS) {
+        if (pattern.test(rowText) && !/glass|cristal/i.test(rowText)) {
+          serviceRows.push(i);
+          console.log(`[Grid Builder] Servicio detectado en fila ${i}: "${rowText.substring(0, 50)}..."`);
+          break;
+        }
+      }
+    }
+
+    if (serviceRows.length === 0) {
+      console.log(`[Grid Builder] No se detectaron servicios, creando tabla única`);
+      return [this.buildVirtualTable(pageData)];
+    }
+
+    const tables: VirtualTable[] = [];
+    for (let i = 0; i < serviceRows.length; i++) {
+      const startRow = serviceRows[i];
+      const endRow = i < serviceRows.length - 1 ? serviceRows[i + 1] : sortedRowEntries.length;
+
+      const subTableRows = sortedRowEntries.slice(startRow, endRow);
+      console.log(`[Grid Builder] Creando sub-tabla ${i + 1}: filas ${startRow} a ${endRow - 1} (${endRow - startRow} filas)`);
+
+      const subTable = this.buildTableFromRows(subTableRows, pageData, startRow);
+      tables.push(subTable);
+    }
+
+    console.log(`[Grid Builder] ✓ Creadas ${tables.length} tablas en página ${pageData.pageNum}`);
+    return tables;
+  }
+
+  private static groupItemsByRow(items: TextItem[]): Map<number, TextItem[]> {
+    const rowGroups = new Map<number, TextItem[]>();
+
+    for (const item of items) {
+      const y = Math.round(item.transform[5]);
+      let foundGroup = false;
+
+      for (const [groupY, groupItems] of rowGroups.entries()) {
+        if (Math.abs(groupY - y) <= this.Y_TOLERANCE) {
+          groupItems.push(item);
+          foundGroup = true;
+          break;
+        }
+      }
+
+      if (!foundGroup) {
+        rowGroups.set(y, [item]);
+      }
+    }
+
+    return rowGroups;
+  }
+
+  private static buildTableFromRows(
+    rowEntries: Array<[number, TextItem[]]>,
+    pageData: PageData,
+    rowOffset: number
+  ): VirtualTable {
+    const allItems = rowEntries.flatMap(([y, items]) => items);
+    const xPositions = this.detectColumnPositions(allItems);
+
+    const grid: GridCell[][] = [];
+
+    for (let rowIdx = 0; rowIdx < rowEntries.length; rowIdx++) {
+      const [y, items] = rowEntries[rowIdx];
+      const row: GridCell[] = [];
+
+      for (let colIdx = 0; colIdx < xPositions.length; colIdx++) {
+        const xTarget = xPositions[colIdx];
+        const xMin = colIdx > 0 ? (xPositions[colIdx - 1] + xTarget) / 2 : 0;
+        const xMax = colIdx < xPositions.length - 1 ? (xTarget + xPositions[colIdx + 1]) / 2 : pageData.width;
+
+        const cellItems = items.filter(item => {
+          const itemX = item.transform[4];
+          return itemX >= xMin && itemX < xMax;
+        });
+
+        const cellText = cellItems.map(item => item.str.trim()).join(' ');
+
+        row.push({
+          text: cellText,
+          x: xTarget,
+          y: y,
+          rowIndex: rowIdx,
+          colIndex: colIdx
+        });
+      }
+
+      grid.push(row);
+    }
+
+    return {
+      rows: grid,
+      rowCount: grid.length,
+      colCount: xPositions.length,
+      pageNum: pageData.pageNum
+    };
+  }
 
   static buildVirtualTable(pageData: PageData): VirtualTable {
     console.log(`[Grid Builder] Construyendo tabla virtual para página ${pageData.pageNum}`);

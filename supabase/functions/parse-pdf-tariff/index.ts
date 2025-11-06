@@ -132,17 +132,23 @@ Deno.serve(async (req: Request) => {
     for (const pageData of pages) {
       console.log(`\n[PDF Parser GRID] ========== PÁGINA ${pageData.pageNum} ==========`);
 
-      const virtualTable = VirtualTableBuilder.buildVirtualTable(pageData);
+      const virtualTables = VirtualTableBuilder.buildMultipleTables(pageData);
+      console.log(`[PDF Parser GRID] Detectadas ${virtualTables.length} tablas en página ${pageData.pageNum}`);
 
-      const extractedRows = GridExtractor.extractFromTable(virtualTable);
+      for (let tableIdx = 0; tableIdx < virtualTables.length; tableIdx++) {
+        const virtualTable = virtualTables[tableIdx];
+        console.log(`\n[PDF Parser GRID] --- Procesando tabla ${tableIdx + 1}/${virtualTables.length} de página ${pageData.pageNum} ---`);
 
-      if (extractedRows.length > 0) {
-        const serviceName = extractedRows[0]?.service_name || 'Desconocido';
-        servicesDetected.push(serviceName);
-        allExtractedData.push(...extractedRows);
-        console.log(`[PDF Parser GRID] ✓ Página ${pageData.pageNum}: ${extractedRows.length} registros extraídos`);
-      } else {
-        console.log(`[PDF Parser GRID] ⚠ Página ${pageData.pageNum}: No se extrajeron datos`);
+        const extractedRows = GridExtractor.extractFromTable(virtualTable);
+
+        if (extractedRows.length > 0) {
+          const serviceName = extractedRows[0]?.service_name || 'Desconocido';
+          servicesDetected.push(serviceName);
+          allExtractedData.push(...extractedRows);
+          console.log(`[PDF Parser GRID] ✓ Tabla ${tableIdx + 1}: ${extractedRows.length} registros extraídos (${serviceName})`);
+        } else {
+          console.log(`[PDF Parser GRID] ⚠ Tabla ${tableIdx + 1}: No se extrajeron datos`);
+        }
       }
     }
 

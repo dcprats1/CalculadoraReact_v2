@@ -104,18 +104,29 @@ export class GridExtractor {
     console.log(`\n[Grid Extractor] ===== EXTRAYENDO DATOS DE TABLA VIRTUAL =====`);
     console.log(`[Grid Extractor] Tabla: ${table.rowCount} filas × ${table.colCount} columnas`);
 
-    const service = this.detectService(table);
-    if (!service) {
-      console.log(`[Grid Extractor] ⚠ No se detectó servicio en esta tabla`);
+    if (this.shouldSkipTable(table)) {
+      console.log(`[Grid Extractor] ⊗ Tabla ignorada (Glass/Cristal detectado)`);
       return [];
     }
 
-    console.log(`[Grid Extractor] ✓ Servicio detectado: ${service.serviceName}`);
+    const service = this.detectService(table);
+    if (!service) {
+      console.log(`[Grid Extractor] ⚠ No se detectó servicio en esta tabla`);
+      this.printTablePreview(table);
+      return [];
+    }
+
+    console.log(`[Grid Extractor] ✓ Servicio detectado: ${service.serviceName} (${service.dbName})`);
 
     const columnMap = this.detectColumns(table);
     console.log(`[Grid Extractor] ✓ Columnas detectadas: ${Object.keys(columnMap).length}`);
     for (const [colName, colIdx] of Object.entries(columnMap)) {
       console.log(`[Grid Extractor]   - ${colName}: columna ${colIdx}`);
+    }
+
+    if (Object.keys(columnMap).length < 3) {
+      console.log(`[Grid Extractor] ⚠ Muy pocas columnas detectadas (${Object.keys(columnMap).length}), ignorando tabla`);
+      return [];
     }
 
     const weightColumn = this.detectWeightColumn(table);
@@ -131,10 +142,35 @@ export class GridExtractor {
       console.log(`[Grid Extractor]   - ${block.zoneName}: filas ${block.startRow} a ${block.endRow}`);
     }
 
+    if (zoneBlocks.length === 0) {
+      console.log(`[Grid Extractor] ⚠ No se detectaron zonas, ignorando tabla`);
+      return [];
+    }
+
     const consolidatedData = this.consolidateDataByWeight(table, zoneBlocks, columnMap, service, weightColumn);
 
     console.log(`\n[Grid Extractor] ✓ Extraídos ${consolidatedData.length} registros de ${service.serviceName}`);
     return consolidatedData;
+  }
+
+  private static shouldSkipTable(table: VirtualTable): boolean {
+    for (let rowIdx = 0; rowIdx < Math.min(10, table.rowCount); rowIdx++) {
+      for (const cell of table.rows[rowIdx]) {
+        if (/glass|cristal/i.test(cell.text)) {
+          console.log(`[Grid Extractor] Detectado Glass/Cristal en fila ${rowIdx}: "${cell.text}"`);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private static printTablePreview(table: VirtualTable): void {
+    console.log(`[Grid Extractor] Preview de tabla (primeras 10 filas):`);
+    for (let i = 0; i < Math.min(10, table.rowCount); i++) {
+      const rowText = table.rows[i].map(c => c.text.substring(0, 15)).join(' | ');
+      console.log(`  Fila ${i}: ${rowText}`);
+    }
   }
 
   private static consolidateDataByWeight(
@@ -236,14 +272,18 @@ export class GridExtractor {
 
   private static detectZoneBlocksImproved(table: VirtualTable, weightColumn: number): Array<{zoneName: string, dbPrefix: string, startRow: number, endRow: number}> {
     const zoneBlocks: Array<{zoneName: string, dbPrefix: string, startRow: number, endRow: number}> = [];
+    const processedRows = new Set<number>();
 
     console.log(`\n[Grid Extractor] Detectando bloques de zona (método mejorado)...`);
 
     for (let rowIdx = 0; rowIdx < table.rowCount; rowIdx++) {
+      if (processedRows.has(rowIdx)) continue;
+
       const currentRow = table.rows[rowIdx];
 
       for (const zoneConfig of ZONES) {
         let zoneDetected = false;
+        let detectionColumn = -1;
 
         for (let colIdx = 0; colIdx < Math.min(3, currentRow.length); colIdx++) {
           const cell = currentRow[colIdx];
@@ -252,6 +292,7 @@ export class GridExtractor {
             if (pattern.test(cell.text)) {
               console.log(`[Grid Extractor] Zona "${zoneConfig.zoneName}" detectada en fila ${rowIdx}, columna ${colIdx} (texto: "${cell.text}")`);
               zoneDetected = true;
+              detectionColumn = colIdx;
               break;
             }
           }
@@ -269,19 +310,32 @@ export class GridExtractor {
 
           const endRow = startRow + WEIGHT_RANGES.length - 1;
 
+          const actualEndRow = Math.min(endRow, table.rowCount - 1);
+
+          for (let r = startRow; r <= actualEndRow; r++) {
+            processedRows.add(r);
+          }
+
+          const firstDataRow = table.rows[startRow];
+          console.log(`[Grid Extractor]   → Primera fila de datos (${startRow}):`);
+          for (let colIdx = 0; colIdx < Math.min(8, firstDataRow.length); colIdx++) {
+            console.log(`[Grid Extractor]     Col ${colIdx}: "${firstDataRow[colIdx].text}"`);
+          }
+
           zoneBlocks.push({
             zoneName: zoneConfig.zoneName,
             dbPrefix: zoneConfig.dbPrefix,
             startRow: startRow,
-            endRow: Math.min(endRow, table.rowCount - 1)
+            endRow: actualEndRow
           });
 
-          console.log(`[Grid Extractor]   → Bloque: filas ${startRow} a ${Math.min(endRow, table.rowCount - 1)}`);
+          console.log(`[Grid Extractor]   → Bloque confirmado: filas ${startRow} a ${actualEndRow}`);
           break;
         }
       }
     }
 
+    console.log(`\n[Grid Extractor] Total bloques detectados: ${zoneBlocks.length}`);
     return zoneBlocks;
   }
 
