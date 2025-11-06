@@ -192,8 +192,20 @@ export class VirtualTableBuilder {
 
   static extractNumberFromCell(cell: GridCell): number | null {
     if (!cell || !cell.text) return null;
-    const cleaned = cell.text.replace(/,/g, '.').replace(/[^0-9.]/g, '');
-    const num = parseFloat(cleaned);
-    return (!isNaN(num) && num > 0 && num < 10000) ? num : null;
+
+    const text = cell.text.trim();
+
+    const numPattern = /(\d+[.,]\d+|\d+)/g;
+    const matches = text.match(numPattern);
+
+    if (!matches || matches.length === 0) return null;
+
+    const firstMatch = matches[0].replace(',', '.');
+    const num = parseFloat(firstMatch);
+
+    if (isNaN(num) || num <= 0 || num >= 10000) return null;
+
+    console.log(`[Grid Parser] Celda "${text}" → Número extraído: ${num}`);
+    return num;
   }
 }

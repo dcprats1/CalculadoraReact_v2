@@ -152,6 +152,8 @@ export class GridExtractor {
       console.log(`\n[Grid Extractor] Procesando zona: ${zoneBlock.zoneName}`);
       console.log(`[Grid Extractor]   Filas: ${zoneBlock.startRow} a ${zoneBlock.endRow}`);
 
+      let extractedWeights = 0;
+
       for (let weightIdx = 0; weightIdx < WEIGHT_RANGES.length; weightIdx++) {
         const weightRange = WEIGHT_RANGES[weightIdx];
         const dataRowIdx = zoneBlock.startRow + weightIdx;
@@ -159,6 +161,21 @@ export class GridExtractor {
         if (dataRowIdx > zoneBlock.endRow) {
           console.log(`[Grid Extractor]   ⚠ No hay suficientes filas para peso ${weightRange.from}-${weightRange.to}`);
           break;
+        }
+
+        const dataRow = table.rows[dataRowIdx];
+        const weightCell = dataRow[weightColumn];
+
+        let weightConfirmed = false;
+        for (const pattern of weightRange.patterns) {
+          if (pattern.test(weightCell.text)) {
+            weightConfirmed = true;
+            break;
+          }
+        }
+
+        if (!weightConfirmed) {
+          console.log(`[Grid Extractor]   ⚠ ADVERTENCIA: Fila ${dataRowIdx} no coincide con peso esperado ${weightRange.from}-${weightRange.to}kg (texto: "${weightCell.text}")`);
         }
 
         const weightKey = `${weightRange.from}-${weightRange.to}`;
@@ -172,9 +189,10 @@ export class GridExtractor {
         }
 
         const rowData = dataByWeight.get(weightKey);
-        const dataRow = table.rows[dataRowIdx];
 
         console.log(`[Grid Extractor]   Fila ${dataRowIdx} (peso ${weightRange.from}-${weightRange.to}kg):`);
+
+        let validValuesCount = 0;
 
         for (const [colName, colIdx] of Object.entries(columnMap)) {
           const columnConfig = COLUMN_HEADERS.find(h => h.name === colName);
@@ -187,14 +205,31 @@ export class GridExtractor {
           rowData[fieldName] = value;
 
           if (value !== null) {
+            validValuesCount++;
             console.log(`[Grid Extractor]     ${colName} (col ${colIdx}): ${value} → ${fieldName}`);
+          } else {
+            console.log(`[Grid Extractor]     ${colName} (col ${colIdx}): NULL (texto: "${cell.text}")`);
           }
         }
+
+        if (validValuesCount > 0) {
+          extractedWeights++;
+        }
+      }
+
+      console.log(`[Grid Extractor]   ✓ Zona ${zoneBlock.zoneName}: ${extractedWeights}/${WEIGHT_RANGES.length} rangos extraídos`);
+
+      if (extractedWeights < WEIGHT_RANGES.length) {
+        console.log(`[Grid Extractor]   ⚠ ADVERTENCIA: Se esperaban ${WEIGHT_RANGES.length} rangos pero solo se extrajeron ${extractedWeights}`);
       }
     }
 
     const result = Array.from(dataByWeight.values());
     console.log(`\n[Grid Extractor] Consolidación completada: ${result.length} registros`);
+
+    if (result.length !== WEIGHT_RANGES.length) {
+      console.log(`[Grid Extractor] ⚠ ADVERTENCIA: Se esperaban ${WEIGHT_RANGES.length} registros pero se generaron ${result.length}`);
+    }
 
     return result;
   }
@@ -225,18 +260,13 @@ export class GridExtractor {
         }
 
         if (zoneDetected) {
-          const weightCell = currentRow[weightColumn];
-          let startsOnSameRow = false;
+          const startRow = this.findFirstWeightRow(table, rowIdx, weightColumn);
 
-          for (const weightPattern of WEIGHT_RANGES[0].patterns) {
-            if (weightPattern.test(weightCell.text)) {
-              startsOnSameRow = true;
-              console.log(`[Grid Extractor]   ✓ Primera fila de datos (1kg) está en la MISMA fila ${rowIdx}`);
-              break;
-            }
+          if (startRow === null) {
+            console.log(`[Grid Extractor]   ⚠ No se encontró primera fila de peso para ${zoneConfig.zoneName}`);
+            break;
           }
 
-          const startRow = startsOnSameRow ? rowIdx : rowIdx + 1;
           const endRow = startRow + WEIGHT_RANGES.length - 1;
 
           zoneBlocks.push({
@@ -253,6 +283,26 @@ export class GridExtractor {
     }
 
     return zoneBlocks;
+  }
+
+  private static findFirstWeightRow(table: VirtualTable, zoneRow: number, weightColumn: number): number | null {
+    const searchRange = 2;
+
+    for (let offset = 0; offset <= searchRange; offset++) {
+      const checkRow = zoneRow + offset;
+      if (checkRow >= table.rowCount) break;
+
+      const weightCell = table.rows[checkRow][weightColumn];
+
+      for (const weightPattern of WEIGHT_RANGES[0].patterns) {
+        if (weightPattern.test(weightCell.text)) {
+          console.log(`[Grid Extractor]   ✓ Primera fila de datos (1kg) encontrada en fila ${checkRow} (offset: ${offset})`);
+          return checkRow;
+        }
+      }
+    }
+
+    return null;
   }
 
   private static detectService(table: VirtualTable): ServiceConfig | null {
