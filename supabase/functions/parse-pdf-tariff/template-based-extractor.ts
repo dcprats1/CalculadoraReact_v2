@@ -204,28 +204,36 @@ export class TemplateBasedExtractor {
     const columnMap: Record<string, number> = {};
 
     // Buscar headers en las primeras 15 filas
+    // IMPORTANTE: El orden importa - "Recogidas" debe buscarse ANTES que otros patterns
     const headerPatterns = [
-      { suffix: "_arr", patterns: [/arrastre/i, /^arr$/i] },
-      { suffix: "_sal", patterns: [/salidas/i, /^sal$/i] },
-      { suffix: "_rec", patterns: [/recogidas/i, /^rec$/i] },
-      { suffix: "_int", patterns: [/interciudad/i, /^int$/i] },
-      { suffix: "_ent", patterns: [/entrega/i, /^ent$/i] },
-      { suffix: "_km", patterns: [/km/i, /kilómetros/i] }
+      { suffix: "_arr", patterns: [/^arrastre$/i, /^arr\.?$/i] },
+      { suffix: "_sal", patterns: [/^salidas$/i, /^sal\.?$/i] },
+      { suffix: "_rec", patterns: [/^recogidas$/i] },  // EXACTO - con 's' final
+      { suffix: "_int", patterns: [/^interciudad$/i, /^int\.?$/i] }
     ];
+
+    console.log(`\n[Template Extractor] Detectando columnas de datos...`);
 
     for (let rowIdx = 0; rowIdx < Math.min(15, table.rowCount); rowIdx++) {
       const row = table.rows[rowIdx];
+
+      // Mostrar toda la fila para debugging
+      const rowText = row.map((c, i) => `[${i}]:"${c.text}"`).join(' ');
+      if (rowIdx < 5) {
+        console.log(`[Template Extractor] Fila ${rowIdx}: ${rowText}`);
+      }
 
       for (const { suffix, patterns } of headerPatterns) {
         if (columnMap[suffix]) continue; // Ya encontrada
 
         for (let colIdx = 0; colIdx < row.length; colIdx++) {
           const cell = row[colIdx];
+          const cellText = cell.text.trim();
 
           for (const pattern of patterns) {
-            if (pattern.test(cell.text)) {
+            if (pattern.test(cellText)) {
               columnMap[suffix] = colIdx;
-              console.log(`[Template Extractor] Header encontrado: ${suffix} en columna ${colIdx} (fila ${rowIdx})`);
+              console.log(`[Template Extractor] ✓ Header "${cellText}" → ${suffix} en columna ${colIdx} (fila ${rowIdx})`);
               break;
             }
           }
@@ -235,6 +243,7 @@ export class TemplateBasedExtractor {
       }
     }
 
+    console.log(`[Template Extractor] Columnas detectadas:`, columnMap);
     return columnMap;
   }
 
