@@ -1,4 +1,3 @@
-// PdfToExcelConverter.tsx
 import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { Download, Loader2, FileSpreadsheet, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -89,11 +88,11 @@ export function PdfToExcelConverter() {
     try {
       const arrayBuffer = await file.arrayBuffer();
 
-      // SIN WORKER, SIN WARNINGS
       const loadingTask = getDocument({
         data: arrayBuffer,
         useWorkerFetch: false,
         verbosity: 0,
+        disableWorker: true,
       });
 
       const pdf = await loadingTask.promise;
@@ -145,7 +144,7 @@ export function PdfToExcelConverter() {
         <FileSpreadsheet className="w-6 h-6 text-green-600" />
         <div>
           <h3 className="text-lg font-semibold text-gray-900">PDF to Excel</h3>
-          <p className="text-sm text-gray-600">100% local, sin errores ni warnings</p>
+          <p className="text-sm text-gray-600">Sin errores, sin warnings, 100% local</p>
         </div>
       </div>
 
