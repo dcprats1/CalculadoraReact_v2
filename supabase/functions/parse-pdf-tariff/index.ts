@@ -153,12 +153,37 @@ Deno.serve(async (req: Request) => {
     }
 
     if (allExtractedData.length === 0) {
+      const debugLogs: string[] = [];
+
+      for (let i = 0; i < Math.min(3, pages.length); i++) {
+        const page = pages[i];
+        debugLogs.push(`\n=== PÁGINA ${page.pageNum} ===`);
+        debugLogs.push(`Total items: ${page.items.length}`);
+
+        const sampleText = page.items.slice(0, 30).map(item => item.str).join(' ');
+        debugLogs.push(`Texto de muestra: ${sampleText.substring(0, 500)}`);
+
+        const virtualTables = VirtualTableBuilder.buildMultipleTables(page);
+        debugLogs.push(`Tablas detectadas: ${virtualTables.length}`);
+
+        for (let j = 0; j < virtualTables.length; j++) {
+          const table = virtualTables[j];
+          debugLogs.push(`\nTabla ${j + 1}: ${table.rowCount} filas`);
+
+          for (let r = 0; r < Math.min(10, table.rowCount); r++) {
+            const rowText = table.rows[r].map(c => c.text).join(' | ');
+            debugLogs.push(`  Fila ${r}: ${rowText.substring(0, 150)}`);
+          }
+        }
+      }
+
       return new Response(
         JSON.stringify({
           error: "No se detectaron tarifas en el PDF",
           details: `Se procesaron ${pages.length} páginas pero no se encontraron servicios reconocidos`,
           debugInfo: {
-            totalPages: pages.length
+            totalPages: pages.length,
+            logs: debugLogs
           }
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
