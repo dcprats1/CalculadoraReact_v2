@@ -2,10 +2,7 @@
 import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { Download, Loader2, FileSpreadsheet, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist/legacy/build/pdf.js';
-
-// DESACTIVAMOS EL WORKER (clave para Bolt.new)
-GlobalWorkerOptions.workerSrc = ''; // No worker needed
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.js';
 
 interface ParsedRow {
   servicio: string;
@@ -92,11 +89,10 @@ export function PdfToExcelConverter() {
     try {
       const arrayBuffer = await file.arrayBuffer();
 
-      // SIN WORKER → useWorkerFetch: false
+      // SIN WORKER, SIN WARNINGS
       const loadingTask = getDocument({
         data: arrayBuffer,
         useWorkerFetch: false,
-        // Opcional: desactiva warnings
         verbosity: 0,
       });
 
@@ -118,7 +114,7 @@ export function PdfToExcelConverter() {
       const data = parseGlsTable(fullText);
 
       if (data.length === 0) {
-        throw new Error('No se encontraron datos. Usa un PDF de tarifas GLS 2025.');
+        throw new Error('No se encontraron tarifas. Usa un PDF de GLS 2025.');
       }
 
       setParsedData(data);
@@ -148,8 +144,8 @@ export function PdfToExcelConverter() {
       <div className="flex items-center gap-3 mb-4">
         <FileSpreadsheet className="w-6 h-6 text-green-600" />
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">PDF to Excel (Bolt.new)</h3>
-          <p className="text-sm text-gray-600">Sin worker, sin errores</p>
+          <h3 className="text-lg font-semibold text-gray-900">PDF to Excel</h3>
+          <p className="text-sm text-gray-600">100% local, sin errores ni warnings</p>
         </div>
       </div>
 
@@ -164,7 +160,7 @@ export function PdfToExcelConverter() {
       {loading && (
         <div className="mt-4 p-4 bg-blue-50 rounded-lg flex items-center gap-3">
           <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-          <p className="text-sm">Procesando PDF sin worker...</p>
+          <p className="text-sm">Procesando PDF...</p>
         </div>
       )}
 
@@ -203,7 +199,7 @@ export function PdfToExcelConverter() {
                 <thead className="bg-gray-100 sticky top-0">
                   <tr>
                     {['Servicio', 'Zona', 'Peso', 'Rec', 'Arr', 'Ent', 'Sal', 'Recog', 'Int'].map(h => (
-                      <th key={h} className="px-2 py-1 text-left">{h}</th>
+                      <th key={h} className="px-2 py-1 text-left font-medium">{h}</th>
                     ))}
                   </tr>
                 </thead>
