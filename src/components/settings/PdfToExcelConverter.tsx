@@ -2,10 +2,10 @@
 import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { Download, Loader2, FileSpreadsheet, AlertCircle, CheckCircle2 } from 'lucide-react';
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js';
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist/legacy/build/pdf.js';
 
-// CONFIGURACIÓN CLAVE PARA BOLT.NEW
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+// DESACTIVAMOS EL WORKER (clave para Bolt.new)
+GlobalWorkerOptions.workerSrc = ''; // No worker needed
 
 interface ParsedRow {
   servicio: string;
@@ -91,10 +91,18 @@ export function PdfToExcelConverter() {
 
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-      const pdf = await loadingTask.promise;
 
+      // SIN WORKER → useWorkerFetch: false
+      const loadingTask = getDocument({
+        data: arrayBuffer,
+        useWorkerFetch: false,
+        // Opcional: desactiva warnings
+        verbosity: 0,
+      });
+
+      const pdf = await loadingTask.promise;
       const allText: string[] = [];
+
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
@@ -110,7 +118,7 @@ export function PdfToExcelConverter() {
       const data = parseGlsTable(fullText);
 
       if (data.length === 0) {
-        throw new Error('No se encontraron datos. Verifica que sea un PDF de tarifas GLS.');
+        throw new Error('No se encontraron datos. Usa un PDF de tarifas GLS 2025.');
       }
 
       setParsedData(data);
@@ -129,7 +137,7 @@ export function PdfToExcelConverter() {
       setExcelUrl(url);
 
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
+      setError(err instanceof Error ? err.message : 'Error al procesar el PDF');
     } finally {
       setLoading(false);
     }
@@ -140,8 +148,8 @@ export function PdfToExcelConverter() {
       <div className="flex items-center gap-3 mb-4">
         <FileSpreadsheet className="w-6 h-6 text-green-600" />
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">PDF to Excel (GLS)</h3>
-          <p className="text-sm text-gray-600">Funciona en Bolt.new</p>
+          <h3 className="text-lg font-semibold text-gray-900">PDF to Excel (Bolt.new)</h3>
+          <p className="text-sm text-gray-600">Sin worker, sin errores</p>
         </div>
       </div>
 
@@ -156,7 +164,7 @@ export function PdfToExcelConverter() {
       {loading && (
         <div className="mt-4 p-4 bg-blue-50 rounded-lg flex items-center gap-3">
           <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-          <p className="text-sm">Procesando PDF...</p>
+          <p className="text-sm">Procesando PDF sin worker...</p>
         </div>
       )}
 
