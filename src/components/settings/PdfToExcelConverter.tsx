@@ -31,6 +31,10 @@ export function PdfToExcelConverter() {
     console.log('📄 Total de elementos de texto:', textItems.length);
     console.log('📄 Primeros 10 elementos:', textItems.slice(0, 10));
 
+    // Mostrar texto concatenado de los primeros 100 elementos
+    const previewText = textItems.slice(0, 100).map(item => item.str).join(' ');
+    console.log('📄 Texto preview (primeros 100):', previewText);
+
     // Agrupar elementos por línea vertical (Y)
     const lineGroups = new Map<number, any[]>();
     const TOLERANCE = 3;
@@ -91,7 +95,7 @@ export function PdfToExcelConverter() {
       else if (peso === '15') peso = '10-15';
       else if (peso === '+' || peso === '+15' || peso === '15+') peso = '15-99';
 
-      const numbers = trimmed.match(/\d+\.\d{2}/g);
+      const numbers = trimmed.match(/\d+[.,]\d{2}/g);
       console.log('🔢 Línea con peso:', trimmed, '→ números:', numbers);
 
       if (numbers && numbers.length >= 6) {
@@ -99,12 +103,12 @@ export function PdfToExcelConverter() {
           servicio: currentService,
           zona: currentZone,
           peso: peso + 'kg',
-          recogida: numbers[0],
-          arrastre: numbers[1],
-          entrega: numbers[2],
-          salidas: numbers[3],
-          recogidas: numbers[4],
-          interciudad: numbers[5],
+          recogida: numbers[0].replace(',', '.'),
+          arrastre: numbers[1].replace(',', '.'),
+          entrega: numbers[2].replace(',', '.'),
+          salidas: numbers[3].replace(',', '.'),
+          recogidas: numbers[4].replace(',', '.'),
+          interciudad: numbers[5].replace(',', '.'),
         };
         console.log('✅ Fila:', row);
         result.push(row);
