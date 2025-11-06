@@ -202,31 +202,43 @@ export function TariffPdfUploader({ onDataImported }: TariffPdfUploaderProps = {
         }
 
       if (response.ok && result.success) {
-        console.log('[TariffPdfUploader] Importación exitosa:', result);
+        console.log('[TariffPdfUploader] Extracción exitosa:', result);
 
-        if (result.verified === 0 || result.imported === 0) {
-          console.error('[TariffPdfUploader] Advertencia: No hay datos verificados en DB');
+        if (result.preview) {
+          console.log('[TariffPdfUploader] Mostrando vista previa de datos extraídos');
           setUploadResult({
-            success: false,
-            message: 'Error de sincronización con base de datos',
-            details: `Se parsearon ${result.imported || 0} tarifas pero no se verificaron en la base de datos. Intenta de nuevo.`,
+            success: true,
+            message: result.message,
+            imported: result.data?.length || 0,
+            preview: result.data,
+            uniqueServices: new Set(result.servicesDetected || []).size,
           });
-          return;
-        }
+          setCurrentPhase('preview');
+        } else {
+          if (result.verified === 0 || result.imported === 0) {
+            console.error('[TariffPdfUploader] Advertencia: No hay datos verificados en DB');
+            setUploadResult({
+              success: false,
+              message: 'Error de sincronización con base de datos',
+              details: `Se parsearon ${result.imported || 0} tarifas pero no se verificaron en la base de datos. Intenta de nuevo.`,
+            });
+            return;
+          }
 
-        if (result.verified !== result.imported) {
-          console.warn(`[TariffPdfUploader] Discrepancia: insertadas=${result.imported}, verificadas=${result.verified}`);
-        }
+          if (result.verified !== result.imported) {
+            console.warn(`[TariffPdfUploader] Discrepancia: insertadas=${result.imported}, verificadas=${result.verified}`);
+          }
 
-        setUploadResult({
-          success: true,
-          message: result.message,
-          imported: result.imported,
-          verified: result.verified,
-          uniqueServices: result.uniqueServices,
-          preview: result.preview,
-        });
-        setCurrentPhase('preview');
+          setUploadResult({
+            success: true,
+            message: result.message,
+            imported: result.imported,
+            verified: result.verified,
+            uniqueServices: result.uniqueServices,
+            preview: result.preview,
+          });
+          setCurrentPhase('preview');
+        }
       } else {
         console.error('[TariffPdfUploader] Error en la importación:', result);
         setUploadResult({
@@ -277,7 +289,7 @@ export function TariffPdfUploader({ onDataImported }: TariffPdfUploaderProps = {
     clearSelection();
   };
 
-  if (currentPhase === 'preview') {
+  if (currentPhase === 'preview' && uploadResult?.preview) {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
@@ -289,6 +301,7 @@ export function TariffPdfUploader({ onDataImported }: TariffPdfUploaderProps = {
           </div>
         </div>
         <TariffPdfPreview
+          parsedData={uploadResult.preview}
           onConfirm={handlePreviewConfirm}
           onCancel={handlePreviewCancel}
           onDataImported={onDataImported}

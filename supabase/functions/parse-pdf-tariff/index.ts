@@ -165,32 +165,15 @@ Deno.serve(async (req: Request) => {
     console.log(`[PDF Parser GRID] Servicios detectados: ${new Set(servicesDetected).size}`);
     console.log(`[PDF Parser GRID] Registros únicos: ${allData.length}`);
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
-
-    const { error: insertError } = await supabase.from("tariffspdf").insert(allData);
-
-    if (insertError) {
-      console.error("[PDF Parser GRID] Error al insertar en DB:", insertError);
-      return new Response(
-        JSON.stringify({
-          error: "Error al insertar tarifas en la base de datos",
-          details: insertError.message,
-          parsedCount: allData.length,
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log(`[PDF Parser GRID] ✓ ${allData.length} registros insertados correctamente`);
+    console.log(`[PDF Parser GRID] ✓ Datos extraídos, retornando para vista previa`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Se importaron ${allData.length} tarifas correctamente`,
+        message: `Se extrajeron ${allData.length} tarifas del PDF`,
         data: allData,
         servicesDetected: Array.from(new Set(servicesDetected)),
+        preview: true,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

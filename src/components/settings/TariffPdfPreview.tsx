@@ -28,22 +28,29 @@ interface TariffRow {
 }
 
 interface TariffPdfPreviewProps {
+  parsedData?: TariffRow[];
   onConfirm: () => void;
   onCancel: () => void;
   onDataImported?: () => void;
 }
 
-export function TariffPdfPreview({ onConfirm, onCancel, onDataImported }: TariffPdfPreviewProps) {
+export function TariffPdfPreview({ parsedData, onConfirm, onCancel, onDataImported }: TariffPdfPreviewProps) {
   const { userData } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [tariffs, setTariffs] = useState<TariffRow[]>([]);
+  const [loading, setLoading] = useState(!parsedData);
+  const [tariffs, setTariffs] = useState<TariffRow[]>(parsedData || []);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isTransferring, setIsTransferring] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadTariffsPdfWithRetry();
-  }, []);
+    if (parsedData) {
+      setTariffs(parsedData);
+      setSelectedIds(new Set(parsedData.map((_, idx) => `temp-${idx}`)));
+      setLoading(false);
+    } else {
+      loadTariffsPdfWithRetry();
+    }
+  }, [parsedData]);
 
   const loadTariffsPdfWithRetry = async (retryCount = 0) => {
     const maxRetries = 5;
@@ -99,7 +106,7 @@ export function TariffPdfPreview({ onConfirm, onCancel, onDataImported }: Tariff
     if (selectedIds.size === tariffs.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(tariffs.map(t => t.id)));
+      setSelectedIds(new Set(tariffs.map((t, idx) => t.id || `temp-${idx}`)));
     }
   };
 
@@ -118,13 +125,13 @@ export function TariffPdfPreview({ onConfirm, onCancel, onDataImported }: Tariff
     setError(null);
 
     try {
-      const selectedTariffs = tariffs.filter(t => selectedIds.has(t.id));
+      const selectedTariffs = tariffs.filter((t, idx) => selectedIds.has(t.id || `temp-${idx}`));
       let successCount = 0;
       let errorCount = 0;
 
       for (const tariff of selectedTariffs) {
         try {
-          const { id, created_at, updated_at, ...tariffData } = tariff;
+          const { id, created_at, updated_at, ...tariffData } = tariff as any;
 
           const { data: existingTariff, error: searchError } = await supabase
             .from('custom_tariffs')
@@ -286,17 +293,19 @@ export function TariffPdfPreview({ onConfirm, onCancel, onDataImported }: Tariff
               {serviceName} ({serviceTariffs.length} rangos)
             </div>
             <div className="divide-y divide-gray-100">
-              {serviceTariffs.map((tariff) => (
+              {serviceTariffs.map((tariff, idx) => {
+                const tariffId = tariff.id || `temp-${tariffs.indexOf(tariff)}`;
+                return (
                 <div
-                  key={tariff.id}
+                  key={tariffId}
                   className={`flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors ${
-                    selectedIds.has(tariff.id) ? 'bg-blue-50' : ''
+                    selectedIds.has(tariffId) ? 'bg-blue-50' : ''
                   }`}
                 >
                   <input
                     type="checkbox"
-                    checked={selectedIds.has(tariff.id)}
-                    onChange={() => toggleSelection(tariff.id)}
+                    checked={selectedIds.has(tariffId)}
+                    onChange={() => toggleSelection(tariffId)}
                     className="w-5 h-5 rounded border-gray-300"
                   />
                   <div className="flex-1 space-y-1">
@@ -383,7 +392,8 @@ export function TariffPdfPreview({ onConfirm, onCancel, onDataImported }: Tariff
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))}
