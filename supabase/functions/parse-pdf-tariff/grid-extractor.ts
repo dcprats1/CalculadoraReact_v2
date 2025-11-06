@@ -1,4 +1,5 @@
 import { VirtualTableBuilder } from './grid-parser.ts';
+import { WeightRowDetector, type WeightRow } from './weight-row-detector.ts';
 
 interface VirtualTable {
   rows: GridCell[][];
@@ -185,7 +186,7 @@ export class GridExtractor {
     service: ServiceConfig,
     weightColumn: number
   ): any[] {
-    console.log(`\n[Grid Extractor] Consolidando datos por peso...`);
+    console.log(`\n[Grid Extractor] Consolidando datos por peso (MÉTODO DINÁMICO)...`);
 
     const dataByWeight = new Map<string, any>();
 
@@ -193,45 +194,40 @@ export class GridExtractor {
       console.log(`\n[Grid Extractor] Procesando zona: ${zoneBlock.zoneName}`);
       console.log(`[Grid Extractor]   Filas: ${zoneBlock.startRow} a ${zoneBlock.endRow}`);
 
+      // Detectar filas de peso dinámicamente dentro del bloque de zona
+      const weightRows = WeightRowDetector.detectWeightRows(
+        table,
+        weightColumn,
+        zoneBlock.startRow,
+        zoneBlock.endRow + 1
+      );
+
+      // Validar secuencia
+      const validation = WeightRowDetector.validateWeightSequence(weightRows);
+      if (!validation.valid) {
+        console.log(`[Grid Extractor]   ⚠ Secuencia de peso incompleta en zona ${zoneBlock.zoneName}:`, validation.missing);
+      }
+
+      console.log(`[Grid Extractor]   Detectadas ${weightRows.length} filas de peso en zona ${zoneBlock.zoneName}`);
+
       let extractedWeights = 0;
 
-      for (let weightIdx = 0; weightIdx < WEIGHT_RANGES.length; weightIdx++) {
-        const weightRange = WEIGHT_RANGES[weightIdx];
-        const dataRowIdx = zoneBlock.startRow + weightIdx;
-
-        if (dataRowIdx > zoneBlock.endRow) {
-          console.log(`[Grid Extractor]   ⚠ No hay suficientes filas para peso ${weightRange.from}-${weightRange.to}`);
-          break;
-        }
-
+      for (const weightRow of weightRows) {
+        const weightKey = `${weightRow.weight_from}-${weightRow.weight_to}`;
+        const dataRowIdx = weightRow.rowIndex;
         const dataRow = table.rows[dataRowIdx];
-        const weightCell = dataRow[weightColumn];
-
-        let weightConfirmed = false;
-        for (const pattern of weightRange.patterns) {
-          if (pattern.test(weightCell.text)) {
-            weightConfirmed = true;
-            break;
-          }
-        }
-
-        if (!weightConfirmed) {
-          console.log(`[Grid Extractor]   ⚠ ADVERTENCIA: Fila ${dataRowIdx} no coincide con peso esperado ${weightRange.from}-${weightRange.to}kg (texto: "${weightCell.text}")`);
-        }
-
-        const weightKey = `${weightRange.from}-${weightRange.to}`;
 
         if (!dataByWeight.has(weightKey)) {
           dataByWeight.set(weightKey, {
             service_name: service.dbName,
-            weight_from: weightRange.from,
-            weight_to: weightRange.to
+            weight_from: weightRow.weight_from,
+            weight_to: weightRow.weight_to
           });
         }
 
         const rowData = dataByWeight.get(weightKey);
 
-        console.log(`[Grid Extractor]   Fila ${dataRowIdx} (peso ${weightRange.from}-${weightRange.to}kg):`);
+        console.log(`[Grid Extractor]   Fila ${dataRowIdx} (Y=${weightRow.yPosition.toFixed(1)}, peso ${weightRow.weight_from}-${weightRow.weight_to}kg):`);
 
         let validValuesCount = 0;
 
@@ -258,7 +254,7 @@ export class GridExtractor {
         }
       }
 
-      console.log(`[Grid Extractor]   ✓ Zona ${zoneBlock.zoneName}: ${extractedWeights}/${WEIGHT_RANGES.length} rangos extraídos`);
+      console.log(`[Grid Extractor]   ✓ Zona ${zoneBlock.zoneName}: ${extractedWeights}/${weightRows.length} rangos extraídos`);
 
       if (extractedWeights < WEIGHT_RANGES.length) {
         console.log(`[Grid Extractor]   ⚠ ADVERTENCIA: Se esperaban ${WEIGHT_RANGES.length} rangos pero solo se extrajeron ${extractedWeights}`);
