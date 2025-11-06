@@ -248,6 +248,15 @@ export class TemplateBasedExtractor {
 
     console.log(`\n[Template Extractor] Extrayendo datos con plantilla...`);
 
+    // Mapeo: columnas detectadas → columnas DB existentes
+    // DB actual solo tiene: _sal, _rec, _int, _arr
+    const dbMapping: Record<string, string> = {
+      '_arr': '_arr',
+      '_sal': '_sal',
+      '_rec': '_rec',
+      '_int': '_int'
+    };
+
     for (const block of zoneBlocks) {
       console.log(`\n[Template Extractor] Procesando zona: ${block.zone.name}`);
       console.log(`[Template Extractor]   ${block.weightRows.length} rangos de peso detectados`);
@@ -268,18 +277,24 @@ export class TemplateBasedExtractor {
 
         console.log(`[Template Extractor]   Fila ${weightRow.rowIndex} (${weightKey}kg):`);
 
-        // Extraer valores de cada columna según plantilla
-        for (const [suffix, colIdx] of Object.entries(columnMap)) {
+        // Extraer valores solo de las columnas que existen en DB
+        for (const [detectedSuffix, colIdx] of Object.entries(columnMap)) {
           if (colIdx >= dataRow.length) continue;
+
+          // Solo procesar columnas que existen en DB
+          const dbSuffix = dbMapping[detectedSuffix];
+          if (!dbSuffix) {
+            continue; // Ignorar columnas que no están en DB (_ent, _rec_col1, _km)
+          }
 
           const cell = dataRow[colIdx];
           const value = VirtualTableBuilder.extractNumberFromCell(cell);
 
-          const fieldName = `${block.zone.dbPrefix}${suffix}`;
+          const fieldName = `${block.zone.dbPrefix}${dbSuffix}`;
           record[fieldName] = value;
 
           if (value !== null) {
-            console.log(`[Template Extractor]     ${suffix} (col ${colIdx}): ${value} → ${fieldName}`);
+            console.log(`[Template Extractor]     ${detectedSuffix} (col ${colIdx}): ${value} → ${fieldName}`);
           }
         }
       }

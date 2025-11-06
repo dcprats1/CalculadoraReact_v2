@@ -98,21 +98,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (!pdfFile.type || pdfFile.type !== 'application/pdf') {
-      return new Response(
-        JSON.stringify({
-          error: "El archivo debe ser un PDF",
-          details: `Tipo recibido: ${pdfFile.type || 'desconocido'}`,
-        }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     if (pdfFile.size > MAX_FILE_SIZE) {
       return new Response(
         JSON.stringify({
           error: "Archivo demasiado grande",
-          details: `Máximo: 10MB. Recibido: ${(pdfFile.size / 1024 / 1024).toFixed(2)}MB`
+          details: `El archivo debe ser menor a ${MAX_FILE_SIZE / 1024 / 1024} MB`,
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -170,120 +160,46 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const allExtractedData = Array.from(dataByServiceAndWeight.values());
-
-    if (allExtractedData.length === 0) {
-      const debugLogs: string[] = [];
-
-      for (let i = 0; i < Math.min(3, pages.length); i++) {
-        const page = pages[i];
-        debugLogs.push(`\n=== PÁGINA ${page.pageNum} ===`);
-        debugLogs.push(`Total items: ${page.items.length}`);
-
-        const sampleText = page.items.slice(0, 30).map(item => item.str).join(' ');
-        debugLogs.push(`Texto de muestra: ${sampleText.substring(0, 500)}`);
-
-        const virtualTables = VirtualTableBuilder.buildMultipleTables(page);
-        debugLogs.push(`Tablas detectadas: ${virtualTables.length}`);
-
-        for (let j = 0; j < virtualTables.length; j++) {
-          const table = virtualTables[j];
-          debugLogs.push(`\nTabla ${j + 1}: ${table.rowCount} filas`);
-
-          for (let r = 0; r < Math.min(10, table.rowCount); r++) {
-            const rowText = table.rows[r].map(c => c.text).join(' | ');
-            debugLogs.push(`  Fila ${r}: ${rowText.substring(0, 150)}`);
-          }
-        }
-      }
-
-      return new Response(
-        JSON.stringify({
-          error: "No se detectaron tarifas en el PDF",
-          details: `Se procesaron ${pages.length} páginas pero no se encontraron servicios reconocidos`,
-          debugInfo: {
-            totalPages: pages.length,
-            logs: debugLogs
-          }
-        }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log(`\n[PDF Parser GRID] ===== RESUMEN =====`);
-    console.log(`[PDF Parser GRID] Total extraído: ${allExtractedData.length} registros`);
-    console.log(`[PDF Parser GRID] Servicios: ${[...new Set(servicesDetected)].join(', ')}`);
+    const allData = Array.from(dataByServiceAndWeight.values());
+    console.log(`\n[PDF Parser GRID] ========== RESUMEN FINAL ==========`);
+    console.log(`[PDF Parser GRID] Servicios detectados: ${new Set(servicesDetected).size}`);
+    console.log(`[PDF Parser GRID] Registros únicos: ${allData.length}`);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
-    if (!supabaseUrl || !supabaseKey) {
-      return new Response(
-        JSON.stringify({ error: "Configuración de Supabase no disponible" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    console.log('[PDF Parser GRID] Limpiando tabla tariffspdf...');
-    const { error: deleteError } = await supabase
-      .from("tariffspdf")
-      .delete()
-      .neq("id", "00000000-0000-0000-0000-000000000000");
-
-    if (deleteError) {
-      console.warn(`[PDF Parser GRID] Advertencia al limpiar: ${deleteError.message}`);
-    }
-
-    console.log(`[PDF Parser GRID] Insertando ${allExtractedData.length} tarifas...`);
-    const { data: insertedData, error: insertError } = await supabase
-      .from("tariffspdf")
-      .insert(allExtractedData)
-      .select();
+    const { error: insertError } = await supabase.from("tariffspdf").insert(allData);
 
     if (insertError) {
-      console.error(`[PDF Parser GRID] Error al insertar: ${insertError.message}`);
+      console.error("[PDF Parser GRID] Error al insertar en DB:", insertError);
       return new Response(
         JSON.stringify({
           error: "Error al insertar tarifas en la base de datos",
           details: insertError.message,
-          parsedCount: allExtractedData.length
+          parsedCount: allData.length,
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`[PDF Parser GRID] ✓ Inserción completada: ${insertedData?.length || 0} registros`);
-
-    const { count: verificationCount } = await supabase
-      .from("tariffspdf")
-      .select('*', { count: 'exact', head: true });
-
-    console.log(`[PDF Parser GRID] ✓ Verificación: ${verificationCount || 0} registros en tabla`);
+    console.log(`[PDF Parser GRID] ✓ ${allData.length} registros insertados correctamente`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Se importaron ${insertedData?.length || 0} tarifas correctamente usando tabla virtual`,
-        imported: insertedData?.length || 0,
-        verified: verificationCount || 0,
-        pages: pages.length,
-        servicesDetected: [...new Set(servicesDetected)],
-        method: "Tabla Virtual (Grid-Based)",
-        preview: allExtractedData.slice(0, 5)
+        message: `Se importaron ${allData.length} tarifas correctamente`,
+        data: allData,
+        servicesDetected: Array.from(new Set(servicesDetected)),
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-
   } catch (error) {
-    console.error(`[PDF Parser GRID] Error fatal: ${error.message}`);
-    console.error(`[PDF Parser GRID] Stack:`, error.stack);
+    console.error("[PDF Parser GRID] Error general:", error);
     return new Response(
       JSON.stringify({
-        error: "Error interno del servidor",
+        error: "Error procesando el PDF",
         details: error.message,
-        type: error.name
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
