@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import { X, User, Settings as SettingsIcon, CreditCard } from 'lucide-react';
+import { X, User, Settings as SettingsIcon, CreditCard, FileSpreadsheet } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { PreferencesTab } from './PreferencesTab';
 import { ProfileTab } from './ProfileTab';
 import { SubscriptionTab } from './SubscriptionTab';
 import { CustomTariffsEditor } from './CustomTariffsEditor';
+import { PdfToExcelConverter } from './PdfToExcelConverter';
 
 interface UserSettingsPanelProps {
   onClose: () => void;
 }
 
-type Tab = 'profile' | 'preferences' | 'subscription';
+type Tab = 'profile' | 'preferences' | 'subscription' | 'pdf-converter';
 
 export function UserSettingsPanel({ onClose }: UserSettingsPanelProps) {
   const { userData } = useAuth();
@@ -22,6 +23,7 @@ export function UserSettingsPanel({ onClose }: UserSettingsPanelProps) {
     { id: 'preferences' as Tab, label: 'Preferencias', icon: SettingsIcon },
     { id: 'profile' as Tab, label: 'Perfil', icon: User },
     { id: 'subscription' as Tab, label: 'Suscripción', icon: CreditCard },
+    { id: 'pdf-converter' as Tab, label: 'PDF a Excel', icon: FileSpreadsheet },
   ];
 
   return (
@@ -76,6 +78,7 @@ export function UserSettingsPanel({ onClose }: UserSettingsPanelProps) {
               {activeTab === 'preferences' && <PreferencesTab />}
               {activeTab === 'profile' && <ProfileTab />}
               {activeTab === 'subscription' && <SubscriptionTab />}
+              {activeTab === 'pdf-converter' && <PdfToExcelConverter />}
             </div>
           </div>
         )}
