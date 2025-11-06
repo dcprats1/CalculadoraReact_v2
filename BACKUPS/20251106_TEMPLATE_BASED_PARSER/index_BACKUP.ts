@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { VirtualTableBuilder } from './grid-parser.ts';
-import { TemplateBasedExtractor } from './template-based-extractor.ts';
+import { GridExtractor } from './grid-extractor.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -139,7 +139,7 @@ Deno.serve(async (req: Request) => {
         const virtualTable = virtualTables[tableIdx];
         console.log(`\n[PDF Parser GRID] --- Procesando tabla ${tableIdx + 1}/${virtualTables.length} de página ${pageData.pageNum} ---`);
 
-        const extractedRows = TemplateBasedExtractor.extractFromTable(virtualTable);
+        const extractedRows = GridExtractor.extractFromTable(virtualTable);
 
         if (extractedRows.length > 0) {
           const serviceName = extractedRows[0]?.service_name || 'Desconocido';
