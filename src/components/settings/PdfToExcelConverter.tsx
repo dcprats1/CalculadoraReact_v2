@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { Download, Loader2, FileSpreadsheet, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { getDocument } from 'pdfjs-dist/legacy/build/pdf.js';
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist/legacy/build/pdf.js';
+
+// Configurar worker una sola vez
+if (typeof window !== 'undefined' && !GlobalWorkerOptions.workerSrc) {
+  GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+}
 
 interface ParsedRow {
   servicio: string;
@@ -90,9 +95,6 @@ export function PdfToExcelConverter() {
 
       const loadingTask = getDocument({
         data: arrayBuffer,
-        useWorkerFetch: false,
-        verbosity: 0,
-        disableWorker: true,
       });
 
       const pdf = await loadingTask.promise;
