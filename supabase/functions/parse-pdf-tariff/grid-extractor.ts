@@ -31,37 +31,42 @@ const SERVICES: ServiceConfig[] = [
   {
     serviceName: "Express 08:30",
     dbName: "Urg8:30H Courier",
-    detectionPatterns: [/express.*0?8:?30/i, /urg.*0?8:?30/i]
+    detectionPatterns: [/express\s*0?8\s*:\s*30/i, /urg.*0?8:?30/i]
+  },
+  {
+    serviceName: "Express 10:30",
+    dbName: "Express 10:30",
+    detectionPatterns: [/express\s*10\s*:\s*30/i]
   },
   {
     serviceName: "Express 14:00",
     dbName: "Urg14H Courier",
-    detectionPatterns: [/express.*14:?00/i, /urg.*14/i]
+    detectionPatterns: [/express\s*14\s*:\s*00/i, /urg.*14/i]
   },
   {
     serviceName: "Express 19:00",
     dbName: "Urg19H Courier",
-    detectionPatterns: [/express.*19:?00/i, /urg.*19/i]
+    detectionPatterns: [/express\s*19\s*:\s*00/i, /urg.*19/i]
   },
   {
     serviceName: "Business Parcel",
     dbName: "Business Parcel",
-    detectionPatterns: [/business.*parcel/i]
+    detectionPatterns: [/business\s*parcel/i]
   },
   {
     serviceName: "Eurobusiness Parcel",
     dbName: "Eurobusiness Parcel",
-    detectionPatterns: [/euro.*business/i]
+    detectionPatterns: [/euro\s*business/i, /eurobusiness/i]
   },
   {
     serviceName: "Economy Parcel",
     dbName: "Economy Parcel",
-    detectionPatterns: [/economy.*parcel/i]
+    detectionPatterns: [/economy\s*parcel/i]
   },
   {
     serviceName: "Parcel Shop",
     dbName: "Parcel Shop",
-    detectionPatterns: [/shop.*return/i, /parcel.*shop/i]
+    detectionPatterns: [/shop.*return/i, /parcel.*shop/i, /shop.*delivery/i]
   }
 ];
 
@@ -285,7 +290,7 @@ export class GridExtractor {
         let zoneDetected = false;
         let detectionColumn = -1;
 
-        for (let colIdx = 0; colIdx < Math.min(3, currentRow.length); colIdx++) {
+        for (let colIdx = 0; colIdx < currentRow.length; colIdx++) {
           const cell = currentRow[colIdx];
 
           for (const pattern of zoneConfig.detectionPatterns) {
@@ -335,7 +340,73 @@ export class GridExtractor {
       }
     }
 
+    if (zoneBlocks.length === 0) {
+      console.log(`[Grid Extractor] ⚠ No se detectaron zonas explícitamente, intentando detección por estructura...`);
+      const fallbackBlocks = this.detectZonesByStructure(table, weightColumn);
+      if (fallbackBlocks.length > 0) {
+        console.log(`[Grid Extractor] ✓ Detección por estructura: ${fallbackBlocks.length} zonas encontradas`);
+        return fallbackBlocks;
+      }
+    }
+
     console.log(`\n[Grid Extractor] Total bloques detectados: ${zoneBlocks.length}`);
+    return zoneBlocks;
+  }
+
+  private static detectZonesByStructure(table: VirtualTable, weightColumn: number): Array<{zoneName: string, dbPrefix: string, startRow: number, endRow: number}> {
+    const zoneBlocks: Array<{zoneName: string, dbPrefix: string, startRow: number, endRow: number}> = [];
+    console.log(`[Grid Extractor] Buscando patrones de peso (1kg) para inferir zonas...`);
+
+    if (weightColumn < 0 || weightColumn >= table.colCount) {
+      console.log(`[Grid Extractor] ⚠ Columna de peso inválida: ${weightColumn}`);
+      return [];
+    }
+
+    let currentRow = 0;
+    let zoneIndex = 0;
+    const processedRows = new Set<number>();
+
+    while (currentRow < table.rowCount && zoneIndex < ZONES.length) {
+      if (processedRows.has(currentRow)) {
+        currentRow++;
+        continue;
+      }
+
+      const weightCell = table.rows[currentRow][weightColumn];
+      let isFirstWeight = false;
+
+      for (const pattern of WEIGHT_RANGES[0].patterns) {
+        if (pattern.test(weightCell.text)) {
+          isFirstWeight = true;
+          break;
+        }
+      }
+
+      if (isFirstWeight) {
+        const zoneConfig = ZONES[zoneIndex];
+        const endRow = Math.min(currentRow + WEIGHT_RANGES.length - 1, table.rowCount - 1);
+
+        console.log(`[Grid Extractor] Inferida zona "${zoneConfig.zoneName}" por estructura: filas ${currentRow} a ${endRow}`);
+
+        for (let r = currentRow; r <= endRow; r++) {
+          processedRows.add(r);
+        }
+
+        zoneBlocks.push({
+          zoneName: zoneConfig.zoneName,
+          dbPrefix: zoneConfig.dbPrefix,
+          startRow: currentRow,
+          endRow: endRow
+        });
+
+        currentRow = endRow + 1;
+        zoneIndex++;
+      } else {
+        currentRow++;
+      }
+    }
+
+    console.log(`[Grid Extractor] ✓ Detección por estructura completada: ${zoneBlocks.length} zonas`);
     return zoneBlocks;
   }
 

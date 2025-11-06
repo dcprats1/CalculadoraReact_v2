@@ -126,7 +126,7 @@ Deno.serve(async (req: Request) => {
     const pages = await extractStructuredTextFromPDF(uint8Array);
     console.log(`[PDF Parser GRID] ${pages.length} páginas extraídas`);
 
-    const allExtractedData: any[] = [];
+    const dataByServiceAndWeight = new Map<string, any>();
     const servicesDetected: string[] = [];
 
     for (const pageData of pages) {
@@ -144,13 +144,33 @@ Deno.serve(async (req: Request) => {
         if (extractedRows.length > 0) {
           const serviceName = extractedRows[0]?.service_name || 'Desconocido';
           servicesDetected.push(serviceName);
-          allExtractedData.push(...extractedRows);
-          console.log(`[PDF Parser GRID] ✓ Tabla ${tableIdx + 1}: ${extractedRows.length} registros extraídos (${serviceName})`);
+
+          for (const row of extractedRows) {
+            const key = `${row.service_name}_${row.weight_from}_${row.weight_to}`;
+
+            if (dataByServiceAndWeight.has(key)) {
+              const existing = dataByServiceAndWeight.get(key);
+              for (const field in row) {
+                if (field !== 'service_name' && field !== 'weight_from' && field !== 'weight_to') {
+                  if (row[field] !== null && row[field] !== undefined) {
+                    existing[field] = row[field];
+                  }
+                }
+              }
+              console.log(`[PDF Parser GRID] ⚠ Consolidando datos duplicados: ${key}`);
+            } else {
+              dataByServiceAndWeight.set(key, { ...row });
+            }
+          }
+
+          console.log(`[PDF Parser GRID] ✓ Tabla ${tableIdx + 1}: ${extractedRows.length} registros procesados (${serviceName})`);
         } else {
           console.log(`[PDF Parser GRID] ⚠ Tabla ${tableIdx + 1}: No se extrajeron datos`);
         }
       }
     }
+
+    const allExtractedData = Array.from(dataByServiceAndWeight.values());
 
     if (allExtractedData.length === 0) {
       const debugLogs: string[] = [];

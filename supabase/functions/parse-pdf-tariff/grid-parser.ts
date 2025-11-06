@@ -31,13 +31,14 @@ export class VirtualTableBuilder {
   private static readonly Y_TOLERANCE = 3;
   private static readonly X_COLUMN_WIDTH = 80;
   private static readonly SERVICE_PATTERNS = [
-    /express.*0?8:?30/i, /urg.*0?8:?30/i,
-    /express.*14:?00/i, /urg.*14/i,
-    /express.*19:?00/i, /urg.*19/i,
-    /business.*parcel/i,
-    /euro.*business/i,
-    /economy.*parcel/i,
-    /parcel.*shop/i
+    /express\s*0?8\s*:\s*30/i, /urg.*0?8:?30/i,
+    /express\s*10\s*:\s*30/i,
+    /express\s*14\s*:\s*00/i, /urg.*14/i,
+    /express\s*19\s*:\s*00/i, /urg.*19/i,
+    /business\s*parcel/i,
+    /euro\s*business/i, /eurobusiness/i,
+    /economy\s*parcel/i,
+    /parcel\s*shop/i, /shop.*delivery/i, /shop.*return/i
   ];
 
   static buildMultipleTables(pageData: PageData): VirtualTable[] {
