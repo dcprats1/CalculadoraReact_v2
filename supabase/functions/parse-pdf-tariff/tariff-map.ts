@@ -534,6 +534,498 @@ export const TARIFF_MAP_2025: ServiceMap[] = [
         Portugal_Peninsular: { recogida: '0,08', arrastre: '0,34', entrega: '0,07', salidas: '0,41', recogidas: '0,42', interciudad: '0,49' }
       }
     ]
+  },
+  // ============================================
+  // SERVICIOS INSULARES - CANARIAS (Continuación)
+  // ============================================
+  {
+    service_name: 'Express19:00 Baleares Menores',
+    page: 13,
+    type: 'insular',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Baleares_Menores: { recogida: '1,17', arrastre: '5,32', entrega: '1,17', salidas: '6,49', recogidas: '6,49', interciudad: '7,66' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 3,
+        label: '1-3kg',
+        Baleares_Menores: { recogida: '1,23', arrastre: '8,42', entrega: '1,23', salidas: '9,65', recogidas: '9,65', interciudad: '10,88' }
+      },
+      {
+        weight_from: 3,
+        weight_to: 5,
+        label: '3-5kg',
+        Baleares_Menores: { recogida: '1,28', arrastre: '10,48', entrega: '1,28', salidas: '11,76', recogidas: '11,76', interciudad: '13,04' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 10,
+        label: '5-10kg',
+        Baleares_Menores: { recogida: '1,58', arrastre: '15,64', entrega: '1,38', salidas: '17,02', recogidas: '17,02', interciudad: '18,40' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 15,
+        label: '10-15kg',
+        Baleares_Menores: { recogida: '1,91', arrastre: '20,71', entrega: '1,58', salidas: '22,29', recogidas: '22,29', interciudad: '23,87' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Baleares_Menores: { recogida: '0,08', arrastre: '1,19', entrega: '0,07', salidas: '1,26', recogidas: '1,26', interciudad: '1,33' }
+      }
+    ]
+  },
+  {
+    service_name: 'Express19:00 Canarias Mayores',
+    page: 13,
+    type: 'insular',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Canarias_Mayores: { recogida: '1,17', arrastre: '7,49', entrega: '1,17', salidas: '8,66', recogidas: '8,66', interciudad: '9,83' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Canarias_Mayores: { recogida: '0,08', arrastre: '3,41', entrega: '0,07', salidas: '3,48', recogidas: '3,48', interciudad: '3,55' }
+      }
+    ]
+  },
+  {
+    service_name: 'Express19:00 Canarias Menores',
+    page: 13,
+    type: 'insular',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Canarias_Menores: { recogida: '1,17', arrastre: '9,89', entrega: '1,17', salidas: '11,06', recogidas: '11,06', interciudad: '12,23' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Canarias_Menores: { recogida: '0,08', arrastre: '3,70', entrega: '0,07', salidas: '3,77', recogidas: '3,77', interciudad: '3,84' }
+      }
+    ]
+  },
+  {
+    service_name: 'BusinessParcel Baleares Menores',
+    page: 14,
+    type: 'insular',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Baleares_Menores: { recogida: '1,17', arrastre: '5,32', entrega: '1,17', salidas: '6,49', recogidas: '6,49', interciudad: '7,66' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 3,
+        label: '1-3kg',
+        Baleares_Menores: { recogida: '1,23', arrastre: '8,42', entrega: '1,23', salidas: '9,65', recogidas: '9,65', interciudad: '10,88' }
+      },
+      {
+        weight_from: 3,
+        weight_to: 5,
+        label: '3-5kg',
+        Baleares_Menores: { recogida: '1,28', arrastre: '10,48', entrega: '1,28', salidas: '11,76', recogidas: '11,76', interciudad: '13,04' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 10,
+        label: '5-10kg',
+        Baleares_Menores: { recogida: '1,58', arrastre: '15,64', entrega: '1,38', salidas: '17,02', recogidas: '17,02', interciudad: '18,40' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 15,
+        label: '10-15kg',
+        Baleares_Menores: { recogida: '1,91', arrastre: '20,71', entrega: '1,58', salidas: '22,29', recogidas: '22,29', interciudad: '23,87' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Baleares_Menores: { recogida: '0,08', arrastre: '1,19', entrega: '0,07', salidas: '1,26', recogidas: '1,26', interciudad: '1,33' }
+      }
+    ]
+  },
+  {
+    service_name: 'BusinessParcel Canarias Mayores',
+    page: 14,
+    type: 'insular',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Canarias_Mayores: { recogida: '1,17', arrastre: '7,49', entrega: '1,17', salidas: '8,66', recogidas: '8,66', interciudad: '9,83' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Canarias_Mayores: { recogida: '0,08', arrastre: '3,41', entrega: '0,07', salidas: '3,48', recogidas: '3,48', interciudad: '3,55' }
+      }
+    ]
+  },
+  {
+    service_name: 'BusinessParcel Canarias Menores',
+    page: 14,
+    type: 'insular',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Canarias_Menores: { recogida: '1,17', arrastre: '9,89', entrega: '1,17', salidas: '11,06', recogidas: '11,06', interciudad: '12,23' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Canarias_Menores: { recogida: '0,08', arrastre: '3,70', entrega: '0,07', salidas: '3,77', recogidas: '3,77', interciudad: '3,84' }
+      }
+    ]
+  },
+  {
+    service_name: 'EconomyParcel Baleares Mayores',
+    page: 15,
+    type: 'insular',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Baleares_Mayores: { recogida: '1,00', arrastre: '2,61', entrega: '1,00', salidas: '3,61', recogidas: '3,61', interciudad: '4,61' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 3,
+        label: '1-3kg',
+        Baleares_Mayores: { recogida: '1,00', arrastre: '4,15', entrega: '1,00', salidas: '5,15', recogidas: '5,15', interciudad: '6,15' }
+      },
+      {
+        weight_from: 3,
+        weight_to: 5,
+        label: '3-5kg',
+        Baleares_Mayores: { recogida: '1,10', arrastre: '5,08', entrega: '1,10', salidas: '6,18', recogidas: '6,18', interciudad: '7,28' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 10,
+        label: '5-10kg',
+        Baleares_Mayores: { recogida: '1,25', arrastre: '7,49', entrega: '1,25', salidas: '8,74', recogidas: '8,74', interciudad: '9,99' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 15,
+        label: '10-15kg',
+        Baleares_Mayores: { recogida: '1,55', arrastre: '9,76', entrega: '1,55', salidas: '11,31', recogidas: '11,31', interciudad: '12,86' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Baleares_Mayores: { recogida: '0,07', arrastre: '0,59', entrega: '0,07', salidas: '0,66', recogidas: '0,66', interciudad: '0,73' }
+      }
+    ]
+  },
+  {
+    service_name: 'EconomyParcel Baleares Menores',
+    page: 15,
+    type: 'insular',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Baleares_Menores: { recogida: '1,00', arrastre: '2,97', entrega: '1,00', salidas: '3,97', recogidas: '3,97', interciudad: '4,97' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 3,
+        label: '1-3kg',
+        Baleares_Menores: { recogida: '1,00', arrastre: '5,64', entrega: '1,00', salidas: '6,64', recogidas: '6,64', interciudad: '7,64' }
+      },
+      {
+        weight_from: 3,
+        weight_to: 5,
+        label: '3-5kg',
+        Baleares_Menores: { recogida: '1,10', arrastre: '8,14', entrega: '1,10', salidas: '9,24', recogidas: '9,24', interciudad: '10,34' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 10,
+        label: '5-10kg',
+        Baleares_Menores: { recogida: '1,25', arrastre: '13,25', entrega: '1,25', salidas: '14,50', recogidas: '14,50', interciudad: '15,75' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 15,
+        label: '10-15kg',
+        Baleares_Menores: { recogida: '1,55', arrastre: '18,22', entrega: '1,55', salidas: '19,77', recogidas: '19,77', interciudad: '21,32' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Baleares_Menores: { recogida: '0,07', arrastre: '1,12', entrega: '0,07', salidas: '1,19', recogidas: '1,19', interciudad: '1,26' }
+      }
+    ]
+  },
+  {
+    service_name: 'EconomyParcel Canarias Mayores',
+    page: 15,
+    type: 'insular',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Canarias_Mayores: { recogida: '1,00', arrastre: '5,93', entrega: '1,00', salidas: '6,93', recogidas: '6,93', interciudad: '7,93' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 3,
+        label: '1-3kg',
+        Canarias_Mayores: { recogida: '1,00', arrastre: '11,11', entrega: '1,00', salidas: '12,11', recogidas: '12,11', interciudad: '13,11' }
+      },
+      {
+        weight_from: 3,
+        weight_to: 5,
+        label: '3-5kg',
+        Canarias_Mayores: { recogida: '1,10', arrastre: '15,82', entrega: '1,10', salidas: '16,92', recogidas: '16,92', interciudad: '18,02' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 10,
+        label: '5-10kg',
+        Canarias_Mayores: { recogida: '1,25', arrastre: '29,07', entrega: '1,25', salidas: '30,32', recogidas: '30,32', interciudad: '31,57' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 15,
+        label: '10-15kg',
+        Canarias_Mayores: { recogida: '1,55', arrastre: '42,92', entrega: '1,55', salidas: '44,47', recogidas: '44,47', interciudad: '46,02' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Canarias_Mayores: { recogida: '0,07', arrastre: '3,18', entrega: '0,07', salidas: '3,25', recogidas: '3,25', interciudad: '3,32' }
+      }
+    ]
+  },
+  {
+    service_name: 'EconomyParcel Canarias Menores',
+    page: 15,
+    type: 'insular',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Canarias_Menores: { recogida: '1,00', arrastre: '6,64', entrega: '1,00', salidas: '7,64', recogidas: '7,64', interciudad: '8,64' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 3,
+        label: '1-3kg',
+        Canarias_Menores: { recogida: '1,00', arrastre: '12,33', entrega: '1,00', salidas: '13,33', recogidas: '13,33', interciudad: '14,33' }
+      },
+      {
+        weight_from: 3,
+        weight_to: 5,
+        label: '3-5kg',
+        Canarias_Menores: { recogida: '1,10', arrastre: '17,53', entrega: '1,10', salidas: '18,63', recogidas: '18,63', interciudad: '19,73' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 10,
+        label: '5-10kg',
+        Canarias_Menores: { recogida: '1,25', arrastre: '32,12', entrega: '1,25', salidas: '33,37', recogidas: '33,37', interciudad: '34,62' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 15,
+        label: '10-15kg',
+        Canarias_Menores: { recogida: '1,55', arrastre: '47,38', entrega: '1,55', salidas: '48,93', recogidas: '48,93', interciudad: '50,48' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Canarias_Menores: { recogida: '0,07', arrastre: '3,79', entrega: '0,07', salidas: '3,86', recogidas: '3,86', interciudad: '3,93' }
+      }
+    ]
+  },
+  // ============================================
+  // SERVICIOS PORTUGAL ISLANDS
+  // ============================================
+  {
+    service_name: 'Express19:00 Madeira Mayores',
+    page: 19,
+    type: 'internacional',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Madeira_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Madeira_Mayores: { salidas: '3,27', recogidas: '3,27', interciudad: '3,27' }
+      }
+    ]
+  },
+  {
+    service_name: 'Express19:00 Madeira Menores',
+    page: 19,
+    type: 'internacional',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Madeira_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Madeira_Menores: { salidas: '3,47', recogidas: '3,47', interciudad: '3,47' }
+      }
+    ]
+  },
+  {
+    service_name: 'Express19:00 Azores Mayores',
+    page: 19,
+    type: 'internacional',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Azores_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Azores_Mayores: { salidas: '3,27', recogidas: '3,27', interciudad: '3,27' }
+      }
+    ]
+  },
+  {
+    service_name: 'Express19:00 Azores Menores',
+    page: 19,
+    type: 'internacional',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Azores_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Azores_Menores: { salidas: '3,47', recogidas: '3,47', interciudad: '3,47' }
+      }
+    ]
+  },
+  {
+    service_name: 'BusinessParcel Madeira Mayores',
+    page: 19,
+    type: 'internacional',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Madeira_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Madeira_Mayores: { salidas: '3,27', recogidas: '3,27', interciudad: '3,27' }
+      }
+    ]
+  },
+  {
+    service_name: 'BusinessParcel Madeira Menores',
+    page: 19,
+    type: 'internacional',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Madeira_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Madeira_Menores: { salidas: '3,47', recogidas: '3,47', interciudad: '3,47' }
+      }
+    ]
+  },
+  {
+    service_name: 'BusinessParcel Azores Mayores',
+    page: 19,
+    type: 'internacional',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Azores_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Azores_Mayores: { salidas: '3,27', recogidas: '3,27', interciudad: '3,27' }
+      }
+    ]
+  },
+  {
+    service_name: 'BusinessParcel Azores Menores',
+    page: 19,
+    type: 'internacional',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Azores_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Azores_Menores: { salidas: '3,47', recogidas: '3,47', interciudad: '3,47' }
+      }
+    ]
   }
 ];
 
