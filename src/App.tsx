@@ -7,13 +7,16 @@ import { LoginContainer } from './components/auth/LoginContainer';
 import TariffCalculator from './components/TariffCalculator';
 import { PricingPage } from './components/pricing/PricingPage';
 import { PaymentSuccess } from './components/PaymentSuccess';
+import { PDFUploadGate } from './components/PDFUploadGate';
 import { canAccessCalculator } from './utils/subscriptionHelpers';
+import { useRequireActivation } from './hooks/useRequireActivation';
 import { Loader2 } from 'lucide-react';
 
 const ENABLE_AUTH = true;
 
 function MainContent() {
   const { isAuthenticated, isLoading, userData } = useAuth();
+  const { isActivated, isLoading: isLoadingActivation } = useRequireActivation();
   const [showPricingForUnregistered, setShowPricingForUnregistered] = useState(false);
   const [unregisteredEmail, setUnregisteredEmail] = useState<string>('');
 
@@ -27,7 +30,7 @@ function MainContent() {
     setUnregisteredEmail('');
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingActivation) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -58,6 +61,10 @@ function MainContent() {
 
   if (!canAccessCalculator(userData)) {
     return <PricingPage userEmail={userData?.email} />;
+  }
+
+  if (!isActivated) {
+    return <PDFUploadGate />;
   }
 
   return (
