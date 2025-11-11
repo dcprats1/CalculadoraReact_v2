@@ -1,7 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
-import { VirtualTableBuilder } from './grid-parser.ts';
-import { TemplateBasedExtractor } from './template-based-extractor.ts';
+import { PDFValidator } from './pdf-validator.ts';
+import { MapBasedExtractor } from './map-based-extractor.ts';
+import { TARIFF_MAP_2025 } from './tariff-map.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -75,7 +76,7 @@ async function extractStructuredTextFromPDF(uint8Array: Uint8Array): Promise<Pag
 }
 
 Deno.serve(async (req: Request) => {
-  console.log(`[PDF Parser GRID] Nueva petición: ${req.method}`);
+  console.log(`[PDF Parser MAP] Nueva petición: ${req.method}`);
 
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -108,77 +109,102 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log(`[PDF Parser GRID] Procesando: ${pdfFile.name} (${pdfFile.size} bytes)`);
+    console.log(`[PDF Parser MAP] Procesando: ${pdfFile.name} (${pdfFile.size} bytes)`);
 
     const arrayBuffer = await pdfFile.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
 
     const pages = await extractStructuredTextFromPDF(uint8Array);
-    console.log(`[PDF Parser GRID] ${pages.length} páginas extraídas`);
+    console.log(`[PDF Parser MAP] ${pages.length} páginas extraídas`);
 
-    const dataByServiceAndWeight = new Map<string, any>();
-    const servicesDetected: string[] = [];
+    // PASO 1: Validar estructura del PDF
+    console.log(`\n[PDF Parser MAP] ========== VALIDACIÓN DE ESTRUCTURA ==========`);
+    const validation = PDFValidator.validate(pages);
 
-    for (const pageData of pages) {
-      console.log(`\n[PDF Parser GRID] ========== PÁGINA ${pageData.pageNum} ==========`);
+    if (!validation.isValid) {
+      console.error(`[PDF Parser MAP] ❌ PDF no válido:`);
+      validation.errors.forEach(err => console.error(`[PDF Parser MAP]   - ${err}`));
 
-      const virtualTables = VirtualTableBuilder.buildMultipleTables(pageData);
-      console.log(`[PDF Parser GRID] Detectadas ${virtualTables.length} tablas en página ${pageData.pageNum}`);
+      return new Response(
+        JSON.stringify({
+          error: "PDF no válido",
+          details: validation.errors.join('; '),
+          warnings: validation.warnings,
+          metadata: validation.metadata
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-      for (let tableIdx = 0; tableIdx < virtualTables.length; tableIdx++) {
-        const virtualTable = virtualTables[tableIdx];
-        console.log(`\n[PDF Parser GRID] --- Procesando tabla ${tableIdx + 1}/${virtualTables.length} de página ${pageData.pageNum} ---`);
+    if (validation.warnings.length > 0) {
+      console.log(`[PDF Parser MAP] ⚠ Advertencias:`);
+      validation.warnings.forEach(warn => console.log(`[PDF Parser MAP]   - ${warn}`));
+    }
 
-        const extractedRows = TemplateBasedExtractor.extractFromTable(virtualTable);
+    console.log(`[PDF Parser MAP] ✓ PDF válido`);
+    console.log(`[PDF Parser MAP] Servicios detectados en validación: ${validation.metadata.servicesDetected.join(', ')}`);
+    console.log(`[PDF Parser MAP] Versión: ${validation.metadata.structureVersion}`);
 
-        if (extractedRows.length > 0) {
-          const serviceName = extractedRows[0]?.service_name || 'Desconocido';
-          servicesDetected.push(serviceName);
+    // PASO 2: Extraer metadatos
+    const metadata = PDFValidator.extractMetadata(pages);
+    console.log(`[PDF Parser MAP] Metadatos: ${JSON.stringify(metadata)}`);
 
-          for (const row of extractedRows) {
-            const key = `${row.service_name}_${row.weight_from}_${row.weight_to}`;
-
-            if (dataByServiceAndWeight.has(key)) {
-              const existing = dataByServiceAndWeight.get(key);
-              for (const field in row) {
-                if (field !== 'service_name' && field !== 'weight_from' && field !== 'weight_to') {
-                  if (row[field] !== null && row[field] !== undefined) {
-                    existing[field] = row[field];
-                  }
-                }
-              }
-              console.log(`[PDF Parser GRID] ⚠ Consolidando datos duplicados: ${key}`);
-            } else {
-              dataByServiceAndWeight.set(key, { ...row });
-            }
-          }
-
-          console.log(`[PDF Parser GRID] ✓ Tabla ${tableIdx + 1}: ${extractedRows.length} registros procesados (${serviceName})`);
-        } else {
-          console.log(`[PDF Parser GRID] ⚠ Tabla ${tableIdx + 1}: No se extrajeron datos`);
-        }
+    // PASO 3: Diagnóstico de primeras páginas (solo primeras 3 para no saturar logs)
+    if (pages.length > 0) {
+      console.log(`\n[PDF Parser MAP] ========== DIAGNÓSTICO DE PÁGINAS ==========`);
+      for (let i = 0; i < Math.min(3, pages.length); i++) {
+        PDFValidator.diagnosticPage(pages[i]);
       }
     }
 
-    const allData = Array.from(dataByServiceAndWeight.values());
-    console.log(`\n[PDF Parser GRID] ========== RESUMEN FINAL ==========`);
-    console.log(`[PDF Parser GRID] Servicios detectados: ${new Set(servicesDetected).size}`);
-    console.log(`[PDF Parser GRID] Registros únicos: ${allData.length}`);
+    // PASO 4: Comparar datos con el mapa para verificar concordancia
+    console.log(`\n[PDF Parser MAP] ========== VERIFICACIÓN DE CONCORDANCIA ==========`);
+    const comparison = MapBasedExtractor.compareWithMap(pages);
 
-    console.log(`[PDF Parser GRID] ✓ Datos extraídos, retornando para vista previa`);
+    const concordancePercentage = (
+      (comparison.matches / (comparison.matches + comparison.mismatches + comparison.missing)) * 100
+    ).toFixed(1);
+
+    console.log(`[PDF Parser MAP] Concordancia con mapa: ${concordancePercentage}%`);
+
+    // PASO 5: Extraer datos usando el mapa
+    console.log(`\n[PDF Parser MAP] ========== EXTRACCIÓN DE DATOS ==========`);
+    const allData = MapBasedExtractor.extractAllData(pages);
+
+    console.log(`\n[PDF Parser MAP] ========== RESUMEN FINAL ==========`);
+    console.log(`[PDF Parser MAP] Total registros extraídos: ${allData.length}`);
+    console.log(`[PDF Parser MAP] Servicios en mapa: ${TARIFF_MAP_2025.length}`);
+    console.log(`[PDF Parser MAP] Concordancia: ${concordancePercentage}%`);
+
+    // Extraer servicios únicos
+    const servicesDetected = Array.from(new Set(allData.map(d => d.service_name)));
+    console.log(`[PDF Parser MAP] Servicios extraídos: ${servicesDetected.join(', ')}`);
+
+    console.log(`[PDF Parser MAP] ✓ Datos extraídos, retornando para vista previa`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Se extrajeron ${allData.length} tarifas del PDF`,
+        message: `Se extrajeron ${allData.length} tarifas del PDF con ${concordancePercentage}% de concordancia`,
         data: allData,
-        servicesDetected: Array.from(new Set(servicesDetected)),
+        servicesDetected,
+        metadata: {
+          ...metadata,
+          ...validation.metadata,
+          concordance: concordancePercentage,
+          comparison: {
+            matches: comparison.matches,
+            mismatches: comparison.mismatches,
+            missing: comparison.missing
+          }
+        },
+        warnings: validation.warnings,
         preview: true,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("[PDF Parser GRID] Error general:", error);
+    console.error("[PDF Parser MAP] Error general:", error);
     return new Response(
       JSON.stringify({
         error: "Error procesando el PDF",
