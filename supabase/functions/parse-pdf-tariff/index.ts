@@ -117,7 +117,6 @@ Deno.serve(async (req: Request) => {
     const pages = await extractStructuredTextFromPDF(uint8Array);
     console.log(`[PDF Parser MAP] ${pages.length} páginas extraídas`);
 
-    // PASO 1: Validar estructura del PDF
     console.log(`\n[PDF Parser MAP] ========== VALIDACIÓN DE ESTRUCTURA ==========`);
     const validation = PDFValidator.validate(pages);
 
@@ -145,11 +144,9 @@ Deno.serve(async (req: Request) => {
     console.log(`[PDF Parser MAP] Servicios detectados en validación: ${validation.metadata.servicesDetected.join(', ')}`);
     console.log(`[PDF Parser MAP] Versión: ${validation.metadata.structureVersion}`);
 
-    // PASO 2: Extraer metadatos
     const metadata = PDFValidator.extractMetadata(pages);
     console.log(`[PDF Parser MAP] Metadatos: ${JSON.stringify(metadata)}`);
 
-    // PASO 3: Diagnóstico de primeras páginas (solo primeras 3 para no saturar logs)
     if (pages.length > 0) {
       console.log(`\n[PDF Parser MAP] ========== DIAGNÓSTICO DE PÁGINAS ==========`);
       for (let i = 0; i < Math.min(3, pages.length); i++) {
@@ -157,7 +154,6 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // PASO 4: Extraer datos directamente del mapa (sin validar PDF por ahora)
     console.log(`\n[PDF Parser MAP] ========== EXTRACCIÓN DIRECTA DEL MAPA ==========`);
     console.log(`[PDF Parser MAP] NOTA: Usando datos hardcodeados del mapa GLS 2025`);
     const allData = SimpleMapExtractor.extractFromMap();
@@ -166,11 +162,9 @@ Deno.serve(async (req: Request) => {
     console.log(`[PDF Parser MAP] Total registros extraídos: ${allData.length}`);
     console.log(`[PDF Parser MAP] Servicios en mapa: ${TARIFF_MAP_2025.length}`);
 
-    // Extraer servicios únicos
     const servicesDetected = Array.from(new Set(allData.map(d => d.service_name)));
     console.log(`[PDF Parser MAP] Servicios extraídos: ${servicesDetected.join(', ')}`);
 
-    // Verificar que hay datos
     const withData = allData.filter(d =>
       d.provincial_sal !== null || d.regional_sal !== null || d.nacional_sal !== null
     );

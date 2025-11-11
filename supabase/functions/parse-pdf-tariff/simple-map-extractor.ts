@@ -108,6 +108,9 @@ export class SimpleMapExtractor {
     console.log(`[Simple Extractor] Extrayendo ${TARIFF_MAP_2025.length} servicios del mapa...`);
 
     for (const serviceMap of TARIFF_MAP_2025) {
+      const serviceType = serviceMap.type || 'peninsular';
+      console.log(`[Simple Extractor] Procesando ${serviceMap.service_name} (tipo: ${serviceType})`);
+
       for (const weightRange of serviceMap.weights) {
         const tariff: OutputTariff = {
           service_name: serviceMap.service_name,
@@ -195,24 +198,27 @@ export class SimpleMapExtractor {
           azores_menores_arr: null
         };
 
-        // Provincial
-        if (weightRange.Provincial) {
+        // SOLO extraer rangos peninsulares si el servicio es peninsular o internacional
+        const shouldExtractPeninsular = serviceType === 'peninsular' || serviceType === 'internacional';
+
+        // Provincial (solo para servicios peninsulares)
+        if (shouldExtractPeninsular && weightRange.Provincial) {
           tariff.provincial_sal = this.parsePrice(weightRange.Provincial.salidas);
           tariff.provincial_rec = this.parsePrice(weightRange.Provincial.recogidas || weightRange.Provincial.recogida);
           tariff.provincial_int = this.parsePrice(weightRange.Provincial.interciudad);
           tariff.provincial_arr = this.parsePrice(weightRange.Provincial.arrastre);
         }
 
-        // Regional
-        if (weightRange.Regional) {
+        // Regional (solo para servicios peninsulares)
+        if (shouldExtractPeninsular && weightRange.Regional) {
           tariff.regional_sal = this.parsePrice(weightRange.Regional.salidas);
           tariff.regional_rec = this.parsePrice(weightRange.Regional.recogidas || weightRange.Regional.recogida);
           tariff.regional_int = this.parsePrice(weightRange.Regional.interciudad);
           tariff.regional_arr = this.parsePrice(weightRange.Regional.arrastre);
         }
 
-        // Nacional
-        if (weightRange.Nacional) {
+        // Nacional (solo para servicios peninsulares)
+        if (shouldExtractPeninsular && weightRange.Nacional) {
           tariff.nacional_sal = this.parsePrice(weightRange.Nacional.salidas);
           tariff.nacional_rec = this.parsePrice(weightRange.Nacional.recogidas || weightRange.Nacional.recogida);
           tariff.nacional_int = this.parsePrice(weightRange.Nacional.interciudad);
@@ -356,16 +362,33 @@ export class SimpleMapExtractor {
         results.push(tariff);
       }
 
-      console.log(`[Simple Extractor] ✓ ${serviceMap.service_name}: ${serviceMap.weights.length} rangos`);
+      console.log(`[Simple Extractor] ✓ ${serviceMap.service_name}: ${serviceMap.weights.length} rangos (tipo: ${serviceType})`);
     }
 
     console.log(`[Simple Extractor] Total extraído: ${results.length} registros`);
 
-    // Log de muestra
+    // Log de muestra por tipo de servicio
     if (results.length > 0) {
-      const sample = results[0];
-      console.log(`[Simple Extractor] Muestra: ${sample.service_name} ${sample.weight_from}-${sample.weight_to}kg`);
-      console.log(`[Simple Extractor]   Provincial: Sal=${sample.provincial_sal}, Rec=${sample.provincial_rec}, Int=${sample.provincial_int}, Arr=${sample.provincial_arr}`);
+      const peninsularSample = results.find(r => r.provincial_sal !== null);
+      if (peninsularSample) {
+        console.log(`[Simple Extractor] Muestra PENINSULAR: ${peninsularSample.service_name} ${peninsularSample.weight_from}-${peninsularSample.weight_to}kg`);
+        console.log(`[Simple Extractor]   Provincial: Sal=${peninsularSample.provincial_sal}, Rec=${peninsularSample.provincial_rec}`);
+        console.log(`[Simple Extractor]   Regional: Sal=${peninsularSample.regional_sal}, Rec=${peninsularSample.regional_rec}`);
+        console.log(`[Simple Extractor]   Nacional: Sal=${peninsularSample.nacional_sal}, Rec=${peninsularSample.nacional_rec}`);
+      }
+
+      const insularSample = results.find(r =>
+        r.baleares_mayores_sal !== null ||
+        r.canarias_mayores_sal !== null
+      );
+      if (insularSample) {
+        console.log(`[Simple Extractor] Muestra INSULAR: ${insularSample.service_name} ${insularSample.weight_from}-${insularSample.weight_to}kg`);
+        console.log(`[Simple Extractor]   ⚠ Provincial: Sal=${insularSample.provincial_sal} (debe ser null)`);
+        console.log(`[Simple Extractor]   ⚠ Regional: Sal=${insularSample.regional_sal} (debe ser null)`);
+        console.log(`[Simple Extractor]   ⚠ Nacional: Sal=${insularSample.nacional_sal} (debe ser null)`);
+        console.log(`[Simple Extractor]   ✓ Baleares Mayores: Sal=${insularSample.baleares_mayores_sal}`);
+        console.log(`[Simple Extractor]   ✓ Canarias Mayores: Sal=${insularSample.canarias_mayores_sal}`);
+      }
     }
 
     return results;
