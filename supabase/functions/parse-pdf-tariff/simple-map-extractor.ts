@@ -25,6 +25,22 @@ interface OutputTariff {
   portugal_rec?: number | null;
   portugal_int?: number | null;
   portugal_arr?: number | null;
+  ceuta_sal?: number | null;
+  ceuta_rec?: number | null;
+  ceuta_int?: number | null;
+  ceuta_arr?: number | null;
+  melilla_sal?: number | null;
+  melilla_rec?: number | null;
+  melilla_int?: number | null;
+  melilla_arr?: number | null;
+  gibraltar_sal?: number | null;
+  gibraltar_rec?: number | null;
+  gibraltar_int?: number | null;
+  gibraltar_arr?: number | null;
+  andorra_sal?: number | null;
+  andorra_rec?: number | null;
+  andorra_int?: number | null;
+  andorra_arr?: number | null;
 }
 
 export class SimpleMapExtractor {
@@ -64,7 +80,23 @@ export class SimpleMapExtractor {
           portugal_sal: null,
           portugal_rec: null,
           portugal_int: null,
-          portugal_arr: null
+          portugal_arr: null,
+          ceuta_sal: null,
+          ceuta_rec: null,
+          ceuta_int: null,
+          ceuta_arr: null,
+          melilla_sal: null,
+          melilla_rec: null,
+          melilla_int: null,
+          melilla_arr: null,
+          gibraltar_sal: null,
+          gibraltar_rec: null,
+          gibraltar_int: null,
+          gibraltar_arr: null,
+          andorra_sal: null,
+          andorra_rec: null,
+          andorra_int: null,
+          andorra_arr: null
         };
 
         // Provincial
@@ -97,6 +129,36 @@ export class SimpleMapExtractor {
           tariff.portugal_rec = this.parsePrice(weightRange.Portugal_Peninsular.recogidas || weightRange.Portugal_Peninsular.recogida);
           tariff.portugal_int = this.parsePrice(weightRange.Portugal_Peninsular.interciudad);
           tariff.portugal_arr = this.parsePrice(weightRange.Portugal_Peninsular.arrastre);
+        }
+
+        // Ceuta/Melilla (en el PDF vienen juntos, los duplicamos para tener 2 destinos)
+        if (weightRange.Ceuta_Melilla) {
+          // Ceuta
+          tariff.ceuta_sal = this.parsePrice(weightRange.Ceuta_Melilla.salidas);
+          tariff.ceuta_rec = this.parsePrice(weightRange.Ceuta_Melilla.recogidas || weightRange.Ceuta_Melilla.recogida);
+          tariff.ceuta_int = this.parsePrice(weightRange.Ceuta_Melilla.interciudad);
+          tariff.ceuta_arr = this.parsePrice(weightRange.Ceuta_Melilla.arrastre);
+          // Melilla (mismos valores que Ceuta)
+          tariff.melilla_sal = this.parsePrice(weightRange.Ceuta_Melilla.salidas);
+          tariff.melilla_rec = this.parsePrice(weightRange.Ceuta_Melilla.recogidas || weightRange.Ceuta_Melilla.recogida);
+          tariff.melilla_int = this.parsePrice(weightRange.Ceuta_Melilla.interciudad);
+          tariff.melilla_arr = this.parsePrice(weightRange.Ceuta_Melilla.arrastre);
+        }
+
+        // Gibraltar
+        if (weightRange.Gibraltar) {
+          tariff.gibraltar_sal = this.parsePrice(weightRange.Gibraltar.salidas);
+          tariff.gibraltar_rec = this.parsePrice(weightRange.Gibraltar.recogidas || weightRange.Gibraltar.recogida);
+          tariff.gibraltar_int = this.parsePrice(weightRange.Gibraltar.interciudad);
+          tariff.gibraltar_arr = this.parsePrice(weightRange.Gibraltar.arrastre);
+        }
+
+        // Andorra
+        if (weightRange.Andorra) {
+          tariff.andorra_sal = this.parsePrice(weightRange.Andorra.salidas);
+          tariff.andorra_rec = this.parsePrice(weightRange.Andorra.recogidas || weightRange.Andorra.recogida);
+          tariff.andorra_int = this.parsePrice(weightRange.Andorra.interciudad);
+          tariff.andorra_arr = this.parsePrice(weightRange.Andorra.arrastre);
         }
 
         results.push(tariff);

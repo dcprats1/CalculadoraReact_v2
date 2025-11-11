@@ -24,6 +24,22 @@ interface TariffRow {
   portugal_rec?: number | null;
   portugal_int?: number | null;
   portugal_arr?: number | null;
+  ceuta_sal?: number | null;
+  ceuta_rec?: number | null;
+  ceuta_int?: number | null;
+  ceuta_arr?: number | null;
+  melilla_sal?: number | null;
+  melilla_rec?: number | null;
+  melilla_int?: number | null;
+  melilla_arr?: number | null;
+  gibraltar_sal?: number | null;
+  gibraltar_rec?: number | null;
+  gibraltar_int?: number | null;
+  gibraltar_arr?: number | null;
+  andorra_sal?: number | null;
+  andorra_rec?: number | null;
+  andorra_int?: number | null;
+  andorra_arr?: number | null;
   [key: string]: any;
 }
 
@@ -312,7 +328,7 @@ export function TariffPdfPreview({ parsedData, onConfirm, onCancel, onDataImport
                     <div className="font-medium text-gray-900 mb-2">
                       Peso: {tariff.weight_from}-{tariff.weight_to}kg
                     </div>
-                    <div className="grid grid-cols-4 gap-3 text-xs">
+                    <div className="grid grid-cols-2 gap-3 text-xs">
                       <div className="space-y-1">
                         <div className="font-semibold text-gray-600">Provincial</div>
                         <div className="flex gap-1">
@@ -389,6 +405,90 @@ export function TariffPdfPreview({ parsedData, onConfirm, onCancel, onDataImport
                           </span>
                         </div>
                       </div>
+                      {(tariff.ceuta_sal !== null && tariff.ceuta_sal !== undefined) && (
+                        <div className="space-y-1">
+                          <div className="font-semibold text-gray-600">Ceuta</div>
+                          <div className="flex gap-1">
+                            <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-800">
+                              Sal: {tariff.ceuta_sal?.toFixed(2)}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-800">
+                              Rec: {tariff.ceuta_rec?.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex gap-1">
+                            <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-800">
+                              Int: {tariff.ceuta_int?.toFixed(2)}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-800">
+                              Arr: {tariff.ceuta_arr?.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {(tariff.melilla_sal !== null && tariff.melilla_sal !== undefined) && (
+                        <div className="space-y-1">
+                          <div className="font-semibold text-gray-600">Melilla</div>
+                          <div className="flex gap-1">
+                            <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-800">
+                              Sal: {tariff.melilla_sal?.toFixed(2)}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-800">
+                              Rec: {tariff.melilla_rec?.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex gap-1">
+                            <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-800">
+                              Int: {tariff.melilla_int?.toFixed(2)}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-800">
+                              Arr: {tariff.melilla_arr?.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {(tariff.gibraltar_sal !== null && tariff.gibraltar_sal !== undefined) && (
+                        <div className="space-y-1">
+                          <div className="font-semibold text-gray-600">Gibraltar</div>
+                          <div className="flex gap-1">
+                            <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-800">
+                              Sal: {tariff.gibraltar_sal?.toFixed(2)}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-800">
+                              Rec: {tariff.gibraltar_rec?.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex gap-1">
+                            <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-800">
+                              Int: {tariff.gibraltar_int?.toFixed(2)}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-800">
+                              Arr: {tariff.gibraltar_arr?.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {(tariff.andorra_sal !== null && tariff.andorra_sal !== undefined) && (
+                        <div className="space-y-1">
+                          <div className="font-semibold text-gray-600">Andorra</div>
+                          <div className="flex gap-1">
+                            <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-800">
+                              Sal: {tariff.andorra_sal?.toFixed(2)}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-800">
+                              Rec: {tariff.andorra_rec?.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex gap-1">
+                            <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-800">
+                              Int: {tariff.andorra_int?.toFixed(2)}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-800">
+                              Arr: {tariff.andorra_arr?.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
