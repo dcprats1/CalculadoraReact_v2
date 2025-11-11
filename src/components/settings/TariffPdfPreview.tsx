@@ -301,6 +301,26 @@ export function TariffPdfPreview({ parsedData, onConfirm, onCancel, onDataImport
       ranges.push('canarias_menores');
     }
 
+    if (tariff.azores_mayores_sal !== null || tariff.azores_mayores_rec !== null ||
+        tariff.azores_mayores_int !== null || tariff.azores_mayores_arr !== null) {
+      ranges.push('azores_mayores');
+    }
+
+    if (tariff.azores_menores_sal !== null || tariff.azores_menores_rec !== null ||
+        tariff.azores_menores_int !== null || tariff.azores_menores_arr !== null) {
+      ranges.push('azores_menores');
+    }
+
+    if (tariff.madeira_mayores_sal !== null || tariff.madeira_mayores_rec !== null ||
+        tariff.madeira_mayores_int !== null || tariff.madeira_mayores_arr !== null) {
+      ranges.push('madeira_mayores');
+    }
+
+    if (tariff.madeira_menores_sal !== null || tariff.madeira_menores_rec !== null ||
+        tariff.madeira_menores_int !== null || tariff.madeira_menores_arr !== null) {
+      ranges.push('madeira_menores');
+    }
+
     return ranges;
   };
 
@@ -317,7 +337,11 @@ export function TariffPdfPreview({ parsedData, onConfirm, onCancel, onDataImport
       'baleares_mayores': 'Baleares Mayores',
       'baleares_menores': 'Baleares Menores',
       'canarias_mayores': 'Canarias Mayores',
-      'canarias_menores': 'Canarias Menores'
+      'canarias_menores': 'Canarias Menores',
+      'azores_mayores': 'Azores Mayores',
+      'azores_menores': 'Azores Menores',
+      'madeira_mayores': 'Madeira Mayores',
+      'madeira_menores': 'Madeira Menores'
     };
 
     const sal = tariff[`${rangeName}_sal` as keyof TariffRow] as number | null;
