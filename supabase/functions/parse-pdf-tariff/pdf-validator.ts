@@ -68,6 +68,66 @@ export class PDFValidator {
   };
 
   /**
+   * Patrones regex para detectar servicios con variaciones de formato
+   * Acepta: Express08:30, Express8:30, Express 8:30, etc.
+   */
+  private static readonly SERVICE_PATTERNS = [
+    /Express\s*0?8:30/i,
+    /Express\s*0?10:30/i,
+    /Express\s*0?14:00/i,
+    /Express\s*0?19:00/i,
+    /BusinessParcel/i,
+    /EconomyParcel/i
+  ];
+
+  /**
+   * Mapa de normalización para convertir variaciones de nombres de servicios
+   * a nombres canónicos internos
+   */
+  private static readonly SERVICE_NAME_MAP: Record<string, string> = {
+    'Express8:30': 'Express08:30',
+    'Express08:30': 'Express08:30',
+    'Express 8:30': 'Express08:30',
+    'Express 08:30': 'Express08:30',
+    'Express10:30': 'Express10:30',
+    'Express 10:30': 'Express10:30',
+    'Express14:00': 'Express14:00',
+    'Express 14:00': 'Express14:00',
+    'Express19:00': 'Express19:00',
+    'Express 19:00': 'Express19:00',
+    'BusinessParcel': 'BusinessParcel',
+    'EconomyParcel': 'EconomyParcel'
+  };
+
+  /**
+   * Normaliza un nombre de servicio a su forma canónica
+   */
+  static normalizeServiceName(serviceName: string): string {
+    const trimmed = serviceName.trim();
+
+    // Buscar coincidencia exacta en el mapa
+    if (this.SERVICE_NAME_MAP[trimmed]) {
+      return this.SERVICE_NAME_MAP[trimmed];
+    }
+
+    // Buscar usando patrones regex
+    for (let i = 0; i < this.SERVICE_PATTERNS.length; i++) {
+      if (this.SERVICE_PATTERNS[i].test(trimmed)) {
+        return this.EXPECTED_MARKERS.services[i];
+      }
+    }
+
+    return serviceName;
+  }
+
+  /**
+   * Detecta si un texto contiene un servicio usando patrones flexibles
+   */
+  private static detectService(text: string, pattern: RegExp, serviceName: string): boolean {
+    return pattern.test(text);
+  }
+
+  /**
    * Valida la estructura completa del PDF
    */
   static validate(pages: PageData[]): ValidationResult {
@@ -88,22 +148,37 @@ export class PDFValidator {
 
     console.log(`[PDF Validator] ✓ Número de páginas: ${pages.length}`);
 
-    // 2. Detectar servicios en el PDF
+    // 2. Detectar servicios en el PDF usando patrones flexibles
     const allText = pages.map(p =>
       p.items.map(item => item.str).join(' ')
     ).join(' ');
 
-    for (const service of this.EXPECTED_MARKERS.services) {
-      if (allText.includes(service)) {
-        servicesDetected.push(service);
-        console.log(`[PDF Validator] ✓ Servicio detectado: ${service}`);
+    // Mostrar muestra del texto para debug
+    const textSample = allText.substring(0, 500);
+    console.log(`[PDF Validator] Muestra de texto extraído: ${textSample.substring(0, 200)}...`);
+
+    for (let i = 0; i < this.SERVICE_PATTERNS.length; i++) {
+      const pattern = this.SERVICE_PATTERNS[i];
+      const serviceName = this.EXPECTED_MARKERS.services[i];
+
+      if (pattern.test(allText)) {
+        servicesDetected.push(serviceName);
+
+        // Extraer el texto exacto encontrado
+        const match = allText.match(pattern);
+        const foundText = match ? match[0] : serviceName;
+        console.log(`[PDF Validator] ✓ Servicio detectado: ${serviceName} (encontrado como: "${foundText}")`);
       } else {
-        warnings.push(`Servicio "${service}" no encontrado en el PDF`);
+        warnings.push(`Servicio "${serviceName}" no encontrado en el PDF`);
+        console.log(`[PDF Validator] ⚠ Servicio no detectado: ${serviceName}`);
       }
     }
 
     if (servicesDetected.length === 0) {
       errors.push('No se detectaron servicios conocidos en el PDF');
+      console.log('[PDF Validator] ❌ ERROR: No se detectaron servicios');
+    } else {
+      console.log(`[PDF Validator] ✓ Total servicios detectados: ${servicesDetected.length}/${this.SERVICE_PATTERNS.length}`);
     }
 
     // 3. Validar estructura de tabla en primeras páginas

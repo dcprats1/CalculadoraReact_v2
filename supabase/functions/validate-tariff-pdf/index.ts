@@ -22,9 +22,12 @@ interface ValidationResponse {
 const VALIDATION_KEYWORDS = {
   primary: [
     { text: "TARIFA ARRASTRE PLANO 2025", points: 30 },
+    { text: "TARIFA RED 2025", points: 30 },
+    { text: "TARIFA RED_2025", points: 30 },
     { text: "Agencias GLS Spain", points: 20 },
-    { text: "Express08:30", points: 15 },
+    { text: "GLS Spain", points: 15 },
     { text: "Enero 2025", points: 15 },
+    { text: "2025", points: 10 },
   ],
   secondary: [
     { text: "BusinessParcel", points: 10 },
@@ -34,6 +37,14 @@ const VALIDATION_KEYWORDS = {
     { text: "ShopReturnService", points: 5 },
   ],
 };
+
+// Patrones regex para detectar servicios con variaciones (con y sin cero a la izquierda)
+const SERVICE_PATTERNS = [
+  { pattern: /Express\s*0?8:30/i, name: "Express08:30", points: 15 },
+  { pattern: /Express\s*0?10:30/i, name: "Express10:30", points: 15 },
+  { pattern: /Express\s*0?14:00/i, name: "Express14:00", points: 15 },
+  { pattern: /Express\s*0?19:00/i, name: "Express19:00", points: 15 },
+];
 
 async function extractTextFromPDF(pdfData: Uint8Array, maxPages: number = 3): Promise<string> {
   try {
@@ -63,13 +74,24 @@ function validatePDFContent(text: string): ValidationResponse {
   let score = 0;
   const foundKeywords: string[] = [];
 
+  // Validar palabras clave primarias (solo la primera coincidencia de cada grupo)
+  let hasPrimaryTarifa = false;
   for (const keyword of VALIDATION_KEYWORDS.primary) {
     if (text.includes(keyword.text)) {
-      score += keyword.points;
-      foundKeywords.push(keyword.text);
+      if (!hasPrimaryTarifa && (keyword.text.includes("TARIFA") || keyword.text === "2025")) {
+        score += keyword.points;
+        foundKeywords.push(keyword.text);
+        if (keyword.text.includes("TARIFA")) {
+          hasPrimaryTarifa = true;
+        }
+      } else if (!keyword.text.includes("TARIFA") && keyword.text !== "2025") {
+        score += keyword.points;
+        foundKeywords.push(keyword.text);
+      }
     }
   }
 
+  // Validar palabras clave secundarias
   for (const keyword of VALIDATION_KEYWORDS.secondary) {
     if (text.includes(keyword.text)) {
       score += keyword.points;
@@ -77,14 +99,27 @@ function validatePDFContent(text: string): ValidationResponse {
     }
   }
 
-  const isValid = score >= 70;
+  // Validar servicios usando patrones regex
+  for (const servicePattern of SERVICE_PATTERNS) {
+    if (servicePattern.pattern.test(text)) {
+      score += servicePattern.points;
+      const match = text.match(servicePattern.pattern);
+      foundKeywords.push(`${servicePattern.name} (encontrado: ${match ? match[0] : ''})`);
+    }
+  }
+
+  // Reducir el umbral a 50 para acomodar variaciones de formato
+  const isValid = score >= 50;
+
+  console.log(`[PDF Validation] Score: ${score}, Keywords found: ${foundKeywords.length}`);
+  console.log(`[PDF Validation] Keywords: ${foundKeywords.join(', ')}`);
 
   return {
     isValid,
     confidence: score,
     reason: isValid
-      ? `PDF oficial validado correctamente (${foundKeywords.length} indicadores encontrados)`
-      : "El documento no parece ser la tarifa oficial de GLS 2025. Por favor, verifica que has subido el archivo correcto."
+      ? `PDF oficial validado correctamente (${foundKeywords.length} indicadores encontrados: ${foundKeywords.slice(0, 5).join(', ')})`
+      : `El documento no parece ser la tarifa oficial de GLS 2025. Score: ${score}/50. Por favor, verifica que has subido el archivo correcto.`
   };
 }
 
