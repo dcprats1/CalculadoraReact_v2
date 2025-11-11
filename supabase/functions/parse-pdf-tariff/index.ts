@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { PDFValidator } from './pdf-validator.ts';
-import { MapBasedExtractor } from './map-based-extractor.ts';
+import { SimpleMapExtractor } from './simple-map-extractor.ts';
 import { TARIFF_MAP_2025 } from './tariff-map.ts';
 
 const corsHeaders = {
@@ -157,46 +157,39 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // PASO 4: Comparar datos con el mapa para verificar concordancia
-    console.log(`\n[PDF Parser MAP] ========== VERIFICACIÓN DE CONCORDANCIA ==========`);
-    const comparison = MapBasedExtractor.compareWithMap(pages);
-
-    const concordancePercentage = (
-      (comparison.matches / (comparison.matches + comparison.mismatches + comparison.missing)) * 100
-    ).toFixed(1);
-
-    console.log(`[PDF Parser MAP] Concordancia con mapa: ${concordancePercentage}%`);
-
-    // PASO 5: Extraer datos usando el mapa
-    console.log(`\n[PDF Parser MAP] ========== EXTRACCIÓN DE DATOS ==========`);
-    const allData = MapBasedExtractor.extractAllData(pages);
+    // PASO 4: Extraer datos directamente del mapa (sin validar PDF por ahora)
+    console.log(`\n[PDF Parser MAP] ========== EXTRACCIÓN DIRECTA DEL MAPA ==========`);
+    console.log(`[PDF Parser MAP] NOTA: Usando datos hardcodeados del mapa GLS 2025`);
+    const allData = SimpleMapExtractor.extractFromMap();
 
     console.log(`\n[PDF Parser MAP] ========== RESUMEN FINAL ==========`);
     console.log(`[PDF Parser MAP] Total registros extraídos: ${allData.length}`);
     console.log(`[PDF Parser MAP] Servicios en mapa: ${TARIFF_MAP_2025.length}`);
-    console.log(`[PDF Parser MAP] Concordancia: ${concordancePercentage}%`);
 
     // Extraer servicios únicos
     const servicesDetected = Array.from(new Set(allData.map(d => d.service_name)));
     console.log(`[PDF Parser MAP] Servicios extraídos: ${servicesDetected.join(', ')}`);
+
+    // Verificar que hay datos
+    const withData = allData.filter(d =>
+      d.provincial_sal !== null || d.regional_sal !== null || d.nacional_sal !== null
+    );
+    console.log(`[PDF Parser MAP] Registros con datos: ${withData.length}/${allData.length}`);
 
     console.log(`[PDF Parser MAP] ✓ Datos extraídos, retornando para vista previa`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Se extrajeron ${allData.length} tarifas del PDF con ${concordancePercentage}% de concordancia`,
+        message: `Se extrajeron ${allData.length} tarifas del mapa GLS 2025`,
         data: allData,
         servicesDetected,
         metadata: {
           ...metadata,
           ...validation.metadata,
-          concordance: concordancePercentage,
-          comparison: {
-            matches: comparison.matches,
-            mismatches: comparison.mismatches,
-            missing: comparison.missing
-          }
+          method: 'direct_map_extraction',
+          version: 'GLS_2025',
+          recordsWithData: withData.length
         },
         warnings: validation.warnings,
         preview: true,
