@@ -887,6 +887,30 @@ export const TARIFF_MAP_2025: ServiceMap[] = [
         Madeira_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
       },
       {
+        weight_from: 1,
+        weight_to: 3,
+        label: '1-3kg',
+        Madeira_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
+      },
+      {
+        weight_from: 3,
+        weight_to: 5,
+        label: '3-5kg',
+        Madeira_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 10,
+        label: '5-10kg',
+        Madeira_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 15,
+        label: '10-15kg',
+        Madeira_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
+      },
+      {
         weight_from: 15,
         weight_to: 999,
         label: 'Kg adicional',
@@ -903,6 +927,30 @@ export const TARIFF_MAP_2025: ServiceMap[] = [
         weight_from: 0,
         weight_to: 1,
         label: '0-1kg',
+        Madeira_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 3,
+        label: '1-3kg',
+        Madeira_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
+      },
+      {
+        weight_from: 3,
+        weight_to: 5,
+        label: '3-5kg',
+        Madeira_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 10,
+        label: '5-10kg',
+        Madeira_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 15,
+        label: '10-15kg',
         Madeira_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
       },
       {
@@ -925,6 +973,30 @@ export const TARIFF_MAP_2025: ServiceMap[] = [
         Azores_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
       },
       {
+        weight_from: 1,
+        weight_to: 3,
+        label: '1-3kg',
+        Azores_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
+      },
+      {
+        weight_from: 3,
+        weight_to: 5,
+        label: '3-5kg',
+        Azores_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 10,
+        label: '5-10kg',
+        Azores_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 15,
+        label: '10-15kg',
+        Azores_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
+      },
+      {
         weight_from: 15,
         weight_to: 999,
         label: 'Kg adicional',
@@ -941,6 +1013,30 @@ export const TARIFF_MAP_2025: ServiceMap[] = [
         weight_from: 0,
         weight_to: 1,
         label: '0-1kg',
+        Azores_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 3,
+        label: '1-3kg',
+        Azores_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
+      },
+      {
+        weight_from: 3,
+        weight_to: 5,
+        label: '3-5kg',
+        Azores_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 10,
+        label: '5-10kg',
+        Azores_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 15,
+        label: '10-15kg',
         Azores_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
       },
       {
@@ -963,6 +1059,30 @@ export const TARIFF_MAP_2025: ServiceMap[] = [
         Madeira_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
       },
       {
+        weight_from: 1,
+        weight_to: 3,
+        label: '1-3kg',
+        Madeira_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
+      },
+      {
+        weight_from: 3,
+        weight_to: 5,
+        label: '3-5kg',
+        Madeira_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 10,
+        label: '5-10kg',
+        Madeira_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 15,
+        label: '10-15kg',
+        Madeira_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
+      },
+      {
         weight_from: 15,
         weight_to: 999,
         label: 'Kg adicional',
@@ -979,6 +1099,30 @@ export const TARIFF_MAP_2025: ServiceMap[] = [
         weight_from: 0,
         weight_to: 1,
         label: '0-1kg',
+        Madeira_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 3,
+        label: '1-3kg',
+        Madeira_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
+      },
+      {
+        weight_from: 3,
+        weight_to: 5,
+        label: '3-5kg',
+        Madeira_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 10,
+        label: '5-10kg',
+        Madeira_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 15,
+        label: '10-15kg',
         Madeira_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
       },
       {
@@ -1001,6 +1145,30 @@ export const TARIFF_MAP_2025: ServiceMap[] = [
         Azores_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
       },
       {
+        weight_from: 1,
+        weight_to: 3,
+        label: '1-3kg',
+        Azores_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
+      },
+      {
+        weight_from: 3,
+        weight_to: 5,
+        label: '3-5kg',
+        Azores_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 10,
+        label: '5-10kg',
+        Azores_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 15,
+        label: '10-15kg',
+        Azores_Mayores: { salidas: '14,75', recogidas: '14,75', interciudad: '29,50' }
+      },
+      {
         weight_from: 15,
         weight_to: 999,
         label: 'Kg adicional',
@@ -1020,10 +1188,113 @@ export const TARIFF_MAP_2025: ServiceMap[] = [
         Azores_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
       },
       {
+        weight_from: 1,
+        weight_to: 3,
+        label: '1-3kg',
+        Azores_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
+      },
+      {
+        weight_from: 3,
+        weight_to: 5,
+        label: '3-5kg',
+        Azores_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 10,
+        label: '5-10kg',
+        Azores_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 15,
+        label: '10-15kg',
+        Azores_Menores: { salidas: '18,13', recogidas: '18,13', interciudad: '36,26' }
+      },
+      {
         weight_from: 15,
         weight_to: 999,
         label: 'Kg adicional',
         Azores_Menores: { salidas: '3,47', recogidas: '3,47', interciudad: '3,47' }
+      }
+    ]
+  },
+  // ============================================
+  // SERVICIOS MARÍTIMOS - PORTUGAL ISLANDS
+  // ============================================
+  {
+    service_name: 'EconomyParcel Marítimo Madeira Mayores',
+    page: 19,
+    type: 'maritimo',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 10,
+        label: '0-10kg',
+        Madeira_Mayores: { salidas: '46,25' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 999,
+        label: 'Cada 10kg adicional',
+        Madeira_Mayores: { salidas: '8,67' }
+      }
+    ]
+  },
+  {
+    service_name: 'EconomyParcel Marítimo Madeira Menores',
+    page: 19,
+    type: 'maritimo',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 10,
+        label: '0-10kg',
+        Madeira_Menores: { salidas: '73,25' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 999,
+        label: 'Cada 10kg adicional',
+        Madeira_Menores: { salidas: '12,72' }
+      }
+    ]
+  },
+  {
+    service_name: 'EconomyParcel Marítimo Azores Mayores',
+    page: 19,
+    type: 'maritimo',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 10,
+        label: '0-10kg',
+        Azores_Mayores: { salidas: '53,00' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 999,
+        label: 'Cada 10kg adicional',
+        Azores_Mayores: { salidas: '9,34' }
+      }
+    ]
+  },
+  {
+    service_name: 'EconomyParcel Marítimo Azores Menores',
+    page: 19,
+    type: 'maritimo',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 10,
+        label: '0-10kg',
+        Azores_Menores: { salidas: '66,50' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 999,
+        label: 'Cada 10kg adicional',
+        Azores_Menores: { salidas: '13,39' }
       }
     ]
   }
