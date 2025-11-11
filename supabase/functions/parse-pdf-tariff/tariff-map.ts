@@ -405,6 +405,49 @@ export const TARIFF_MAP_2025: ServiceMap[] = [
         Nacional: { recogida: '0,06', arrastre: '0,28', entrega: '0,06', salidas: '0,34', recogidas: '0,34', interciudad: '0,40' }
       }
     ]
+  },
+  {
+    service_name: 'EuroBusinessParcel',
+    page: 7,
+    type: 'internacional',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Portugal_Peninsular: { recogida: '1,17', arrastre: '2,06', entrega: '1,17', salidas: '3,23', recogidas: '3,23', interciudad: '4,40' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 3,
+        label: '1-3kg',
+        Portugal_Peninsular: { recogida: '1,23', arrastre: '2,14', entrega: '1,23', salidas: '3,37', recogidas: '3,37', interciudad: '4,60' }
+      },
+      {
+        weight_from: 3,
+        weight_to: 5,
+        label: '3-5kg',
+        Portugal_Peninsular: { recogida: '1,28', arrastre: '2,49', entrega: '1,28', salidas: '3,77', recogidas: '3,77', interciudad: '5,05' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 10,
+        label: '5-10kg',
+        Portugal_Peninsular: { recogida: '1,58', arrastre: '3,08', entrega: '1,38', salidas: '4,46', recogidas: '4,66', interciudad: '6,04' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 15,
+        label: '10-15kg',
+        Portugal_Peninsular: { recogida: '1,91', arrastre: '4,66', entrega: '1,58', salidas: '6,24', recogidas: '6,57', interciudad: '8,15' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Portugal_Peninsular: { recogida: '0,08', arrastre: '0,34', entrega: '0,07', salidas: '0,41', recogidas: '0,42', interciudad: '0,49' }
+      }
+    ]
   }
 ];
 
