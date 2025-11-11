@@ -41,6 +41,54 @@ interface OutputTariff {
   andorra_rec?: number | null;
   andorra_int?: number | null;
   andorra_arr?: number | null;
+  baleares_mayores_sal?: number | null;
+  baleares_mayores_rec?: number | null;
+  baleares_mayores_int?: number | null;
+  baleares_mayores_arr?: number | null;
+  baleares_menores_sal?: number | null;
+  baleares_menores_rec?: number | null;
+  baleares_menores_int?: number | null;
+  baleares_menores_arr?: number | null;
+  baleares_interislas_sal?: number | null;
+  baleares_interislas_rec?: number | null;
+  baleares_interislas_int?: number | null;
+  baleares_interislas_arr?: number | null;
+  canarias_mayores_sal?: number | null;
+  canarias_mayores_rec?: number | null;
+  canarias_mayores_int?: number | null;
+  canarias_mayores_arr?: number | null;
+  canarias_menores_sal?: number | null;
+  canarias_menores_rec?: number | null;
+  canarias_menores_int?: number | null;
+  canarias_menores_arr?: number | null;
+  canarias_interislas_sal?: number | null;
+  canarias_interislas_rec?: number | null;
+  canarias_interislas_int?: number | null;
+  canarias_interislas_arr?: number | null;
+  tenerife_tenerife_sal?: number | null;
+  tenerife_tenerife_rec?: number | null;
+  tenerife_tenerife_int?: number | null;
+  tenerife_tenerife_arr?: number | null;
+  las_palmas_las_palmas_sal?: number | null;
+  las_palmas_las_palmas_rec?: number | null;
+  las_palmas_las_palmas_int?: number | null;
+  las_palmas_las_palmas_arr?: number | null;
+  madeira_mayores_sal?: number | null;
+  madeira_mayores_rec?: number | null;
+  madeira_mayores_int?: number | null;
+  madeira_mayores_arr?: number | null;
+  madeira_menores_sal?: number | null;
+  madeira_menores_rec?: number | null;
+  madeira_menores_int?: number | null;
+  madeira_menores_arr?: number | null;
+  azores_mayores_sal?: number | null;
+  azores_mayores_rec?: number | null;
+  azores_mayores_int?: number | null;
+  azores_mayores_arr?: number | null;
+  azores_menores_sal?: number | null;
+  azores_menores_rec?: number | null;
+  azores_menores_int?: number | null;
+  azores_menores_arr?: number | null;
 }
 
 export class SimpleMapExtractor {
@@ -96,7 +144,55 @@ export class SimpleMapExtractor {
           andorra_sal: null,
           andorra_rec: null,
           andorra_int: null,
-          andorra_arr: null
+          andorra_arr: null,
+          baleares_mayores_sal: null,
+          baleares_mayores_rec: null,
+          baleares_mayores_int: null,
+          baleares_mayores_arr: null,
+          baleares_menores_sal: null,
+          baleares_menores_rec: null,
+          baleares_menores_int: null,
+          baleares_menores_arr: null,
+          baleares_interislas_sal: null,
+          baleares_interislas_rec: null,
+          baleares_interislas_int: null,
+          baleares_interislas_arr: null,
+          canarias_mayores_sal: null,
+          canarias_mayores_rec: null,
+          canarias_mayores_int: null,
+          canarias_mayores_arr: null,
+          canarias_menores_sal: null,
+          canarias_menores_rec: null,
+          canarias_menores_int: null,
+          canarias_menores_arr: null,
+          canarias_interislas_sal: null,
+          canarias_interislas_rec: null,
+          canarias_interislas_int: null,
+          canarias_interislas_arr: null,
+          tenerife_tenerife_sal: null,
+          tenerife_tenerife_rec: null,
+          tenerife_tenerife_int: null,
+          tenerife_tenerife_arr: null,
+          las_palmas_las_palmas_sal: null,
+          las_palmas_las_palmas_rec: null,
+          las_palmas_las_palmas_int: null,
+          las_palmas_las_palmas_arr: null,
+          madeira_mayores_sal: null,
+          madeira_mayores_rec: null,
+          madeira_mayores_int: null,
+          madeira_mayores_arr: null,
+          madeira_menores_sal: null,
+          madeira_menores_rec: null,
+          madeira_menores_int: null,
+          madeira_menores_arr: null,
+          azores_mayores_sal: null,
+          azores_mayores_rec: null,
+          azores_mayores_int: null,
+          azores_mayores_arr: null,
+          azores_menores_sal: null,
+          azores_menores_rec: null,
+          azores_menores_int: null,
+          azores_menores_arr: null
         };
 
         // Provincial
@@ -159,6 +255,102 @@ export class SimpleMapExtractor {
           tariff.andorra_rec = this.parsePrice(weightRange.Andorra.recogidas || weightRange.Andorra.recogida);
           tariff.andorra_int = this.parsePrice(weightRange.Andorra.interciudad);
           tariff.andorra_arr = this.parsePrice(weightRange.Andorra.arrastre);
+        }
+
+        // Baleares Mayores
+        if (weightRange.Baleares_Mayores) {
+          tariff.baleares_mayores_sal = this.parsePrice(weightRange.Baleares_Mayores.salidas);
+          tariff.baleares_mayores_rec = this.parsePrice(weightRange.Baleares_Mayores.recogidas || weightRange.Baleares_Mayores.recogida);
+          tariff.baleares_mayores_int = this.parsePrice(weightRange.Baleares_Mayores.interciudad);
+          tariff.baleares_mayores_arr = this.parsePrice(weightRange.Baleares_Mayores.arrastre);
+        }
+
+        // Baleares Menores
+        if (weightRange.Baleares_Menores) {
+          tariff.baleares_menores_sal = this.parsePrice(weightRange.Baleares_Menores.salidas);
+          tariff.baleares_menores_rec = this.parsePrice(weightRange.Baleares_Menores.recogidas || weightRange.Baleares_Menores.recogida);
+          tariff.baleares_menores_int = this.parsePrice(weightRange.Baleares_Menores.interciudad);
+          tariff.baleares_menores_arr = this.parsePrice(weightRange.Baleares_Menores.arrastre);
+        }
+
+        // Baleares Interislas
+        if (weightRange.Baleares_Interislas) {
+          tariff.baleares_interislas_sal = this.parsePrice(weightRange.Baleares_Interislas.salidas);
+          tariff.baleares_interislas_rec = this.parsePrice(weightRange.Baleares_Interislas.recogidas || weightRange.Baleares_Interislas.recogida);
+          tariff.baleares_interislas_int = this.parsePrice(weightRange.Baleares_Interislas.interciudad);
+          tariff.baleares_interislas_arr = this.parsePrice(weightRange.Baleares_Interislas.arrastre);
+        }
+
+        // Canarias Mayores
+        if (weightRange.Canarias_Mayores) {
+          tariff.canarias_mayores_sal = this.parsePrice(weightRange.Canarias_Mayores.salidas);
+          tariff.canarias_mayores_rec = this.parsePrice(weightRange.Canarias_Mayores.recogidas || weightRange.Canarias_Mayores.recogida);
+          tariff.canarias_mayores_int = this.parsePrice(weightRange.Canarias_Mayores.interciudad);
+          tariff.canarias_mayores_arr = this.parsePrice(weightRange.Canarias_Mayores.arrastre);
+        }
+
+        // Canarias Menores
+        if (weightRange.Canarias_Menores) {
+          tariff.canarias_menores_sal = this.parsePrice(weightRange.Canarias_Menores.salidas);
+          tariff.canarias_menores_rec = this.parsePrice(weightRange.Canarias_Menores.recogidas || weightRange.Canarias_Menores.recogida);
+          tariff.canarias_menores_int = this.parsePrice(weightRange.Canarias_Menores.interciudad);
+          tariff.canarias_menores_arr = this.parsePrice(weightRange.Canarias_Menores.arrastre);
+        }
+
+        // Canarias Interislas
+        if (weightRange.Canarias_Interislas) {
+          tariff.canarias_interislas_sal = this.parsePrice(weightRange.Canarias_Interislas.salidas);
+          tariff.canarias_interislas_rec = this.parsePrice(weightRange.Canarias_Interislas.recogidas || weightRange.Canarias_Interislas.recogida);
+          tariff.canarias_interislas_int = this.parsePrice(weightRange.Canarias_Interislas.interciudad);
+          tariff.canarias_interislas_arr = this.parsePrice(weightRange.Canarias_Interislas.arrastre);
+        }
+
+        // Tenerife / Tenerife
+        if (weightRange.Tenerife_Tenerife) {
+          tariff.tenerife_tenerife_sal = this.parsePrice(weightRange.Tenerife_Tenerife.salidas);
+          tariff.tenerife_tenerife_rec = this.parsePrice(weightRange.Tenerife_Tenerife.recogidas || weightRange.Tenerife_Tenerife.recogida);
+          tariff.tenerife_tenerife_int = this.parsePrice(weightRange.Tenerife_Tenerife.interciudad);
+          tariff.tenerife_tenerife_arr = this.parsePrice(weightRange.Tenerife_Tenerife.arrastre);
+        }
+
+        // Las Palmas / Las Palmas
+        if (weightRange.Las_Palmas_Las_Palmas) {
+          tariff.las_palmas_las_palmas_sal = this.parsePrice(weightRange.Las_Palmas_Las_Palmas.salidas);
+          tariff.las_palmas_las_palmas_rec = this.parsePrice(weightRange.Las_Palmas_Las_Palmas.recogidas || weightRange.Las_Palmas_Las_Palmas.recogida);
+          tariff.las_palmas_las_palmas_int = this.parsePrice(weightRange.Las_Palmas_Las_Palmas.interciudad);
+          tariff.las_palmas_las_palmas_arr = this.parsePrice(weightRange.Las_Palmas_Las_Palmas.arrastre);
+        }
+
+        // Madeira Mayores
+        if (weightRange.Madeira_Mayores) {
+          tariff.madeira_mayores_sal = this.parsePrice(weightRange.Madeira_Mayores.salidas);
+          tariff.madeira_mayores_rec = this.parsePrice(weightRange.Madeira_Mayores.recogidas || weightRange.Madeira_Mayores.recogida);
+          tariff.madeira_mayores_int = this.parsePrice(weightRange.Madeira_Mayores.interciudad);
+          tariff.madeira_mayores_arr = this.parsePrice(weightRange.Madeira_Mayores.arrastre);
+        }
+
+        // Madeira Menores
+        if (weightRange.Madeira_Menores) {
+          tariff.madeira_menores_sal = this.parsePrice(weightRange.Madeira_Menores.salidas);
+          tariff.madeira_menores_rec = this.parsePrice(weightRange.Madeira_Menores.recogidas || weightRange.Madeira_Menores.recogida);
+          tariff.madeira_menores_int = this.parsePrice(weightRange.Madeira_Menores.interciudad);
+          tariff.madeira_menores_arr = this.parsePrice(weightRange.Madeira_Menores.arrastre);
+        }
+
+        // Azores Mayores
+        if (weightRange.Azores_Mayores) {
+          tariff.azores_mayores_sal = this.parsePrice(weightRange.Azores_Mayores.salidas);
+          tariff.azores_mayores_rec = this.parsePrice(weightRange.Azores_Mayores.recogidas || weightRange.Azores_Mayores.recogida);
+          tariff.azores_mayores_int = this.parsePrice(weightRange.Azores_Mayores.interciudad);
+          tariff.azores_mayores_arr = this.parsePrice(weightRange.Azores_Mayores.arrastre);
+        }
+
+        // Azores Menores
+        if (weightRange.Azores_Menores) {
+          tariff.azores_menores_sal = this.parsePrice(weightRange.Azores_Menores.salidas);
+          tariff.azores_menores_rec = this.parsePrice(weightRange.Azores_Menores.recogidas || weightRange.Azores_Menores.recogida);
+          tariff.azores_menores_int = this.parsePrice(weightRange.Azores_Menores.interciudad);
+          tariff.azores_menores_arr = this.parsePrice(weightRange.Azores_Menores.arrastre);
         }
 
         results.push(tariff);

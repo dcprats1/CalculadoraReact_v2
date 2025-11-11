@@ -407,6 +407,152 @@ export const TARIFF_MAP_2025: ServiceMap[] = [
     ]
   },
   {
+    service_name: 'Express19:00 Baleares/Canarias',
+    page: 13,
+    type: 'insular',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Baleares_Mayores: { recogida: '1,17', arrastre: '3,84', entrega: '1,17', salidas: '5,01', recogidas: '5,01', interciudad: '6,18' },
+        Baleares_Menores: { recogida: '1,17', arrastre: '5,32', entrega: '1,17', salidas: '6,49', recogidas: '6,49', interciudad: '7,66' },
+        Baleares_Interislas: { recogida: '1,17', arrastre: '5,93', entrega: '1,17', salidas: '7,10', recogidas: '7,10', interciudad: '8,27' },
+        Canarias_Mayores: { recogida: '1,17', arrastre: '7,49', entrega: '1,17', salidas: '8,66', recogidas: '8,66', interciudad: '9,83' },
+        Canarias_Menores: { recogida: '1,17', arrastre: '9,89', entrega: '1,17', salidas: '11,06', recogidas: '11,06', interciudad: '12,23' },
+        Canarias_Interislas: { recogida: '1,17', arrastre: '7,17', entrega: '1,17', salidas: '8,34', recogidas: '8,34', interciudad: '9,51' },
+        Tenerife_Tenerife: { recogida: '2,50', arrastre: '0,78', entrega: '2,50', salidas: '3,28', recogidas: '3,28', interciudad: '5,78' },
+        Las_Palmas_Las_Palmas: { recogida: '2,50', arrastre: '0,78', entrega: '2,50', salidas: '3,28', recogidas: '3,28', interciudad: '5,78' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 3,
+        label: '1-3kg',
+        Baleares_Mayores: { recogida: '1,23', arrastre: '5,32', entrega: '1,23', salidas: '6,55', recogidas: '6,55', interciudad: '7,78' },
+        Baleares_Menores: { recogida: '1,23', arrastre: '8,42', entrega: '1,23', salidas: '9,65', recogidas: '9,65', interciudad: '10,88' },
+        Baleares_Interislas: { recogida: '1,23', arrastre: '9,03', entrega: '1,23', salidas: '10,26', recogidas: '10,26', interciudad: '11,49' },
+        Tenerife_Tenerife: { recogida: '2,66', arrastre: '0,87', entrega: '2,66', salidas: '3,53', recogidas: '3,53', interciudad: '6,19' },
+        Las_Palmas_Las_Palmas: { recogida: '2,66', arrastre: '0,87', entrega: '2,66', salidas: '3,53', recogidas: '3,53', interciudad: '6,19' }
+      },
+      {
+        weight_from: 3,
+        weight_to: 5,
+        label: '3-5kg',
+        Baleares_Mayores: { recogida: '1,28', arrastre: '6,30', entrega: '1,28', salidas: '7,58', recogidas: '7,58', interciudad: '8,86' },
+        Baleares_Menores: { recogida: '1,28', arrastre: '10,48', entrega: '1,28', salidas: '11,76', recogidas: '11,76', interciudad: '13,04' },
+        Baleares_Interislas: { recogida: '1,28', arrastre: '11,09', entrega: '1,28', salidas: '12,37', recogidas: '12,37', interciudad: '13,65' },
+        Tenerife_Tenerife: { recogida: '2,82', arrastre: '0,99', entrega: '2,82', salidas: '3,81', recogidas: '3,81', interciudad: '6,63' },
+        Las_Palmas_Las_Palmas: { recogida: '2,82', arrastre: '0,99', entrega: '2,82', salidas: '3,81', recogidas: '3,81', interciudad: '6,63' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 10,
+        label: '5-10kg',
+        Baleares_Mayores: { recogida: '1,58', arrastre: '8,76', entrega: '1,38', salidas: '10,14', recogidas: '10,14', interciudad: '11,52' },
+        Baleares_Menores: { recogida: '1,58', arrastre: '15,64', entrega: '1,38', salidas: '17,02', recogidas: '17,02', interciudad: '18,40' },
+        Baleares_Interislas: { recogida: '1,58', arrastre: '16,25', entrega: '1,38', salidas: '17,63', recogidas: '17,63', interciudad: '19,01' },
+        Tenerife_Tenerife: { recogida: '3,22', arrastre: '1,14', entrega: '3,22', salidas: '4,36', recogidas: '4,36', interciudad: '7,58' },
+        Las_Palmas_Las_Palmas: { recogida: '3,22', arrastre: '1,14', entrega: '3,22', salidas: '4,36', recogidas: '4,36', interciudad: '7,58' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 15,
+        label: '10-15kg',
+        Baleares_Mayores: { recogida: '1,91', arrastre: '11,13', entrega: '1,58', salidas: '12,71', recogidas: '12,71', interciudad: '14,29' },
+        Baleares_Menores: { recogida: '1,91', arrastre: '20,71', entrega: '1,58', salidas: '22,29', recogidas: '22,29', interciudad: '23,87' },
+        Baleares_Interislas: { recogida: '1,91', arrastre: '21,32', entrega: '1,58', salidas: '22,90', recogidas: '22,90', interciudad: '24,48' },
+        Tenerife_Tenerife: { recogida: '3,62', arrastre: '1,42', entrega: '3,62', salidas: '5,04', recogidas: '5,04', interciudad: '8,66' },
+        Las_Palmas_Las_Palmas: { recogida: '3,62', arrastre: '1,42', entrega: '3,62', salidas: '5,04', recogidas: '5,04', interciudad: '8,66' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Baleares_Mayores: { recogida: '0,08', arrastre: '0,66', entrega: '0,07', salidas: '0,73', recogidas: '0,73', interciudad: '0,80' },
+        Baleares_Menores: { recogida: '0,08', arrastre: '1,19', entrega: '0,07', salidas: '1,26', recogidas: '1,26', interciudad: '1,33' },
+        Baleares_Interislas: { recogida: '0,08', arrastre: '1,19', entrega: '0,07', salidas: '1,26', recogidas: '1,26', interciudad: '1,33' },
+        Canarias_Mayores: { recogida: '0,08', arrastre: '3,41', entrega: '0,07', salidas: '3,48', recogidas: '3,48', interciudad: '3,55' },
+        Canarias_Menores: { recogida: '0,08', arrastre: '3,70', entrega: '0,07', salidas: '3,77', recogidas: '3,77', interciudad: '3,84' },
+        Canarias_Interislas: { recogida: '0,08', arrastre: '3,54', entrega: '0,07', salidas: '3,61', recogidas: '3,61', interciudad: '3,68' },
+        Tenerife_Tenerife: { recogida: '0,08', arrastre: '0,14', entrega: '0,08', salidas: '0,22', recogidas: '0,22', interciudad: '0,30' },
+        Las_Palmas_Las_Palmas: { recogida: '0,08', arrastre: '0,14', entrega: '0,08', salidas: '0,22', recogidas: '0,22', interciudad: '0,30' }
+      }
+    ]
+  },
+  {
+    service_name: 'BusinessParcel Baleares/Canarias',
+    page: 14,
+    type: 'insular',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Baleares_Mayores: { recogida: '1,17', arrastre: '3,84', entrega: '1,17', salidas: '5,01', recogidas: '5,01', interciudad: '6,18' },
+        Baleares_Menores: { recogida: '1,17', arrastre: '5,32', entrega: '1,17', salidas: '6,49', recogidas: '6,49', interciudad: '7,66' },
+        Baleares_Interislas: { recogida: '1,17', arrastre: '5,93', entrega: '1,17', salidas: '7,10', recogidas: '7,10', interciudad: '8,27' },
+        Canarias_Mayores: { recogida: '1,17', arrastre: '7,49', entrega: '1,17', salidas: '8,66', recogidas: '8,66', interciudad: '9,83' },
+        Canarias_Menores: { recogida: '1,17', arrastre: '9,89', entrega: '1,17', salidas: '11,06', recogidas: '11,06', interciudad: '12,23' },
+        Canarias_Interislas: { recogida: '1,17', arrastre: '7,17', entrega: '1,17', salidas: '8,34', recogidas: '8,34', interciudad: '9,51' },
+        Tenerife_Tenerife: { recogida: '2,50', arrastre: '0,78', entrega: '2,50', salidas: '3,28', recogidas: '3,28', interciudad: '5,78' },
+        Las_Palmas_Las_Palmas: { recogida: '2,50', arrastre: '0,78', entrega: '2,50', salidas: '3,28', recogidas: '3,28', interciudad: '5,78' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 3,
+        label: '1-3kg',
+        Baleares_Mayores: { recogida: '1,23', arrastre: '5,32', entrega: '1,23', salidas: '6,55', recogidas: '6,55', interciudad: '7,78' },
+        Baleares_Menores: { recogida: '1,23', arrastre: '8,42', entrega: '1,23', salidas: '9,65', recogidas: '9,65', interciudad: '10,88' },
+        Baleares_Interislas: { recogida: '1,23', arrastre: '9,03', entrega: '1,23', salidas: '10,26', recogidas: '10,26', interciudad: '11,49' },
+        Tenerife_Tenerife: { recogida: '2,66', arrastre: '0,87', entrega: '2,66', salidas: '3,53', recogidas: '3,53', interciudad: '6,19' },
+        Las_Palmas_Las_Palmas: { recogida: '2,66', arrastre: '0,87', entrega: '2,66', salidas: '3,53', recogidas: '3,53', interciudad: '6,19' }
+      },
+      {
+        weight_from: 3,
+        weight_to: 5,
+        label: '3-5kg',
+        Baleares_Mayores: { recogida: '1,28', arrastre: '6,30', entrega: '1,28', salidas: '7,58', recogidas: '7,58', interciudad: '8,86' },
+        Baleares_Menores: { recogida: '1,28', arrastre: '10,48', entrega: '1,28', salidas: '11,76', recogidas: '11,76', interciudad: '13,04' },
+        Baleares_Interislas: { recogida: '1,28', arrastre: '11,09', entrega: '1,28', salidas: '12,37', recogidas: '12,37', interciudad: '13,65' },
+        Tenerife_Tenerife: { recogida: '2,82', arrastre: '0,99', entrega: '2,82', salidas: '3,81', recogidas: '3,81', interciudad: '6,63' },
+        Las_Palmas_Las_Palmas: { recogida: '2,82', arrastre: '0,99', entrega: '2,82', salidas: '3,81', recogidas: '3,81', interciudad: '6,63' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 10,
+        label: '5-10kg',
+        Baleares_Mayores: { recogida: '1,58', arrastre: '8,76', entrega: '1,38', salidas: '10,14', recogidas: '10,14', interciudad: '11,52' },
+        Baleares_Menores: { recogida: '1,58', arrastre: '15,64', entrega: '1,38', salidas: '17,02', recogidas: '17,02', interciudad: '18,40' },
+        Baleares_Interislas: { recogida: '1,58', arrastre: '16,25', entrega: '1,38', salidas: '17,63', recogidas: '17,63', interciudad: '19,01' },
+        Tenerife_Tenerife: { recogida: '3,22', arrastre: '1,14', entrega: '3,22', salidas: '4,36', recogidas: '4,36', interciudad: '7,58' },
+        Las_Palmas_Las_Palmas: { recogida: '3,22', arrastre: '1,14', entrega: '3,22', salidas: '4,36', recogidas: '4,36', interciudad: '7,58' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 15,
+        label: '10-15kg',
+        Baleares_Mayores: { recogida: '1,91', arrastre: '11,13', entrega: '1,58', salidas: '12,71', recogidas: '12,71', interciudad: '14,29' },
+        Baleares_Menores: { recogida: '1,91', arrastre: '20,71', entrega: '1,58', salidas: '22,29', recogidas: '22,29', interciudad: '23,87' },
+        Baleares_Interislas: { recogida: '1,91', arrastre: '21,32', entrega: '1,58', salidas: '22,90', recogidas: '22,90', interciudad: '24,48' },
+        Tenerife_Tenerife: { recogida: '3,62', arrastre: '1,42', entrega: '3,62', salidas: '5,04', recogidas: '5,04', interciudad: '8,66' },
+        Las_Palmas_Las_Palmas: { recogida: '3,62', arrastre: '1,42', entrega: '3,62', salidas: '5,04', recogidas: '5,04', interciudad: '8,66' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Baleares_Mayores: { recogida: '0,08', arrastre: '0,66', entrega: '0,07', salidas: '0,73', recogidas: '0,73', interciudad: '0,80' },
+        Baleares_Menores: { recogida: '0,08', arrastre: '1,19', entrega: '0,07', salidas: '1,26', recogidas: '1,26', interciudad: '1,33' },
+        Baleares_Interislas: { recogida: '0,08', arrastre: '1,19', entrega: '0,07', salidas: '1,26', recogidas: '1,26', interciudad: '1,33' },
+        Canarias_Mayores: { recogida: '0,08', arrastre: '3,41', entrega: '0,07', salidas: '3,48', recogidas: '3,48', interciudad: '3,55' },
+        Canarias_Menores: { recogida: '0,08', arrastre: '3,70', entrega: '0,07', salidas: '3,77', recogidas: '3,77', interciudad: '3,84' },
+        Canarias_Interislas: { recogida: '0,08', arrastre: '3,54', entrega: '0,07', salidas: '3,61', recogidas: '3,61', interciudad: '3,68' },
+        Tenerife_Tenerife: { recogida: '0,08', arrastre: '0,14', entrega: '0,08', salidas: '0,22', recogidas: '0,22', interciudad: '0,30' },
+        Las_Palmas_Las_Palmas: { recogida: '0,08', arrastre: '0,14', entrega: '0,08', salidas: '0,22', recogidas: '0,22', interciudad: '0,30' }
+      }
+    ]
+  },
+  {
     service_name: 'EuroBusinessParcel',
     page: 7,
     type: 'internacional',
