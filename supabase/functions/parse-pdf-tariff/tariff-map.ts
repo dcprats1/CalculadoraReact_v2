@@ -700,6 +700,297 @@ export const TARIFF_MAP_2025: ServiceMap[] = [
       }
     ]
   },
+  // ============================================
+  // SERVICIOS AÉREOS - EXPRESS10:30 Y EXPRESS14:00 ISLAS
+  // ============================================
+  {
+    service_name: 'Express10:30 Baleares Mayores',
+    page: 12,
+    type: 'aereo',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Baleares_Mayores: { recogida: '1,17', arrastre: '6,03', entrega: '2,00', salidas: '8,03', recogidas: '7,20', interciudad: '9,20', km: '0,34' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Baleares_Mayores: { recogida: '0,08', arrastre: '3,02', entrega: '0,13', salidas: '3,15', recogidas: '3,10', interciudad: '3,23' }
+      }
+    ]
+  },
+  {
+    service_name: 'Express10:30 Baleares Interislas',
+    page: 12,
+    type: 'aereo',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Baleares_Interislas: { recogida: '1,17', arrastre: '8,53', entrega: '2,00', salidas: '10,53', recogidas: '9,70', interciudad: '11,70', km: '0,34' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Baleares_Interislas: { recogida: '0,08', arrastre: '4,20', entrega: '0,13', salidas: '4,33', recogidas: '4,28', interciudad: '4,41' }
+      }
+    ]
+  },
+  {
+    service_name: 'Express10:30 Canarias Mayores',
+    page: 12,
+    type: 'aereo',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Canarias_Mayores: { recogida: '1,17', arrastre: '7,50', entrega: '2,00', salidas: '9,50', recogidas: '8,66', interciudad: '10,66', km: '0,34' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Canarias_Mayores: { recogida: '0,08', arrastre: '3,41', entrega: '0,13', salidas: '3,54', recogidas: '3,48', interciudad: '3,61' }
+      }
+    ]
+  },
+  {
+    service_name: 'Express10:30 Canarias Interislas',
+    page: 12,
+    type: 'aereo',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Canarias_Interislas: { recogida: '1,17', arrastre: '7,26', entrega: '2,00', salidas: '9,26', recogidas: '8,34', interciudad: '10,34', km: '0,34' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Canarias_Interislas: { recogida: '0,08', arrastre: '3,56', entrega: '0,13', salidas: '3,69', recogidas: '3,61', interciudad: '3,74' }
+      }
+    ]
+  },
+  {
+    service_name: 'Express10:30 Tenerife/Las Palmas',
+    page: 12,
+    type: 'aereo',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Tenerife_Tenerife: { recogida: '2,50', arrastre: '1,21', entrega: '2,50', salidas: '3,71', recogidas: '3,28', interciudad: '5,78' },
+        Las_Palmas_Las_Palmas: { recogida: '2,50', arrastre: '1,21', entrega: '2,50', salidas: '3,71', recogidas: '3,28', interciudad: '5,78' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 3,
+        label: '1-3kg',
+        Tenerife_Tenerife: { recogida: '2,66', arrastre: '1,29', entrega: '2,66', salidas: '3,95', recogidas: '3,53', interciudad: '6,19' },
+        Las_Palmas_Las_Palmas: { recogida: '2,66', arrastre: '1,29', entrega: '2,66', salidas: '3,95', recogidas: '3,53', interciudad: '6,19' }
+      },
+      {
+        weight_from: 3,
+        weight_to: 5,
+        label: '3-5kg',
+        Tenerife_Tenerife: { recogida: '2,82', arrastre: '1,41', entrega: '2,82', salidas: '4,23', recogidas: '3,81', interciudad: '6,63' },
+        Las_Palmas_Las_Palmas: { recogida: '2,82', arrastre: '1,41', entrega: '2,82', salidas: '4,23', recogidas: '3,81', interciudad: '6,63' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 10,
+        label: '5-10kg',
+        Tenerife_Tenerife: { recogida: '3,22', arrastre: '1,56', entrega: '3,22', salidas: '4,78', recogidas: '4,36', interciudad: '7,58' },
+        Las_Palmas_Las_Palmas: { recogida: '3,22', arrastre: '1,56', entrega: '3,22', salidas: '4,78', recogidas: '4,36', interciudad: '7,58' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 15,
+        label: '10-15kg',
+        Tenerife_Tenerife: { recogida: '3,62', arrastre: '1,84', entrega: '3,62', salidas: '5,46', recogidas: '5,04', interciudad: '8,66' },
+        Las_Palmas_Las_Palmas: { recogida: '3,62', arrastre: '1,84', entrega: '3,62', salidas: '5,46', recogidas: '5,04', interciudad: '8,66' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Tenerife_Tenerife: { recogida: '0,08', arrastre: '0,14', entrega: '0,08', salidas: '0,22', recogidas: '0,22', interciudad: '0,30' },
+        Las_Palmas_Las_Palmas: { recogida: '0,08', arrastre: '0,14', entrega: '0,08', salidas: '0,22', recogidas: '0,22', interciudad: '0,30' }
+      }
+    ]
+  },
+  {
+    service_name: 'Express14:00 Baleares Mayores',
+    page: 12,
+    type: 'aereo',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Baleares_Mayores: { recogida: '1,17', arrastre: '6,11', entrega: '1,25', salidas: '7,36', recogidas: '7,28', interciudad: '8,53' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Baleares_Mayores: { recogida: '0,08', arrastre: '3,01', entrega: '0,08', salidas: '3,09', recogidas: '3,09', interciudad: '3,17' }
+      }
+    ]
+  },
+  {
+    service_name: 'Express14:00 Baleares Menores',
+    page: 12,
+    type: 'aereo',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Baleares_Menores: { recogida: '1,17', arrastre: '8,21', entrega: '1,25', salidas: '9,46', recogidas: '9,38', interciudad: '10,63' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Baleares_Menores: { recogida: '0,08', arrastre: '3,94', entrega: '0,08', salidas: '4,02', recogidas: '4,02', interciudad: '4,10' }
+      }
+    ]
+  },
+  {
+    service_name: 'Express14:00 Baleares Interislas',
+    page: 12,
+    type: 'aereo',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Baleares_Interislas: { recogida: '1,17', arrastre: '8,24', entrega: '1,25', salidas: '9,49', recogidas: '9,41', interciudad: '10,66' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Baleares_Interislas: { recogida: '0,08', arrastre: '3,97', entrega: '0,08', salidas: '4,05', recogidas: '4,05', interciudad: '4,13' }
+      }
+    ]
+  },
+  {
+    service_name: 'Express14:00 Canarias Mayores',
+    page: 12,
+    type: 'aereo',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Canarias_Mayores: { recogida: '1,17', arrastre: '7,42', entrega: '1,25', salidas: '8,67', recogidas: '8,66', interciudad: '9,91' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Canarias_Mayores: { recogida: '0,08', arrastre: '3,41', entrega: '0,08', salidas: '3,49', recogidas: '3,48', interciudad: '3,56' }
+      }
+    ]
+  },
+  {
+    service_name: 'Express14:00 Canarias Menores',
+    page: 12,
+    type: 'aereo',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Canarias_Menores: { recogida: '1,17', arrastre: '9,81', entrega: '1,25', salidas: '11,06', recogidas: '11,06', interciudad: '12,31' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Canarias_Menores: { recogida: '0,08', arrastre: '3,70', entrega: '0,08', salidas: '3,78', recogidas: '3,77', interciudad: '3,85' }
+      }
+    ]
+  },
+  {
+    service_name: 'Express14:00 Canarias Interislas',
+    page: 12,
+    type: 'aereo',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Canarias_Interislas: { recogida: '1,17', arrastre: '7,18', entrega: '1,25', salidas: '8,43', recogidas: '8,34', interciudad: '9,59' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Canarias_Interislas: { recogida: '0,08', arrastre: '3,54', entrega: '0,08', salidas: '3,62', recogidas: '3,62', interciudad: '3,70' }
+      }
+    ]
+  },
+  {
+    service_name: 'Express14:00 Tenerife/Las Palmas',
+    page: 12,
+    type: 'aereo',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Tenerife_Tenerife: { recogida: '2,50', arrastre: '1,21', entrega: '2,50', salidas: '3,71', recogidas: '3,28', interciudad: '5,78' },
+        Las_Palmas_Las_Palmas: { recogida: '2,50', arrastre: '1,21', entrega: '2,50', salidas: '3,71', recogidas: '3,28', interciudad: '5,78' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 3,
+        label: '1-3kg',
+        Tenerife_Tenerife: { recogida: '2,66', arrastre: '1,29', entrega: '2,66', salidas: '3,95', recogidas: '3,53', interciudad: '6,19' },
+        Las_Palmas_Las_Palmas: { recogida: '2,66', arrastre: '1,29', entrega: '2,66', salidas: '3,95', recogidas: '3,53', interciudad: '6,19' }
+      },
+      {
+        weight_from: 3,
+        weight_to: 5,
+        label: '3-5kg',
+        Tenerife_Tenerife: { recogida: '2,82', arrastre: '1,41', entrega: '2,82', salidas: '4,23', recogidas: '3,81', interciudad: '6,63' },
+        Las_Palmas_Las_Palmas: { recogida: '2,82', arrastre: '1,41', entrega: '2,82', salidas: '4,23', recogidas: '3,81', interciudad: '6,63' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 10,
+        label: '5-10kg',
+        Tenerife_Tenerife: { recogida: '3,22', arrastre: '1,56', entrega: '3,22', salidas: '4,78', recogidas: '4,36', interciudad: '7,58' },
+        Las_Palmas_Las_Palmas: { recogida: '3,22', arrastre: '1,56', entrega: '3,22', salidas: '4,78', recogidas: '4,36', interciudad: '7,58' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 15,
+        label: '10-15kg',
+        Tenerife_Tenerife: { recogida: '3,62', arrastre: '1,84', entrega: '3,62', salidas: '5,46', recogidas: '5,04', interciudad: '8,66' },
+        Las_Palmas_Las_Palmas: { recogida: '3,62', arrastre: '1,84', entrega: '3,62', salidas: '5,46', recogidas: '5,04', interciudad: '8,66' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Tenerife_Tenerife: { recogida: '0,08', arrastre: '0,14', entrega: '0,08', salidas: '0,22', recogidas: '0,22', interciudad: '0,30' },
+        Las_Palmas_Las_Palmas: { recogida: '0,08', arrastre: '0,14', entrega: '0,08', salidas: '0,22', recogidas: '0,22', interciudad: '0,30' }
+      }
+    ]
+  },
   {
     service_name: 'EconomyParcel Baleares Mayores',
     page: 15,
@@ -1295,6 +1586,176 @@ export const TARIFF_MAP_2025: ServiceMap[] = [
         weight_to: 999,
         label: 'Cada 10kg adicional',
         Azores_Menores: { salidas: '13,39' }
+      }
+    ]
+  },
+  // ============================================
+  // SERVICIOS MARÍTIMOS - BALEARES Y CANARIAS
+  // ============================================
+  {
+    service_name: 'EconomyParcel Marítimo Baleares Mayores',
+    page: 16,
+    type: 'maritimo',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Baleares_Mayores: { arrastre: '2,61', entrega: '1,00', salidas: '3,61' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 3,
+        label: '1-3kg',
+        Baleares_Mayores: { arrastre: '4,15', entrega: '1,00', salidas: '5,15' }
+      },
+      {
+        weight_from: 3,
+        weight_to: 5,
+        label: '3-5kg',
+        Baleares_Mayores: { arrastre: '5,08', entrega: '1,10', salidas: '6,18' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 10,
+        label: '5-10kg',
+        Baleares_Mayores: { arrastre: '7,49', entrega: '1,25', salidas: '8,74' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 15,
+        label: '10-15kg',
+        Baleares_Mayores: { arrastre: '9,76', entrega: '1,55', salidas: '11,31' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Baleares_Mayores: { arrastre: '0,59', entrega: '0,07', salidas: '0,66' }
+      }
+    ]
+  },
+  {
+    service_name: 'EconomyParcel Marítimo Baleares Menores',
+    page: 16,
+    type: 'maritimo',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Baleares_Menores: { arrastre: '2,97', entrega: '1,00', salidas: '3,97' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 3,
+        label: '1-3kg',
+        Baleares_Menores: { arrastre: '5,64', entrega: '1,00', salidas: '6,64' }
+      },
+      {
+        weight_from: 3,
+        weight_to: 5,
+        label: '3-5kg',
+        Baleares_Menores: { arrastre: '8,14', entrega: '1,10', salidas: '9,24' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 10,
+        label: '5-10kg',
+        Baleares_Menores: { arrastre: '13,25', entrega: '1,25', salidas: '14,50' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 15,
+        label: '10-15kg',
+        Baleares_Menores: { arrastre: '18,22', entrega: '1,55', salidas: '19,77' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Baleares_Menores: { arrastre: '1,12', entrega: '0,07', salidas: '1,19' }
+      }
+    ]
+  },
+  {
+    service_name: 'EconomyParcel Marítimo Baleares Interislas',
+    page: 16,
+    type: 'maritimo',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 1,
+        label: '0-1kg',
+        Baleares_Interislas: { arrastre: '3,58', entrega: '1,00', salidas: '4,58' }
+      },
+      {
+        weight_from: 1,
+        weight_to: 3,
+        label: '1-3kg',
+        Baleares_Interislas: { arrastre: '6,74', entrega: '1,00', salidas: '7,74' }
+      },
+      {
+        weight_from: 3,
+        weight_to: 5,
+        label: '3-5kg',
+        Baleares_Interislas: { arrastre: '8,75', entrega: '1,10', salidas: '9,85' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 10,
+        label: '5-10kg',
+        Baleares_Interislas: { arrastre: '13,86', entrega: '1,25', salidas: '15,11' }
+      },
+      {
+        weight_from: 10,
+        weight_to: 15,
+        label: '10-15kg',
+        Baleares_Interislas: { arrastre: '18,83', entrega: '1,55', salidas: '20,38' }
+      },
+      {
+        weight_from: 15,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Baleares_Interislas: { arrastre: '1,12', entrega: '0,07', salidas: '1,19' }
+      }
+    ]
+  },
+  {
+    service_name: 'EconomyParcel Marítimo Canarias Mayores',
+    page: 16,
+    type: 'maritimo',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 5,
+        label: '0-5kg',
+        Canarias_Mayores: { arrastre: '5,05', entrega: '1,28', salidas: '6,33' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Canarias_Mayores: { arrastre: '0,53', entrega: '0,08', salidas: '0,61' }
+      }
+    ]
+  },
+  {
+    service_name: 'EconomyParcel Marítimo Canarias Menores',
+    page: 16,
+    type: 'maritimo',
+    weights: [
+      {
+        weight_from: 0,
+        weight_to: 5,
+        label: '0-5kg',
+        Canarias_Menores: { arrastre: '7,32', entrega: '1,28', salidas: '8,60' }
+      },
+      {
+        weight_from: 5,
+        weight_to: 999,
+        label: 'Kg adicional',
+        Canarias_Menores: { arrastre: '0,88', entrega: '0,08', salidas: '0,96' }
       }
     ]
   }
