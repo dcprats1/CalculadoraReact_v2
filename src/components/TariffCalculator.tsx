@@ -1476,6 +1476,7 @@ const TariffCalculator: React.FC = () => {
     if (selectedCustomPlanId) {
       setLinearDiscount(0);
       setSelectedPlanGroup('');
+      setSelectedDiscountPlan('');
     }
   }, [selectedCustomPlanId]);
 
