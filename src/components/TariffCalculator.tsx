@@ -918,12 +918,13 @@ const TariffCalculator: React.FC = () => {
             </label>
             <div className="flex gap-2">
               <select
-                value={selectedCustomPlanId || planForSelectedService?.id || ''}
+                value={selectedCustomPlanId ? `custom-${selectedCustomPlanId}` : (planForSelectedService?.id || '')}
                 onChange={(e) => {
                   const value = e.target.value;
                   if (value.startsWith('custom-')) {
                     setSelectedCustomPlanId(value.replace('custom-', ''));
                     setSelectedPlanGroup('');
+                    setSelectedDiscountPlan('');
                   } else {
                     setSelectedCustomPlanId(null);
                     handleDiscountPlanSelection(value);

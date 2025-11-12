@@ -319,16 +319,19 @@ export default function CommercialPlansManager({ onClose, onPlanSelected }: Comm
                             </td>
                             {DOMESTIC_WEIGHT_RANGES.map((range) => (
                               <td key={range} className="border border-gray-300 px-1 py-1">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="100"
-                                  step="0.1"
-                                  value={discounts.domestic[service][range] || ''}
-                                  onChange={(e) => handleDomesticDiscountChange(service, range, e.target.value)}
-                                  className="w-full px-2 py-1 text-center border border-gray-200 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
-                                  placeholder="0"
-                                />
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    step="0.1"
+                                    value={discounts.domestic[service][range] || ''}
+                                    onChange={(e) => handleDomesticDiscountChange(service, range, e.target.value)}
+                                    className="w-full px-2 py-1 pr-6 text-center border border-gray-200 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
+                                    placeholder="0"
+                                  />
+                                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs pointer-events-none">%</span>
+                                </div>
                               </td>
                             ))}
                             <td className="border border-gray-300 px-1 py-1 text-center">
@@ -374,16 +377,19 @@ export default function CommercialPlansManager({ onClose, onPlanSelected }: Comm
                           </td>
                           {INTERNATIONAL_WEIGHT_RANGES.map((range) => (
                             <td key={range} className="border border-gray-300 px-1 py-1">
-                              <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                step="0.1"
-                                value={discounts.international.EuroBusinessParcel[range] || ''}
-                                onChange={(e) => handleInternationalDiscountChange(range, e.target.value)}
-                                className="w-full px-2 py-1 text-center border border-gray-200 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
-                                placeholder="0"
-                              />
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  step="0.1"
+                                  value={discounts.international.EuroBusinessParcel[range] || ''}
+                                  onChange={(e) => handleInternationalDiscountChange(range, e.target.value)}
+                                  className="w-full px-2 py-1 pr-6 text-center border border-gray-200 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
+                                  placeholder="0"
+                                />
+                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs pointer-events-none">%</span>
+                              </div>
                             </td>
                           ))}
                         </tr>
