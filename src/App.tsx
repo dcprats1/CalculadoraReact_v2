@@ -13,7 +13,7 @@ import { useRequireActivation } from './hooks/useRequireActivation';
 import { Loader2 } from 'lucide-react';
 
 const ENABLE_AUTH = true;
-const ENABLE_TARIFF_VALIDATION = false; // TODO: Cambiar a true cuando las Edge Functions estén desplegadas
+const ENABLE_TARIFF_VALIDATION = true;
 
 function MainContent() {
   const { isAuthenticated, isLoading, userData } = useAuth();
