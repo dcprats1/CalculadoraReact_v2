@@ -370,7 +370,7 @@ const TariffCalculator: React.FC = () => {
   const [comparatorServiceSelection, setComparatorServiceSelection] = useState<string>(selectedService);
   const skipNextComparatorAutoRecalc = useRef(false);
   const [isPlansManagerOpen, setIsPlansManagerOpen] = useState<boolean>(false);
-  const { plans: customCommercialPlans, loading: plansLoading } = useCommercialPlans();
+  const { plans: customCommercialPlans, loading: plansLoading, loadPlans: reloadCustomPlans } = useCommercialPlans();
   const [selectedCustomPlanId, setSelectedCustomPlanId] = useState<string | null>(null);
 
   const selectedCustomPlan = useMemo(
@@ -2167,12 +2167,16 @@ const TariffCalculator: React.FC = () => {
 
       {isPlansManagerOpen && (
         <CommercialPlansManager
-          onClose={() => setIsPlansManagerOpen(false)}
+          onClose={() => {
+            setIsPlansManagerOpen(false);
+            reloadCustomPlans();
+          }}
           onPlanSelected={(plan) => {
             if (plan) {
               console.log('Plan seleccionado:', plan);
             }
             setIsPlansManagerOpen(false);
+            reloadCustomPlans();
           }}
         />
       )}
