@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Package, AlertCircle, Calculator, ArrowUp, MapPin, Settings, LogOut, User, Eye, EyeOff } from 'lucide-react';
+import { Package, AlertCircle, Calculator, ArrowUp, MapPin, Settings, LogOut, User, Eye, EyeOff, Sliders } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useViewMode } from '../contexts/ViewModeContext';
@@ -7,6 +7,10 @@ import { usePreferences } from '../contexts/PreferencesContext';
 import { trackPackageCalculation } from '../utils/tracking';
 import { UserSettingsPanel } from './settings/UserSettingsPanel';
 import { AdminPanel } from './admin/AdminPanel';
+import CommercialPlansManager from './settings/CommercialPlansManager';
+import { useCommercialPlans } from '../hooks/useCommercialPlans';
+import { CommercialPlan } from '../types/commercialPlans';
+import { applyCustomPlanDiscount, getCustomPlanDisplayInfo } from '../utils/customCommercialPlans';
 import { useTariffs, useDiscountPlans, useCustomTariffsActive } from '../hooks/useSupabaseData';
 import {
   PackageData,
@@ -365,6 +369,14 @@ const TariffCalculator: React.FC = () => {
   );
   const [comparatorServiceSelection, setComparatorServiceSelection] = useState<string>(selectedService);
   const skipNextComparatorAutoRecalc = useRef(false);
+  const [isPlansManagerOpen, setIsPlansManagerOpen] = useState<boolean>(false);
+  const { plans: customCommercialPlans, loading: plansLoading } = useCommercialPlans();
+  const [selectedCustomPlanId, setSelectedCustomPlanId] = useState<string | null>(null);
+
+  const selectedCustomPlan = useMemo(
+    () => customCommercialPlans.find(p => p.id === selectedCustomPlanId) || null,
+    [customCommercialPlans, selectedCustomPlanId]
+  );
 
   const allDiscountPlans = useMemo(
     () => [...remoteDiscountPlans, ...CUSTOM_DISCOUNT_PLANS],
@@ -503,7 +515,7 @@ const TariffCalculator: React.FC = () => {
 
     const comparatorIsParcelShop = isParcelShopService(comparatorServiceSelection);
     const effectiveLinearDiscount =
-      selectedPlanGroup || comparatorIsParcelShop ? 0 : linearDiscount;
+      selectedPlanGroup || selectedCustomPlan || comparatorIsParcelShop ? 0 : linearDiscount;
     const saturdayCostValue =
       comparatorServiceSelection === 'Urg14H Courier' && saturdayDelivery ? 2.5 : 0;
     const comparatorPlanDefinition = comparatorPlanId
@@ -778,6 +790,14 @@ const TariffCalculator: React.FC = () => {
       }
     }
 
+    if (selectedCustomPlan) {
+      const planInfo = getCustomPlanDisplayInfo(selectedCustomPlan);
+      return {
+        value: planInfo.name,
+        description: planInfo.description
+      };
+    }
+
     if (selectedPlanGroup) {
       return {
         value: planGroupDisplayName || 'Plan comercial seleccionado',
@@ -797,6 +817,7 @@ const TariffCalculator: React.FC = () => {
       description: undefined
     };
   }, [
+    selectedCustomPlan,
     planForSelectedService,
     packages,
     selectedService,
@@ -895,28 +916,60 @@ const TariffCalculator: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Selección Plan Comercial Aplicable
             </label>
-            <select
-              value={planForSelectedService?.id ?? ''}
-              onChange={(e) => handleDiscountPlanSelection(e.target.value)}
-              disabled={applicableDiscountPlans.length === 0}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                applicableDiscountPlans.length === 0
-                  ? 'border-gray-200 bg-gray-50 text-gray-500 cursor-not-allowed'
-                  : 'border-gray-300'
-              }`}
-            >
-              <option value="">
-                {applicableDiscountPlans.length === 0 ? 'Sin planes disponibles' : 'Sin descuento'}
-              </option>
-              {applicableDiscountPlans.map(plan => (
-                <option key={plan.id} value={plan.id}>
-                  {plan.plan_name}
-                  {plan.discount_type !== 'custom'
-                    ? ` (-${plan.discount_value}${plan.discount_type === 'percentage' ? '%' : '€'})`
-                    : ''}
+            <div className="flex gap-2">
+              <select
+                value={selectedCustomPlanId || planForSelectedService?.id || ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value.startsWith('custom-')) {
+                    setSelectedCustomPlanId(value.replace('custom-', ''));
+                    setSelectedPlanGroup('');
+                  } else {
+                    setSelectedCustomPlanId(null);
+                    handleDiscountPlanSelection(value);
+                  }
+                }}
+                disabled={applicableDiscountPlans.length === 0 && customCommercialPlans.length === 0}
+                className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  applicableDiscountPlans.length === 0 && customCommercialPlans.length === 0
+                    ? 'border-gray-200 bg-gray-50 text-gray-500 cursor-not-allowed'
+                    : 'border-gray-300'
+                }`}
+              >
+                <option value="">
+                  {applicableDiscountPlans.length === 0 && customCommercialPlans.length === 0 ? 'Sin planes disponibles' : 'Sin descuento'}
                 </option>
-              ))}
-            </select>
+                {applicableDiscountPlans.length > 0 && (
+                  <optgroup label="Planes del Sistema">
+                    {applicableDiscountPlans.map(plan => (
+                      <option key={plan.id} value={plan.id}>
+                        {plan.plan_name}
+                        {plan.discount_type !== 'custom'
+                          ? ` (-${plan.discount_value}${plan.discount_type === 'percentage' ? '%' : '€'})`
+                          : ''}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {customCommercialPlans.length > 0 && (
+                  <optgroup label="Planes Personalizados">
+                    {customCommercialPlans.map(plan => (
+                      <option key={`custom-${plan.id}`} value={`custom-${plan.id}`}>
+                        {plan.plan_name} (Personalizado)
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+              <button
+                onClick={() => setIsPlansManagerOpen(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 whitespace-nowrap text-sm font-medium"
+                title="Gestionar planes comerciales personalizados"
+              >
+                <Sliders size={16} />
+                <span className="hidden sm:inline">Gestionar</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1419,6 +1472,13 @@ const TariffCalculator: React.FC = () => {
   }, [selectedPlanGroup]);
 
   useEffect(() => {
+    if (selectedCustomPlanId) {
+      setLinearDiscount(0);
+      setSelectedPlanGroup('');
+    }
+  }, [selectedCustomPlanId]);
+
+  useEffect(() => {
     if (selectedService !== 'Urg14H Courier') {
       setSaturdayDelivery(false);
     }
@@ -1478,7 +1538,7 @@ const TariffCalculator: React.FC = () => {
     const zonesWithRestrictions = new Set<string>();
 
     const serviceTariffs = tariffs.filter(tariff => tariff.service_name === selectedService);
-    const hasActivePlan = Boolean(planForSelectedService);
+    const hasActivePlan = Boolean(planForSelectedService) || Boolean(selectedCustomPlan);
     const parcelShopSelected = isParcelShopService(selectedService);
     const effectiveLinearDiscount =
       hasActivePlan || parcelShopSelected ? 0 : linearDiscount;
@@ -1530,7 +1590,20 @@ const TariffCalculator: React.FC = () => {
         const roundedCost = roundUp(zoneCost.cost);
         totalInitialCost += roundedCost * quantity;
 
-        if (planForSelectedService) {
+        if (selectedCustomPlan) {
+          const weightForPlan = zoneCost.finalWeight ?? pkg.weight ?? 0;
+          const costAfterDiscount = applyCustomPlanDiscount(
+            roundedCost,
+            selectedCustomPlan,
+            selectedService,
+            weightForPlan,
+            false
+          );
+          const discountPerUnit = roundedCost - costAfterDiscount;
+          if (discountPerUnit > 0) {
+            planDiscountTotal += discountPerUnit * quantity;
+          }
+        } else if (planForSelectedService) {
           const weightForPlan = zoneCost.finalWeight ?? pkg.weight ?? 0;
           const discountPerUnit = calculatePlanDiscountForWeight(
             serviceTariffs,
@@ -1569,7 +1642,7 @@ const TariffCalculator: React.FC = () => {
           : null;
 
       const zoneLinearDiscount = baseOverrideForZone !== null ? 0 : effectiveLinearDiscount;
-      const planDiscountAmountForZone = planForSelectedService ? planDiscountTotal : 0;
+      const planDiscountAmountForZone = (planForSelectedService || selectedCustomPlan) ? planDiscountTotal : 0;
 
       breakdowns[zoneName] = calculateCostBreakdown(
         totalInitialCost,
@@ -2011,7 +2084,7 @@ const TariffCalculator: React.FC = () => {
             onProvincialCostChange={handleProvincialCostChange}
             provincialCostOverride={provincialCostOverride}
             onMarginChange={setMarginPercentage}
-            planSelected={Boolean(selectedPlanGroup)}
+            planSelected={Boolean(selectedPlanGroup) || Boolean(selectedCustomPlan)}
             discountSummaryValue={discountSummary.value}
             discountSummaryDescription={discountSummary.description}
           />
@@ -2076,6 +2149,18 @@ const TariffCalculator: React.FC = () => {
             </button>
           </div>
         </div>
+      )}
+
+      {isPlansManagerOpen && (
+        <CommercialPlansManager
+          onClose={() => setIsPlansManagerOpen(false)}
+          onPlanSelected={(plan) => {
+            if (plan) {
+              console.log('Plan seleccionado:', plan);
+            }
+            setIsPlansManagerOpen(false);
+          }}
+        />
       )}
     </div>
   );
