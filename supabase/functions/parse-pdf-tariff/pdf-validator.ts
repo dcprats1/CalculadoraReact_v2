@@ -1,6 +1,6 @@
 /**
- * PDF Structure Validator
- * Valida que el PDF tenga la estructura esperada antes de extraer datos
+ * PDF Structure Validator - Simplified Version
+ * Valida que el PDF tenga las 38 páginas esperadas mediante palabras clave exactas
  */
 
 interface TextItem {
@@ -23,18 +23,16 @@ interface ValidationResult {
   warnings: string[];
   metadata: {
     totalPages: number;
+    pagesIdentified: number;
     servicesDetected: string[];
     structureVersion?: string;
   };
 }
 
 export class PDFValidator {
-  private static readonly EXPECTED_MIN_PAGES = 4;
-  private static readonly EXPECTED_MAX_PAGES = 50;
-
   /**
-   * Mapa de marcadores de texto para cada página
-   * Usado para identificación robusta sin depender de años o versiones
+   * Mapa de palabras clave para cada página (1-38)
+   * Cada página debe contener al menos una de las palabras clave especificadas
    */
   private static readonly PAGE_MARKERS: Record<number, string[]> = {
     1: ['Agencias GLS Spain'],
@@ -77,133 +75,50 @@ export class PDFValidator {
     38: ['Suplementos']
   };
 
-  /**
-   * Marcadores esperados en el PDF de tarifas GLS
-   */
-  private static readonly EXPECTED_MARKERS = {
-    services: [
-      'Express08:30',
-      'Express10:30',
-      'Express14:00',
-      'Express19:00',
-      'BusinessParcel',
-      'EconomyParcel'
-    ],
-    zones: [
-      'Provincial',
-      'Regional',
-      'Nacional'
-    ],
-    columns: [
-      'Peso',
-      'Recogida',
-      'Arrastre',
-      'Entrega',
-      'Salidas',
-      'Interciudad'
-    ],
-    weights: [
-      '0 - 1',
-      '1 - 3',
-      '3 - 5',
-      '5 - 10',
-      '10 - 15',
-      '15 - 999'
-    ]
-  };
+  private static readonly EXPECTED_PAGES = 38;
+  private static readonly MIN_REQUIRED_PAGES = 30;
+  private static readonly CRITICAL_PAGES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
   /**
-   * Patrones regex para detectar servicios con variaciones de formato
-   * Acepta: Express08:30, Express8:30, Express 8:30, etc.
+   * Normaliza texto para comparación (elimina espacios extra, ignora mayúsculas)
    */
-  private static readonly SERVICE_PATTERNS = [
-    /Express\s*0?8:30/i,
-    /Express\s*0?10:30/i,
-    /Express\s*0?14:00/i,
-    /Express\s*0?19:00/i,
-    /BusinessParcel/i,
-    /EconomyParcel/i
-  ];
-
-  /**
-   * Mapa de normalización para convertir variaciones de nombres de servicios
-   * a nombres canónicos internos
-   */
-  private static readonly SERVICE_NAME_MAP: Record<string, string> = {
-    'Express8:30': 'Express08:30',
-    'Express08:30': 'Express08:30',
-    'Express 8:30': 'Express08:30',
-    'Express 08:30': 'Express08:30',
-    'Express10:30': 'Express10:30',
-    'Express 10:30': 'Express10:30',
-    'Express14:00': 'Express14:00',
-    'Express 14:00': 'Express14:00',
-    'Express19:00': 'Express19:00',
-    'Express 19:00': 'Express19:00',
-    'BusinessParcel': 'BusinessParcel',
-    'EconomyParcel': 'EconomyParcel'
-  };
-
-  /**
-   * Normaliza un nombre de servicio a su forma canónica
-   */
-  static normalizeServiceName(serviceName: string): string {
-    const trimmed = serviceName.trim();
-
-    // Buscar coincidencia exacta en el mapa
-    if (this.SERVICE_NAME_MAP[trimmed]) {
-      return this.SERVICE_NAME_MAP[trimmed];
-    }
-
-    // Buscar usando patrones regex
-    for (let i = 0; i < this.SERVICE_PATTERNS.length; i++) {
-      if (this.SERVICE_PATTERNS[i].test(trimmed)) {
-        return this.EXPECTED_MARKERS.services[i];
-      }
-    }
-
-    return serviceName;
+  private static normalizeText(text: string): string {
+    return text.replace(/\s+/g, ' ').trim().toLowerCase();
   }
 
   /**
-   * Detecta si un texto contiene un servicio usando patrones flexibles
-   */
-  private static detectService(text: string, pattern: RegExp, serviceName: string): boolean {
-    return pattern.test(text);
-  }
-
-  /**
-   * Identifica páginas usando marcadores de texto específicos
+   * Identifica páginas usando palabras clave específicas
    */
   static identifyPages(pages: PageData[]): Map<number, number> {
     const pageMap = new Map<number, number>();
 
-    console.log('[PDF Validator] Identificando páginas por marcadores de texto...');
+    console.log('[PDF Validator] Identificando páginas por palabras clave...');
 
     for (const page of pages) {
       const pageText = page.items.map(item => item.str).join(' ');
+      const normalizedPageText = this.normalizeText(pageText);
 
-      // Buscar qué marcador coincide con esta página
-      for (const [logicalPage, markers] of Object.entries(this.PAGE_MARKERS)) {
-        const pageNum = parseInt(logicalPage);
+      for (const [logicalPageStr, markers] of Object.entries(this.PAGE_MARKERS)) {
+        const logicalPage = parseInt(logicalPageStr);
 
-        // Verificar si alguno de los marcadores está presente
+        if (pageMap.has(logicalPage)) {
+          continue;
+        }
+
         const hasMarker = markers.some(marker => {
-          // Búsqueda flexible: ignorar mayúsculas y espacios extra
-          const normalizedText = pageText.replace(/\s+/g, ' ');
-          const normalizedMarker = marker.replace(/\s+/g, ' ');
-          return normalizedText.includes(normalizedMarker);
+          const normalizedMarker = this.normalizeText(marker);
+          return normalizedPageText.includes(normalizedMarker);
         });
 
         if (hasMarker) {
-          pageMap.set(pageNum, page.pageNum);
-          console.log(`[PDF Validator] ✓ Página lógica ${pageNum} identificada como página física ${page.pageNum} (marcador: "${markers[0]}")`);
+          pageMap.set(logicalPage, page.pageNum);
+          console.log(`[PDF Validator] ✓ Página lógica ${logicalPage} identificada como página física ${page.pageNum} (marcador: "${markers[0]}")`);
           break;
         }
       }
     }
 
-    console.log(`[PDF Validator] ✓ Identificadas ${pageMap.size} páginas de ${Object.keys(this.PAGE_MARKERS).length} esperadas`);
+    console.log(`[PDF Validator] ✓ Identificadas ${pageMap.size}/${this.EXPECTED_PAGES} páginas`);
     return pageMap;
   }
 
@@ -213,125 +128,60 @@ export class PDFValidator {
   static validate(pages: PageData[]): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
-    const servicesDetected: string[] = [];
 
-    console.log('[PDF Validator] Iniciando validación...');
+    console.log('[PDF Validator] Iniciando validación simplificada...');
+    console.log(`[PDF Validator] Total páginas en PDF: ${pages.length}`);
 
-    // 1. Validar número de páginas
-    if (pages.length < this.EXPECTED_MIN_PAGES) {
-      errors.push(`El PDF tiene ${pages.length} páginas, se esperan al menos ${this.EXPECTED_MIN_PAGES}`);
-    }
-
-    if (pages.length > this.EXPECTED_MAX_PAGES) {
-      warnings.push(`El PDF tiene ${pages.length} páginas, es inusualmente grande (máximo esperado: ${this.EXPECTED_MAX_PAGES})`);
-    }
-
-    console.log(`[PDF Validator] ✓ Número de páginas: ${pages.length}`);
-
-    // 2. Identificar páginas usando marcadores de texto
     const pageMap = this.identifyPages(pages);
+    const pagesIdentified = pageMap.size;
 
-    // Verificar páginas críticas
-    const criticalPages = [1, 2, 3, 4, 5, 6, 7, 8];
-    const missingCritical = criticalPages.filter(p => !pageMap.has(p));
-
-    if (missingCritical.length > 0) {
-      errors.push(`No se encontraron las páginas críticas: ${missingCritical.join(', ')}`);
-    }
-
-    if (pageMap.size < 5) {
-      errors.push(`Solo se identificaron ${pageMap.size} páginas mediante marcadores, se esperan al menos 5`);
-    } else {
-      console.log(`[PDF Validator] ✓ Páginas identificadas: ${pageMap.size}`);
-    }
-
-    // 3. Detectar servicios en el PDF usando patrones flexibles
-    const allText = pages.map(p =>
-      p.items.map(item => item.str).join(' ')
-    ).join(' ');
-
-    // Mostrar muestra del texto para debug
-    const textSample = allText.substring(0, 500);
-    console.log(`[PDF Validator] Muestra de texto extraído: ${textSample.substring(0, 200)}...`);
-
-    for (let i = 0; i < this.SERVICE_PATTERNS.length; i++) {
-      const pattern = this.SERVICE_PATTERNS[i];
-      const serviceName = this.EXPECTED_MARKERS.services[i];
-
-      if (pattern.test(allText)) {
-        servicesDetected.push(serviceName);
-
-        // Extraer el texto exacto encontrado
-        const match = allText.match(pattern);
-        const foundText = match ? match[0] : serviceName;
-        console.log(`[PDF Validator] ✓ Servicio detectado: ${serviceName} (encontrado como: "${foundText}")`);
-      } else {
-        warnings.push(`Servicio "${serviceName}" no encontrado en el PDF`);
-        console.log(`[PDF Validator] ⚠ Servicio no detectado: ${serviceName}`);
+    const missingPages: number[] = [];
+    for (let i = 1; i <= this.EXPECTED_PAGES; i++) {
+      if (!pageMap.has(i)) {
+        missingPages.push(i);
       }
     }
 
-    if (servicesDetected.length === 0) {
-      warnings.push('No se detectaron servicios conocidos mediante patrones regex');
-      console.log('[PDF Validator] ⚠ No se detectaron servicios mediante patrones');
-    } else {
-      console.log(`[PDF Validator] ✓ Total servicios detectados: ${servicesDetected.length}/${this.SERVICE_PATTERNS.length}`);
+    const missingCriticalPages = this.CRITICAL_PAGES.filter(p => !pageMap.has(p));
+
+    if (missingCriticalPages.length > 0) {
+      const missingDetails = missingCriticalPages.map(p =>
+        `Página ${p} (buscando: "${this.PAGE_MARKERS[p][0]}")`
+      ).join(', ');
+      errors.push(`No se encontraron páginas críticas: ${missingDetails}`);
     }
 
-    // 3. Validar estructura de tabla en primeras páginas
-    const samplePages = pages.slice(0, Math.min(10, pages.length));
-    let tablesFound = 0;
+    if (pagesIdentified < this.MIN_REQUIRED_PAGES) {
+      errors.push(`Solo se identificaron ${pagesIdentified} de ${this.EXPECTED_PAGES} páginas esperadas (mínimo requerido: ${this.MIN_REQUIRED_PAGES})`);
 
-    for (const page of samplePages) {
-      const pageText = page.items.map(item => item.str).join(' ');
-
-      // Buscar indicadores de tabla
-      const hasWeightColumn = this.EXPECTED_MARKERS.weights.some(w => pageText.includes(w));
-      const hasZoneColumn = this.EXPECTED_MARKERS.zones.some(z => pageText.includes(z));
-      const hasPriceColumns = this.EXPECTED_MARKERS.columns.slice(1).some(c => pageText.includes(c));
-
-      if (hasWeightColumn || hasZoneColumn || hasPriceColumns) {
-        tablesFound++;
-        console.log(`[PDF Validator] ✓ Estructura de tabla detectada en página ${page.pageNum}`);
+      if (missingPages.length > 0 && missingPages.length <= 10) {
+        const missingList = missingPages.slice(0, 10).map(p =>
+          `${p} ("${this.PAGE_MARKERS[p][0]}")`
+        ).join(', ');
+        errors.push(`Páginas no encontradas: ${missingList}`);
       }
+    } else if (pagesIdentified < this.EXPECTED_PAGES) {
+      const missingList = missingPages.slice(0, 5).map(p =>
+        `${p} ("${this.PAGE_MARKERS[p][0]}")`
+      ).join(', ');
+      warnings.push(`Faltan ${missingPages.length} páginas: ${missingList}${missingPages.length > 5 ? ', ...' : ''}`);
     }
 
-    if (tablesFound === 0) {
-      errors.push('No se detectaron tablas de tarifas en las primeras páginas del PDF');
-    }
-
-    // 4. Validar que hay datos numéricos (precios)
-    const hasNumericData = pages.some(page =>
-      page.items.some(item => {
-        const str = item.str.replace(',', '.');
-        return /^\d+[\.,]\d{2}$/.test(str) || /^\d+$/.test(str);
-      })
-    );
-
-    if (!hasNumericData) {
-      errors.push('No se detectaron datos numéricos (precios) en el PDF');
-    } else {
-      console.log('[PDF Validator] ✓ Datos numéricos detectados');
-    }
-
-    // 5. Validar coordenadas y transformaciones
-    const invalidPages = pages.filter(p =>
-      p.items.some(item =>
-        !item.transform ||
-        item.transform.length !== 6 ||
-        item.transform.every(v => v === 0)
-      )
-    );
-
-    if (invalidPages.length > 0) {
-      warnings.push(`${invalidPages.length} páginas tienen items con transformaciones inválidas`);
-    }
-
-    // Resultado final
     const isValid = errors.length === 0;
 
     console.log(`[PDF Validator] Validación completada: ${isValid ? 'VÁLIDO' : 'INVÁLIDO'}`);
+    console.log(`[PDF Validator] Páginas identificadas: ${pagesIdentified}/${this.EXPECTED_PAGES}`);
     console.log(`[PDF Validator] Errores: ${errors.length}, Advertencias: ${warnings.length}`);
+
+    if (!isValid) {
+      console.error('[PDF Validator] ❌ Errores de validación:');
+      errors.forEach(err => console.error(`[PDF Validator]   - ${err}`));
+    }
+
+    if (warnings.length > 0) {
+      console.log('[PDF Validator] ⚠ Advertencias:');
+      warnings.forEach(warn => console.log(`[PDF Validator]   - ${warn}`));
+    }
 
     return {
       isValid,
@@ -339,61 +189,26 @@ export class PDFValidator {
       warnings,
       metadata: {
         totalPages: pages.length,
-        servicesDetected,
-        structureVersion: this.detectVersionByMarkers(pageMap),
-        pagesIdentified: pageMap.size
+        pagesIdentified,
+        servicesDetected: [],
+        structureVersion: this.detectVersionByPages(pageMap)
       }
     };
   }
 
   /**
-   * Detecta la versión del PDF de tarifas basándose en marcadores identificados
+   * Detecta la versión del PDF basándose en páginas identificadas
    */
-  private static detectVersionByMarkers(pageMap: Map<number, number>): string {
-    // Si tenemos las páginas esperadas, es formato GLS estándar
-    if (pageMap.has(1) && pageMap.has(2) && pageMap.has(4)) {
-      return 'GLS_STANDARD_FORMAT';
+  private static detectVersionByPages(pageMap: Map<number, number>): string {
+    if (pageMap.size === this.EXPECTED_PAGES) {
+      return 'GLS_STANDARD_38_PAGES';
     }
 
-    // Si solo hay algunas páginas
-    if (pageMap.size > 0) {
+    if (pageMap.size >= this.MIN_REQUIRED_PAGES) {
       return 'GLS_PARTIAL_FORMAT';
     }
 
     return 'UNKNOWN';
-  }
-
-  /**
-   * Detecta la versión del PDF de tarifas (método antiguo para compatibilidad)
-   */
-  private static detectVersion(text: string): string {
-    // Buscar año en el texto
-    const yearMatch = text.match(/202[3-9]/);
-    if (yearMatch) {
-      return `GLS_TARIFA_${yearMatch[0]}`;
-    }
-
-    // Buscar "TARIFA" en el texto
-    if (text.includes('TARIFA')) {
-      return 'GLS_TARIFA_UNKNOWN_YEAR';
-    }
-
-    return 'UNKNOWN';
-  }
-
-  /**
-   * Valida que una página específica contiene datos de un servicio
-   */
-  static validateServicePage(page: PageData, expectedService: string): boolean {
-    const pageText = page.items.map(item => item.str).join(' ');
-    const hasService = pageText.includes(expectedService);
-
-    if (!hasService) {
-      console.log(`[PDF Validator] ⚠ Página ${page.pageNum} no contiene el servicio "${expectedService}"`);
-      return false;
-    }
-
-    return true;
   }
 
   /**
@@ -404,7 +219,11 @@ export class PDFValidator {
     year?: string;
     company?: string;
   } {
-    const firstPageText = pages[0]?.items.map(item => item.str).join(' ') || '';
+    if (pages.length === 0) {
+      return {};
+    }
+
+    const firstPageText = pages[0].items.map(item => item.str).join(' ');
 
     const yearMatch = firstPageText.match(/202[3-9]/);
     const hasGLS = firstPageText.includes('GLS');
@@ -418,43 +237,31 @@ export class PDFValidator {
   }
 
   /**
-   * Diagnóstico detallado de una página
+   * Diagnóstico detallado de una página (útil para debugging)
    */
   static diagnosticPage(page: PageData): void {
     console.log(`\n[PDF Validator] ========== DIAGNÓSTICO PÁGINA ${page.pageNum} ==========`);
     console.log(`[PDF Validator] Dimensiones: ${page.width} x ${page.height}`);
     console.log(`[PDF Validator] Total items: ${page.items.length}`);
 
-    // Analizar distribución de texto
-    const textLengths = page.items.map(item => item.str.length);
-    const avgLength = textLengths.reduce((a, b) => a + b, 0) / textLengths.length;
-    console.log(`[PDF Validator] Longitud promedio de texto: ${avgLength.toFixed(2)}`);
+    const pageText = page.items.map(item => item.str).join(' ');
+    const textSample = pageText.substring(0, 200);
+    console.log(`[PDF Validator] Muestra de texto: "${textSample}..."`);
 
-    // Items únicos
-    const uniqueStrings = new Set(page.items.map(item => item.str));
-    console.log(`[PDF Validator] Textos únicos: ${uniqueStrings.size}`);
-
-    // Detectar números
-    const numericItems = page.items.filter(item => {
-      const str = item.str.replace(',', '.');
-      return /^\d+[\.,]\d{2}$/.test(str) || /^\d+$/.test(str);
-    });
-    console.log(`[PDF Validator] Items numéricos: ${numericItems.length}`);
-
-    // Detectar servicios
-    const servicesInPage = this.EXPECTED_MARKERS.services.filter(service =>
-      page.items.some(item => item.str.includes(service))
-    );
-    if (servicesInPage.length > 0) {
-      console.log(`[PDF Validator] Servicios detectados: ${servicesInPage.join(', ')}`);
+    const matchedMarkers: string[] = [];
+    for (const [logicalPageStr, markers] of Object.entries(this.PAGE_MARKERS)) {
+      const found = markers.some(marker =>
+        this.normalizeText(pageText).includes(this.normalizeText(marker))
+      );
+      if (found) {
+        matchedMarkers.push(`Página ${logicalPageStr}: "${markers[0]}"`);
+      }
     }
 
-    // Detectar zonas
-    const zonesInPage = this.EXPECTED_MARKERS.zones.filter(zone =>
-      page.items.some(item => item.str.includes(zone))
-    );
-    if (zonesInPage.length > 0) {
-      console.log(`[PDF Validator] Zonas detectadas: ${zonesInPage.join(', ')}`);
+    if (matchedMarkers.length > 0) {
+      console.log(`[PDF Validator] Marcadores encontrados: ${matchedMarkers.join(', ')}`);
+    } else {
+      console.log(`[PDF Validator] No se encontraron marcadores conocidos`);
     }
 
     console.log(`[PDF Validator] ========================================\n`);
