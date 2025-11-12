@@ -117,6 +117,14 @@ Deno.serve(async (req: Request) => {
     const pages = await extractStructuredTextFromPDF(uint8Array);
     console.log(`[PDF Parser MAP] ${pages.length} páginas extraídas`);
 
+    console.log(`\n[PDF Parser MAP] ========== IDENTIFICACIÓN DE PÁGINAS POR TEXTO ==========`);
+    const pageMap = PDFValidator.identifyPages(pages);
+
+    console.log(`\n[PDF Parser MAP] Mapa de páginas identificadas:`);
+    pageMap.forEach((physicalPage, logicalPage) => {
+      console.log(`[PDF Parser MAP]   Página lógica ${logicalPage} -> Página física ${physicalPage}`);
+    });
+
     console.log(`\n[PDF Parser MAP] ========== VALIDACIÓN DE ESTRUCTURA ==========`);
     const validation = PDFValidator.validate(pages);
 
@@ -129,7 +137,8 @@ Deno.serve(async (req: Request) => {
           error: "PDF no válido",
           details: validation.errors.join('; '),
           warnings: validation.warnings,
-          metadata: validation.metadata
+          metadata: validation.metadata,
+          pageMap: Array.from(pageMap.entries())
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -141,18 +150,12 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log(`[PDF Parser MAP] ✓ PDF válido`);
-    console.log(`[PDF Parser MAP] Servicios detectados en validación: ${validation.metadata.servicesDetected.join(', ')}`);
+    console.log(`[PDF Parser MAP] Páginas identificadas: ${validation.metadata.pagesIdentified}`);
+    console.log(`[PDF Parser MAP] Servicios detectados: ${validation.metadata.servicesDetected.join(', ') || 'ninguno'}`);
     console.log(`[PDF Parser MAP] Versión: ${validation.metadata.structureVersion}`);
 
     const metadata = PDFValidator.extractMetadata(pages);
     console.log(`[PDF Parser MAP] Metadatos: ${JSON.stringify(metadata)}`);
-
-    if (pages.length > 0) {
-      console.log(`\n[PDF Parser MAP] ========== DIAGNÓSTICO DE PÁGINAS ==========`);
-      for (let i = 0; i < Math.min(3, pages.length); i++) {
-        PDFValidator.diagnosticPage(pages[i]);
-      }
-    }
 
     console.log(`\n[PDF Parser MAP] ========== EXTRACCIÓN DIRECTA DEL MAPA ==========`);
     console.log(`[PDF Parser MAP] NOTA: Usando datos hardcodeados del mapa GLS 2025`);
@@ -175,15 +178,17 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Se extrajeron ${allData.length} tarifas del mapa GLS 2025`,
+        message: `Se extrajeron ${allData.length} tarifas del mapa GLS`,
         data: allData,
         servicesDetected,
         metadata: {
           ...metadata,
           ...validation.metadata,
           method: 'direct_map_extraction',
-          version: 'GLS_2025',
-          recordsWithData: withData.length
+          version: validation.metadata.structureVersion,
+          recordsWithData: withData.length,
+          pagesIdentified: pageMap.size,
+          pageMapping: Array.from(pageMap.entries())
         },
         warnings: validation.warnings,
         preview: true,

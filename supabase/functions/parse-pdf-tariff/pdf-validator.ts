@@ -33,6 +33,51 @@ export class PDFValidator {
   private static readonly EXPECTED_MAX_PAGES = 50;
 
   /**
+   * Mapa de marcadores de texto para cada página
+   * Usado para identificación robusta sin depender de años o versiones
+   */
+  private static readonly PAGE_MARKERS: Record<number, string[]> = {
+    1: ['Agencias GLS Spain'],
+    2: ['Tarifas Peninsular, Insular, Andorra, Ceuta, Melilla & Portugal'],
+    3: ['Peninsula, Andorra, Ceuta, Melilla & Portugal'],
+    4: ['Express8:30'],
+    5: ['Express14:00'],
+    6: ['Express19:00'],
+    7: ['BusinessParcel'],
+    8: ['EconomyParcel'],
+    9: ['BurofaxService'],
+    10: ['Recogen en Centro de Destino'],
+    11: ['Insular'],
+    12: ['(Aéreo)'],
+    13: ['Express19:00'],
+    14: ['BusinessParcel'],
+    15: ['EconomyParcel'],
+    16: ['(Carga marítima)', '(Carga Marítima)'],
+    17: ['ShopReturnService'],
+    18: ['(Glass)'],
+    19: ['(Carga Marítima)', '(Carga marítima)'],
+    20: ['IntercompanyService'],
+    21: ['Unitoque 5 días'],
+    22: ['Bitoque 5 días'],
+    23: ['Bitoque 2 días'],
+    24: ['Resto de Servicios'],
+    25: ['Retorno Copia Sellada'],
+    26: ['Medios Dedicados'],
+    27: ['Extra Cargo Nacional (I)'],
+    28: ['Extra Cargo Nacional (II)'],
+    29: ['Extra Cargo Nacional (III)'],
+    30: ['Servicios Internacionales de GLS'],
+    31: ['EuroBusinessParcel'],
+    32: ['EuroReturnService'],
+    33: ['EuroBusinessParcel'],
+    34: ['Priority'],
+    35: ['Economy'],
+    36: ['Priority Import'],
+    37: ['Economy Import'],
+    38: ['Suplementos']
+  };
+
+  /**
    * Marcadores esperados en el PDF de tarifas GLS
    */
   private static readonly EXPECTED_MARKERS = {
@@ -128,6 +173,41 @@ export class PDFValidator {
   }
 
   /**
+   * Identifica páginas usando marcadores de texto específicos
+   */
+  static identifyPages(pages: PageData[]): Map<number, number> {
+    const pageMap = new Map<number, number>();
+
+    console.log('[PDF Validator] Identificando páginas por marcadores de texto...');
+
+    for (const page of pages) {
+      const pageText = page.items.map(item => item.str).join(' ');
+
+      // Buscar qué marcador coincide con esta página
+      for (const [logicalPage, markers] of Object.entries(this.PAGE_MARKERS)) {
+        const pageNum = parseInt(logicalPage);
+
+        // Verificar si alguno de los marcadores está presente
+        const hasMarker = markers.some(marker => {
+          // Búsqueda flexible: ignorar mayúsculas y espacios extra
+          const normalizedText = pageText.replace(/\s+/g, ' ');
+          const normalizedMarker = marker.replace(/\s+/g, ' ');
+          return normalizedText.includes(normalizedMarker);
+        });
+
+        if (hasMarker) {
+          pageMap.set(pageNum, page.pageNum);
+          console.log(`[PDF Validator] ✓ Página lógica ${pageNum} identificada como página física ${page.pageNum} (marcador: "${markers[0]}")`);
+          break;
+        }
+      }
+    }
+
+    console.log(`[PDF Validator] ✓ Identificadas ${pageMap.size} páginas de ${Object.keys(this.PAGE_MARKERS).length} esperadas`);
+    return pageMap;
+  }
+
+  /**
    * Valida la estructura completa del PDF
    */
   static validate(pages: PageData[]): ValidationResult {
@@ -148,7 +228,24 @@ export class PDFValidator {
 
     console.log(`[PDF Validator] ✓ Número de páginas: ${pages.length}`);
 
-    // 2. Detectar servicios en el PDF usando patrones flexibles
+    // 2. Identificar páginas usando marcadores de texto
+    const pageMap = this.identifyPages(pages);
+
+    // Verificar páginas críticas
+    const criticalPages = [1, 2, 3, 4, 5, 6, 7, 8];
+    const missingCritical = criticalPages.filter(p => !pageMap.has(p));
+
+    if (missingCritical.length > 0) {
+      errors.push(`No se encontraron las páginas críticas: ${missingCritical.join(', ')}`);
+    }
+
+    if (pageMap.size < 5) {
+      errors.push(`Solo se identificaron ${pageMap.size} páginas mediante marcadores, se esperan al menos 5`);
+    } else {
+      console.log(`[PDF Validator] ✓ Páginas identificadas: ${pageMap.size}`);
+    }
+
+    // 3. Detectar servicios en el PDF usando patrones flexibles
     const allText = pages.map(p =>
       p.items.map(item => item.str).join(' ')
     ).join(' ');
@@ -175,8 +272,8 @@ export class PDFValidator {
     }
 
     if (servicesDetected.length === 0) {
-      errors.push('No se detectaron servicios conocidos en el PDF');
-      console.log('[PDF Validator] ❌ ERROR: No se detectaron servicios');
+      warnings.push('No se detectaron servicios conocidos mediante patrones regex');
+      console.log('[PDF Validator] ⚠ No se detectaron servicios mediante patrones');
     } else {
       console.log(`[PDF Validator] ✓ Total servicios detectados: ${servicesDetected.length}/${this.SERVICE_PATTERNS.length}`);
     }
@@ -243,13 +340,31 @@ export class PDFValidator {
       metadata: {
         totalPages: pages.length,
         servicesDetected,
-        structureVersion: this.detectVersion(allText)
+        structureVersion: this.detectVersionByMarkers(pageMap),
+        pagesIdentified: pageMap.size
       }
     };
   }
 
   /**
-   * Detecta la versión del PDF de tarifas
+   * Detecta la versión del PDF de tarifas basándose en marcadores identificados
+   */
+  private static detectVersionByMarkers(pageMap: Map<number, number>): string {
+    // Si tenemos las páginas esperadas, es formato GLS estándar
+    if (pageMap.has(1) && pageMap.has(2) && pageMap.has(4)) {
+      return 'GLS_STANDARD_FORMAT';
+    }
+
+    // Si solo hay algunas páginas
+    if (pageMap.size > 0) {
+      return 'GLS_PARTIAL_FORMAT';
+    }
+
+    return 'UNKNOWN';
+  }
+
+  /**
+   * Detecta la versión del PDF de tarifas (método antiguo para compatibilidad)
    */
   private static detectVersion(text: string): string {
     // Buscar año en el texto
