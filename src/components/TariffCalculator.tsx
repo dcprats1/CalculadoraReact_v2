@@ -378,10 +378,34 @@ const TariffCalculator: React.FC = () => {
     [customCommercialPlans, selectedCustomPlanId]
   );
 
-  const allDiscountPlans = useMemo(
-    () => [...remoteDiscountPlans, ...CUSTOM_DISCOUNT_PLANS],
-    [remoteDiscountPlans]
-  );
+  const allDiscountPlans = useMemo(() => {
+    const userPlansAsDiscounts = customCommercialPlans.flatMap(plan => {
+      const services = [
+        'Urg8:30H Courier',
+        'Urg10H Courier',
+        'Urg14H Courier',
+        'Urg19H Courier',
+        'Business Parcel',
+        'Economy Parcel',
+        'EuroBusiness Parcel'
+      ];
+
+      return services.map(serviceName => ({
+        id: `user-plan-${plan.id}-${serviceName}`,
+        plan_name: plan.plan_name,
+        service_name: serviceName,
+        discount_type: 'custom' as const,
+        discount_value: 0,
+        min_volume: 0,
+        applies_to: 'cost' as const,
+        is_active: true,
+        created_at: plan.created_at,
+        _userPlanId: plan.id
+      }));
+    });
+
+    return [...remoteDiscountPlans, ...CUSTOM_DISCOUNT_PLANS, ...userPlansAsDiscounts];
+  }, [remoteDiscountPlans, customCommercialPlans]);
 
   const applicableDiscountPlans = useMemo(
     () =>
@@ -558,18 +582,36 @@ const TariffCalculator: React.FC = () => {
       let planDiscountAmount = 0;
 
       if (comparatorPlan) {
-        const canApplyPlan =
-          comparatorPlan.discount_type !== 'custom' || comparatorPlanMatchesService;
+        const isUserPlan = comparatorPlan.id.startsWith('user-plan-');
 
-        if (canApplyPlan) {
-          planDiscountAmount = calculatePlanDiscountForWeight(
-            serviceTariffs,
-            comparatorServiceSelection,
-            zone,
-            comparatorPlan,
-            weightForPlan,
-            shippingMode
-          );
+        if (isUserPlan) {
+          const userPlanId = (comparatorPlan as any)._userPlanId;
+          const userPlan = customCommercialPlans.find(p => p.id === userPlanId);
+
+          if (userPlan) {
+            planDiscountAmount = calculateCustomPlanDiscount(
+              serviceTariffs,
+              userPlan,
+              comparatorServiceSelection,
+              zone,
+              weightForPlan,
+              shippingMode
+            );
+          }
+        } else {
+          const canApplyPlan =
+            comparatorPlan.discount_type !== 'custom' || comparatorPlanMatchesService;
+
+          if (canApplyPlan) {
+            planDiscountAmount = calculatePlanDiscountForWeight(
+              serviceTariffs,
+              comparatorServiceSelection,
+              zone,
+              comparatorPlan,
+              weightForPlan,
+              shippingMode
+            );
+          }
         }
       }
 
@@ -654,7 +696,9 @@ const TariffCalculator: React.FC = () => {
     spc,
     suplementos,
     tariffs,
-    tariffsLoading
+    tariffsLoading,
+    customCommercialPlans,
+    selectedCustomPlan
   ]);
 
   const comparatorTablesForPanel = useMemo(
