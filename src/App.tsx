@@ -13,6 +13,7 @@ import { useRequireActivation } from './hooks/useRequireActivation';
 import { Loader2 } from 'lucide-react';
 
 const ENABLE_AUTH = true;
+const ENABLE_TARIFF_VALIDATION = false; // TODO: Cambiar a true cuando las Edge Functions estén desplegadas
 
 function MainContent() {
   const { isAuthenticated, isLoading, userData } = useAuth();
@@ -30,7 +31,7 @@ function MainContent() {
     setUnregisteredEmail('');
   };
 
-  if (isLoading || isLoadingActivation) {
+  if (isLoading || (ENABLE_TARIFF_VALIDATION && isLoadingActivation)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -63,7 +64,7 @@ function MainContent() {
     return <PricingPage userEmail={userData?.email} />;
   }
 
-  if (!isActivated) {
+  if (ENABLE_TARIFF_VALIDATION && !isActivated) {
     return <PDFUploadGate />;
   }
 
