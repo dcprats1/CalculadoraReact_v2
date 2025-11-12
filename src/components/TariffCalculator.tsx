@@ -113,8 +113,8 @@ const COMPARATOR_COLUMN_WEIGHTS: Record<ComparatorColumn, number> = {
   '0 a 1kg': 1,
   '1 a 3kg': 3,
   '3 a 5kg': 5,
-  '5 a 10kg': 10,
-  '10 a 15kg': 15,
+  '5 a 10kg': 9,
+  '10 a 15kg': 14,
   'kg. adc': 16
 };
 
