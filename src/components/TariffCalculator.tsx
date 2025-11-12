@@ -392,7 +392,16 @@ const TariffCalculator: React.FC = () => {
   );
 
   const planForSelectedService = useMemo(
-    () => findPlanForServiceGroup(allDiscountPlans, selectedPlanGroup, selectedService) ?? null,
+    () => {
+      const result = findPlanForServiceGroup(allDiscountPlans, selectedPlanGroup, selectedService) ?? null;
+      console.log('[planForSelectedService] useMemo recalculated:', {
+        selectedPlanGroup,
+        selectedService,
+        allDiscountPlansCount: allDiscountPlans.length,
+        result
+      });
+      return result;
+    },
     [allDiscountPlans, selectedPlanGroup, selectedService]
   );
 
@@ -1714,6 +1723,24 @@ const TariffCalculator: React.FC = () => {
       setLinearDiscount(preferences.fixed_discount_percentage);
     }
   }, [preferences]); // Se ejecuta cuando cambian las preferencias
+
+  // Restaurar descuento lineal cuando se deselecciona un plan
+  useEffect(() => {
+    const hasNoPlan = !selectedPlanGroup && !selectedCustomPlanId;
+    const hasPreferenceDiscount = preferences?.fixed_discount_percentage && preferences.fixed_discount_percentage > 0;
+
+    console.log('[useEffect-restoreLinearDiscount]', {
+      hasNoPlan,
+      hasPreferenceDiscount,
+      currentLinearDiscount: linearDiscount,
+      preferenceDiscount: preferences?.fixed_discount_percentage
+    });
+
+    if (hasNoPlan && hasPreferenceDiscount && linearDiscount === 0) {
+      console.log('[useEffect-restoreLinearDiscount] Restoring linear discount from preferences');
+      setLinearDiscount(preferences.fixed_discount_percentage);
+    }
+  }, [selectedPlanGroup, selectedCustomPlanId, preferences, linearDiscount]);
 
   return (
     <div className="min-h-screen bg-gray-50">
