@@ -60,41 +60,31 @@ export function PDFUploadGate() {
     setError(null);
 
     try {
-      const fileName = `${user.id}/tarifa_2025.pdf`;
-
-      const { data: uploadData, error: uploadError } = await supabase
-        .storage
-        .from('user-tariff-pdfs')
-        .upload(fileName, file, {
-          upsert: true,
-          contentType: 'application/pdf',
-        });
-
-      if (uploadError) {
-        throw new Error('Error al subir el archivo: ' + uploadError.message);
-      }
+      const formData = new FormData();
+      formData.append('pdf', file);
+      formData.append('userId', user.id);
 
       setUploadState('validating');
 
-      const { data: validationData, error: validationError } = await supabase.functions.invoke<ValidationResult>(
-        'validate-tariff-pdf',
-        {
-          body: {
-            pdfPath: fileName,
-            userId: user.id,
-          },
-        }
-      );
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-      if (validationError) {
-        throw new Error('Error al validar el PDF: ' + validationError.message);
+      const response = await fetch(`${supabaseUrl}/functions/v1/upload-and-validate-tariff`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al procesar el archivo');
       }
 
-      if (!validationData) {
-        throw new Error('No se recibió respuesta del servidor.');
-      }
+      const result = await response.json();
 
-      if (validationData.isValid) {
+      if (result.is_activated) {
         setUploadState('success');
 
         setTimeout(() => {
@@ -102,7 +92,7 @@ export function PDFUploadGate() {
         }, 2000);
       } else {
         setUploadState('error');
-        setError(validationData.reason);
+        setError(result.message || 'El PDF no pudo ser validado correctamente');
       }
     } catch (err: any) {
       console.error('Upload error:', err);

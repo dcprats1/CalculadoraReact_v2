@@ -9,20 +9,20 @@ interface ActivationStatus {
 }
 
 export function useRequireActivation(): ActivationStatus {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [isActivated, setIsActivated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) {
+    if (!isAuthenticated || !user) {
       setIsLoading(false);
       setIsActivated(false);
       return;
     }
 
     checkActivationStatus();
-  }, [user]);
+  }, [user, isAuthenticated]);
 
   const checkActivationStatus = async () => {
     if (!user) return;
@@ -31,34 +31,23 @@ export function useRequireActivation(): ActivationStatus {
       setIsLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
-        .from('user_tariff_activation')
-        .select('is_activated')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      console.log('[useRequireActivation] Checking activation for user:', user.id);
 
-      if (fetchError) {
-        throw fetchError;
+      const { data, error: functionError } = await supabase.functions.invoke('check-tariff-activation', {
+        body: { userId: user.id }
+      });
+
+      if (functionError) {
+        console.error('[useRequireActivation] Function error:', functionError);
+        throw functionError;
       }
 
-      if (!data) {
-        const { error: insertError } = await supabase
-          .from('user_tariff_activation')
-          .insert({
-            user_id: user.id,
-            is_activated: false,
-          });
+      console.log('[useRequireActivation] Activation status:', data);
 
-        if (insertError && !insertError.message.includes('duplicate')) {
-          throw insertError;
-        }
+      setIsActivated(data?.is_activated || false);
 
-        setIsActivated(false);
-      } else {
-        setIsActivated(data.is_activated || false);
-      }
     } catch (err: any) {
-      console.error('Error checking activation status:', err);
+      console.error('[useRequireActivation] Error checking activation status:', err);
       setError(err.message);
       setIsActivated(false);
     } finally {
