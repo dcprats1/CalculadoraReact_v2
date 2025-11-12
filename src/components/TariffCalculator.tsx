@@ -1333,21 +1333,28 @@ const TariffCalculator: React.FC = () => {
 
   const handleDiscountPlanSelection = useCallback(
     (planId: string) => {
+      console.log('[handleDiscountPlanSelection] Called with planId:', planId);
+
       if (!planId) {
+        console.log('[handleDiscountPlanSelection] Empty planId, clearing selection');
         setSelectedPlanGroup('');
         setSelectedDiscountPlan('');
         return;
       }
 
       const matchingPlan = allDiscountPlans.find(plan => plan.id === planId);
+      console.log('[handleDiscountPlanSelection] Matching plan found:', matchingPlan);
 
       if (!matchingPlan) {
+        console.log('[handleDiscountPlanSelection] No matching plan, clearing selection');
         setSelectedPlanGroup('');
         setSelectedDiscountPlan('');
         return;
       }
 
-      setSelectedPlanGroup(getPlanGroupKey(matchingPlan));
+      const planGroupKey = getPlanGroupKey(matchingPlan);
+      console.log('[handleDiscountPlanSelection] Setting planGroup:', planGroupKey, 'discountPlan:', matchingPlan.id);
+      setSelectedPlanGroup(planGroupKey);
       setSelectedDiscountPlan(matchingPlan.id);
     },
     [allDiscountPlans]
@@ -1431,8 +1438,11 @@ const TariffCalculator: React.FC = () => {
   const isAdmin = userData?.is_admin || false;
 
   useEffect(() => {
+    console.log('[useEffect-planSync] selectedPlanGroup:', selectedPlanGroup, 'planForSelectedService:', planForSelectedService, 'selectedDiscountPlan:', selectedDiscountPlan);
+
     if (!selectedPlanGroup) {
       if (selectedDiscountPlan !== '') {
+        console.log('[useEffect-planSync] Clearing selectedDiscountPlan because no planGroup');
         setSelectedDiscountPlan('');
       }
       return;
@@ -1440,9 +1450,11 @@ const TariffCalculator: React.FC = () => {
 
     if (planForSelectedService) {
       if (planForSelectedService.id !== selectedDiscountPlan) {
+        console.log('[useEffect-planSync] Setting selectedDiscountPlan to:', planForSelectedService.id);
         setSelectedDiscountPlan(planForSelectedService.id);
       }
     } else if (selectedDiscountPlan !== '') {
+      console.log('[useEffect-planSync] No planForSelectedService, clearing selectedDiscountPlan');
       setSelectedDiscountPlan('');
     }
   }, [planForSelectedService, selectedPlanGroup, selectedDiscountPlan]);
@@ -1473,7 +1485,9 @@ const TariffCalculator: React.FC = () => {
   }, [selectedPlanGroup]);
 
   useEffect(() => {
+    console.log('[useEffect-customPlan] selectedCustomPlanId:', selectedCustomPlanId);
     if (selectedCustomPlanId) {
+      console.log('[useEffect-customPlan] Clearing system plans');
       setLinearDiscount(0);
       setSelectedPlanGroup('');
       setSelectedDiscountPlan('');
