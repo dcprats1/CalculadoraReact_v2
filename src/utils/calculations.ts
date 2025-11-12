@@ -822,21 +822,14 @@ const resolveTariffCost = (
   const step = getAdditionalStep(serviceName, zone);
 
   const lowestPricedRange = pricedRanges[0];
-
-  const containingRange = [...pricedRanges].reverse().find(range => {
+  const containingRange = pricedRanges.find(range => {
     const upperBound = range.to ?? range.from;
-    if (roundedWeight < range.from) {
-      return false;
-    }
-    if (roundedWeight === range.from) {
-      return true;
-    }
-    return roundedWeight < upperBound || (roundedWeight === upperBound && range === pricedRanges[pricedRanges.length - 1]);
+    return roundedWeight >= range.from && roundedWeight <= upperBound;
   });
 
   let baseRange = containingRange;
   if (!baseRange) {
-    if (roundedWeight <= lowestPricedRange.from) {
+    if (roundedWeight < lowestPricedRange.from) {
       baseRange = lowestPricedRange;
     } else {
       baseRange = [...pricedRanges].reverse().find(range => range.from <= roundedWeight) ?? lowestPricedRange;
