@@ -567,7 +567,8 @@ const TariffCalculator: React.FC = () => {
             comparatorServiceSelection,
             zone,
             comparatorPlan,
-            weightForPlan
+            weightForPlan,
+            shippingMode
           );
         }
       }
@@ -1612,7 +1613,8 @@ const TariffCalculator: React.FC = () => {
             selectedService,
             zoneName,
             planForSelectedService,
-            weightForPlan
+            weightForPlan,
+            shippingMode
           );
           if (discountPerUnit > 0) {
             planDiscountTotal += discountPerUnit * quantity;

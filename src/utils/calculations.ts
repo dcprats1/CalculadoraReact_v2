@@ -1386,12 +1386,19 @@ const resolvePlanCostDetails = (
   };
 };
 
+const ALLOWED_ZONES_FOR_PLAN_DISCOUNT: Set<DestinationZone> = new Set([
+  'Provincial',
+  'Regional',
+  'Nacional'
+]);
+
 export const calculatePlanDiscountForWeight = (
   tariffs: Tariff[],
   serviceName: string,
   zone: DestinationZone,
   plan: DiscountPlan,
-  weight: number
+  weight: number,
+  shippingMode?: ShippingMode
 ): number => {
   if (!plan) {
     return 0;
@@ -1399,6 +1406,25 @@ export const calculatePlanDiscountForWeight = (
 
   if (plan.discount_type === 'fixed') {
     return plan.discount_value > 0 ? roundUp(plan.discount_value) : 0;
+  }
+
+  // Los descuentos SOLO se aplican a Salida y Recogida, NUNCA a Interciudad
+  if (shippingMode === 'interciudad') {
+    return 0;
+  }
+
+  // Verificar que la zona está permitida
+  const isEuroBusiness = serviceName === 'EuroBusiness Parcel';
+  const isPortugal = zone === 'Portugal';
+
+  // Portugal: solo para EuroBusiness
+  if (isPortugal && !isEuroBusiness) {
+    return 0;
+  }
+
+  // Otras zonas: solo Provincial, Regional, Nacional
+  if (!isPortugal && !ALLOWED_ZONES_FOR_PLAN_DISCOUNT.has(zone)) {
+    return 0;
   }
 
   const arrField = ARR_FIELD_MAP[zone];
