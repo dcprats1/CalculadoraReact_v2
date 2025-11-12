@@ -115,9 +115,12 @@ Deno.serve(async (req: Request) => {
     const detectedTitles = parseResult.metadata?.secureTitleValidation?.detectedTitles || 0;
     const totalTitles = parseResult.metadata?.secureTitleValidation?.totalTitles || 38;
 
-    const isValid = confidence >= 0.5 && detectedTitles >= (totalTitles * 0.5);
+    const MIN_CONFIDENCE = 0.70;
+    const MIN_PAGES_DETECTED = Math.ceil(totalTitles * 0.70);
 
-    console.log(`[upload-and-validate-tariff] Validation: confidence=${confidence}, titles=${detectedTitles}/${totalTitles}, valid=${isValid}`);
+    const isValid = confidence >= MIN_CONFIDENCE && detectedTitles >= MIN_PAGES_DETECTED;
+
+    console.log(`[upload-and-validate-tariff] Validation: confidence=${confidence.toFixed(2)} (min: ${MIN_CONFIDENCE}), titles=${detectedTitles}/${totalTitles} (min: ${MIN_PAGES_DETECTED}), valid=${isValid}`);
 
     const { error: updateError } = await supabaseAdmin
       .from("user_tariff_activation")
@@ -164,13 +167,22 @@ Deno.serve(async (req: Request) => {
       );
     } else {
       console.log(`[upload-and-validate-tariff] ❌ User ${userId} validation failed`);
+
+      let detailedMessage = `El PDF no contiene suficientes marcadores de tarifa GLS (detectados ${detectedTitles}/${totalTitles}, confianza ${Math.round(confidence * 100)}%).`;
+
+      if (detectedTitles === 0) {
+        detailedMessage += ' El documento parece no ser una tarifa GLS válida. Asegúrate de subir el PDF oficial de tarifas GLS 2025.';
+      } else if (detectedTitles < MIN_PAGES_DETECTED) {
+        detailedMessage += ` Se requieren al menos ${MIN_PAGES_DETECTED} páginas identificadas. Verifica que el PDF esté completo y no sea una versión parcial.`;
+      }
+
       return new Response(
         JSON.stringify({
           is_activated: false,
           confidence: confidence,
           detectedTitles: detectedTitles,
           totalTitles: totalTitles,
-          message: `El PDF no contiene suficientes marcadores de tarifa GLS (detectados ${detectedTitles}/${totalTitles}, confianza ${Math.round(confidence * 100)}%)`,
+          message: detailedMessage,
         }),
         {
           status: 200,

@@ -35,16 +35,16 @@ export class PDFValidator {
    * Cada página debe contener al menos una de las palabras clave especificadas
    */
   private static readonly PAGE_MARKERS: Record<number, string[]> = {
-    1: ['Agencias GLS Spain'],
-    2: ['Tarifas Peninsular, Insular, Andorra, Ceuta, Melilla & Portugal'],
-    3: ['Peninsula, Andorra, Ceuta, Melilla & Portugal'],
-    4: ['Express8:30'],
-    5: ['Express14:00'],
-    6: ['Express19:00'],
-    7: ['BusinessParcel'],
-    8: ['EconomyParcel'],
-    9: ['BurofaxService'],
-    10: ['Recogen en Centro de Destino'],
+    1: ['Agencias GLS Spain', 'GLS Spain', 'Agencias GLS'],
+    2: ['Tarifas Peninsular, Insular, Andorra, Ceuta, Melilla & Portugal', 'Tarifas Peninsular', 'TARIFA'],
+    3: ['Peninsula, Andorra, Ceuta, Melilla & Portugal', 'Peninsula', 'Servicios Nacionales'],
+    4: ['Express8:30', 'Express 8:30', 'Express8', '8:30'],
+    5: ['Express14:00', 'Express 14:00', 'Express14', '14:00'],
+    6: ['Express19:00', 'Express 19:00', 'Express19', '19:00'],
+    7: ['BusinessParcel', 'Business Parcel', 'Business'],
+    8: ['EconomyParcel', 'Economy Parcel', 'Economy'],
+    9: ['BurofaxService', 'Burofax Service', 'Burofax'],
+    10: ['Recogen en Centro de Destino', 'Centro de Destino', 'ParcelShop'],
     11: ['Insular'],
     12: ['(Aéreo)'],
     13: ['Express19:00'],
@@ -75,15 +75,26 @@ export class PDFValidator {
     38: ['Suplementos']
   };
 
-  private static readonly EXPECTED_PAGES = 38;
+  static readonly EXPECTED_PAGES = 38;
   private static readonly MIN_REQUIRED_PAGES = 30;
   private static readonly CRITICAL_PAGES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
   /**
-   * Normaliza texto para comparación (elimina espacios extra, ignora mayúsculas)
+   * Normaliza texto para comparación (elimina espacios extra, ignora mayúsculas, normaliza caracteres especiales)
    */
   private static normalizeText(text: string): string {
-    return text.replace(/\s+/g, ' ').trim().toLowerCase();
+    return text
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[áàäâ]/g, 'a')
+      .replace(/[éèëê]/g, 'e')
+      .replace(/[íìïî]/g, 'i')
+      .replace(/[óòöô]/g, 'o')
+      .replace(/[úùüû]/g, 'u')
+      .replace(/ñ/g, 'n');
   }
 
   /**

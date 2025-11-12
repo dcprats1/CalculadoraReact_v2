@@ -175,6 +175,12 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[PDF Parser MAP] ✓ Datos extraídos, retornando para vista previa`);
 
+    const confidence = pageMap.size / PDFValidator.EXPECTED_PAGES;
+    const detectedTitles = pageMap.size;
+    const totalTitles = PDFValidator.EXPECTED_PAGES;
+
+    console.log(`[PDF Parser MAP] Confianza de validación: ${Math.round(confidence * 100)}% (${detectedTitles}/${totalTitles} páginas)`);
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -188,7 +194,12 @@ Deno.serve(async (req: Request) => {
           version: validation.metadata.structureVersion,
           recordsWithData: withData.length,
           pagesIdentified: pageMap.size,
-          pageMapping: Array.from(pageMap.entries())
+          pageMapping: Array.from(pageMap.entries()),
+          secureTitleValidation: {
+            confidence: confidence,
+            detectedTitles: detectedTitles,
+            totalTitles: totalTitles
+          }
         },
         warnings: validation.warnings,
         preview: true,
