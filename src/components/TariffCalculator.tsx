@@ -10,7 +10,7 @@ import { AdminPanel } from './admin/AdminPanel';
 import CommercialPlansManager from './settings/CommercialPlansManager';
 import { useCommercialPlans } from '../hooks/useCommercialPlans';
 import { CommercialPlan } from '../types/commercialPlans';
-import { applyCustomPlanDiscount, getCustomPlanDisplayInfo } from '../utils/customCommercialPlans';
+import { calculateCustomPlanDiscount, getCustomPlanDisplayInfo } from '../utils/customCommercialPlans';
 import { useTariffs, useDiscountPlans, useCustomTariffsActive } from '../hooks/useSupabaseData';
 import {
   PackageData,
@@ -1594,14 +1594,14 @@ const TariffCalculator: React.FC = () => {
 
         if (selectedCustomPlan) {
           const weightForPlan = zoneCost.finalWeight ?? pkg.weight ?? 0;
-          const costAfterDiscount = applyCustomPlanDiscount(
-            roundedCost,
+          const discountPerUnit = calculateCustomPlanDiscount(
+            serviceTariffs,
             selectedCustomPlan,
             selectedService,
+            zoneName,
             weightForPlan,
-            false
+            shippingMode
           );
-          const discountPerUnit = roundedCost - costAfterDiscount;
           if (discountPerUnit > 0) {
             planDiscountTotal += discountPerUnit * quantity;
           }
