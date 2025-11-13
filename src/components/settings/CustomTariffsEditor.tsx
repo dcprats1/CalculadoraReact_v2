@@ -614,7 +614,7 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
               <p className="text-sm text-blue-900 text-center leading-relaxed">
-                Costes de Salida (Sal), Recogida (Rec) e Interciudad (Int) son costes totales.<br />
+                PUEDES MODIFICAR ESTA TABLA Y GUARDARLA. ESTARÁ DISPONIBLE COMO TARIFA "PERSONALIZADA". Costes de Salida (Sal), Recogida (Rec) e Interciudad (Int) son costes totales.<br />
                 Arrastres (Arr) solo se tendrá en cuenta para la aplicación de planes comerciales<br />
                 aplicados sobre esta tabla de costes personalizada.
               </p>
