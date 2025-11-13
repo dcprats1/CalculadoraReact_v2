@@ -223,24 +223,9 @@ const COST_FIELD_MAP: Record<DestinationZone, Record<ShippingMode, keyof Tariff>
   }
 };
 
-const PRICE_FIELD_MAP: Record<DestinationZone, keyof Tariff> = {
-  Provincial: 'provincial_price',
-  Regional: 'regional_price',
-  Nacional: 'nacional_price',
-  Portugal: 'portugal_price',
-  'Madeira Mayores': 'madeira_mayores_price',
-  'Madeira Menores': 'madeira_menores_price',
-  'Azores Mayores': 'azores_mayores_price',
-  'Azores Menores': 'azores_menores_price',
-  Andorra: 'andorra_price',
-  Gibraltar: 'gibraltar_price',
-  'Canarias Mayores': 'canarias_mayores_price',
-  'Canarias Menores': 'canarias_menores_price',
-  'Baleares Mayores': 'baleares_mayores_price',
-  'Baleares Menores': 'baleares_menores_price',
-  Ceuta: 'ceuta_price',
-  Melilla: 'melilla_price'
-};
+// NOTA: Las columnas *_price ya no existen en la BD
+// La tabla tariffs solo contiene columnas *_sal, *_rec, *_int y *_arr
+// Los precios se calculan dinámicamente a partir de los costes
 
 const ARR_FIELD_MAP: Partial<Record<DestinationZone, keyof Tariff>> = {
   Provincial: 'provincial_arr',
@@ -933,29 +918,29 @@ export function calculatePackageCost(
   // Determine final weight (higher of actual vs volumetric)
   const finalWeight = getFinalWeight(packageData.weight, volumetricWeight);
 
-  // Get base cost and price based on zone
+  // Get base cost based on zone
   const costField = COST_FIELD_MAP[zone]?.[shippingMode];
-  const priceField = PRICE_FIELD_MAP[zone];
   const baseCostValue = resolvedCost ?? (costField ? getTariffNumericValue(tariff, costField) ?? 0 : 0);
-  const basePrice = priceField ? getTariffNumericValue(tariff, priceField) ?? 0 : 0;
-  const originalPrice = basePrice;
-  let finalPrice = basePrice;
+
+  // NOTA: Ya no usamos *_price de la BD, el precio se calcula a partir del coste
+  // Aplicamos descuentos al coste si hay plan disponible
+  let finalCost = baseCostValue;
   let discount = 0;
 
-  // Apply discount if available
+  // Apply discount if available (se aplica al coste, no al precio)
   if (discountPlan && discountPlan.service_name === tariff.service_name) {
     if (discountPlan.discount_type === 'percentage') {
-      discount = (basePrice * discountPlan.discount_value) / 100;
-      finalPrice = basePrice - discount;
+      discount = (baseCostValue * discountPlan.discount_value) / 100;
+      finalCost = baseCostValue - discount;
     } else if (discountPlan.discount_type === 'fixed') {
       discount = discountPlan.discount_value;
-      finalPrice = basePrice - discount;
+      finalCost = baseCostValue - discount;
     }
   }
 
-  // Apply margin to get final selling price
-  const marginAmount = (finalPrice * marginPercentage) / 100;
-  const finalSellingPrice = finalPrice + marginAmount;
+  // Apply margin to get final selling price (sobre el coste final)
+  const marginAmount = (finalCost * marginPercentage) / 100;
+  const finalSellingPrice = finalCost + marginAmount;
 
   return {
     serviceName: tariff.service_name,
@@ -964,7 +949,7 @@ export function calculatePackageCost(
     margin: finalSellingPrice - baseCostValue,
     marginPercentage: baseCostValue > 0 ? ((finalSellingPrice - baseCostValue) / baseCostValue) * 100 : 0,
     discount,
-    originalPrice,
+    originalPrice: baseCostValue,
     actualWeight: packageData.weight,
     volumetricWeight,
     finalWeight
@@ -1247,13 +1232,8 @@ const getZoneCostFromTariff = (
   return getTariffNumericValue(tariff, field);
 };
 
-const getZonePriceFromTariff = (tariff: Tariff, zone: DestinationZone): number | null => {
-  const field = PRICE_FIELD_MAP[zone];
-  if (!field) {
-    return null;
-  }
-  return getTariffNumericValue(tariff, field);
-};
+// NOTA: getZonePriceFromTariff eliminada porque las columnas *_price ya no existen
+// Los precios se calculan dinámicamente a partir de los costes
 
 export const getZoneArrFromTariff = (tariff: Tariff, zone: DestinationZone): number | null => {
   const field = ARR_FIELD_MAP[zone];
@@ -1515,7 +1495,8 @@ export function buildVirtualTariffTable(
     for (const zone of DESTINATION_ZONES) {
       for (const mode of SHIPPING_MODES) {
         const baseCost = getZoneCostFromTariff(tariff, zone, mode);
-        const referenceValue = baseCost ?? getZonePriceFromTariff(tariff, zone);
+        // Ya no existe getZonePriceFromTariff, solo usamos baseCost
+        const referenceValue = baseCost;
 
         if (referenceValue === null) {
           continue;
