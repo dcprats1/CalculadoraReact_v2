@@ -829,7 +829,14 @@ const resolveTariffCost = (
   const lowestPricedRange = pricedRanges[0];
   const containingRange = pricedRanges.find(range => {
     const upperBound = range.to ?? range.from;
-    return roundedWeight >= range.from && roundedWeight <= upperBound;
+    const isFirstRange = range.from === 0;
+
+    // Aplicar lógica correcta de rangos
+    if (isFirstRange) {
+      return roundedWeight >= range.from && roundedWeight <= upperBound;
+    } else {
+      return roundedWeight > range.from && roundedWeight <= upperBound;
+    }
   });
 
   let baseRange = containingRange;
