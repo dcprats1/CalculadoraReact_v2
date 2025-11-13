@@ -505,11 +505,31 @@ export interface SimulationResult {
 
 export function findTariffForWeight(tariffs: Tariff[], serviceName: string, weight: number): Tariff | null {
   const roundedWeight = Math.ceil(Math.max(weight, 0));
-  return tariffs.find(tariff =>
-    tariff.service_name === serviceName &&
-    roundedWeight >= tariff.weight_from &&
-    (tariff.weight_to === null || roundedWeight <= tariff.weight_to)
-  ) || null;
+
+  // Los rangos son inclusivos: 0-1, 1-3, 3-5, 5-10, 10-15, 15-999
+  // Un peso de 1.001kg redondeado a 2kg debe ir al rango 1-3 (no al 0-1)
+  // La lógica correcta es: weight > weight_from && weight <= weight_to
+  // EXCEPTO para el primer rango (0-X) que debe incluir desde 0
+
+  return tariffs.find(tariff => {
+    if (tariff.service_name !== serviceName) return false;
+
+    const isFirstRange = tariff.weight_from === 0;
+    const isOpenRange = tariff.weight_to === null || tariff.weight_to >= 999;
+
+    if (isFirstRange) {
+      // Primer rango: incluye desde 0 hasta weight_to (inclusive)
+      return roundedWeight >= tariff.weight_from &&
+             (tariff.weight_to === null || roundedWeight <= tariff.weight_to);
+    } else if (isOpenRange) {
+      // Rango abierto (15-999): incluye desde weight_from + 0.001 en adelante
+      return roundedWeight > tariff.weight_from;
+    } else {
+      // Rangos intermedios: excluye weight_from, incluye weight_to
+      // Ejemplo: rango 1-3 aplica para pesos 2kg y 3kg (no 1kg)
+      return roundedWeight > tariff.weight_from && roundedWeight <= tariff.weight_to;
+    }
+  }) || null;
 }
 
 export function calculateVolumetricWeight(
@@ -1298,7 +1318,14 @@ const findContainingFiniteTariff = (tariffs: Tariff[], weight: number): Tariff |
       .filter(tariff => tariff.weight_to !== null && tariff.weight_to !== undefined)
       .find(tariff => {
         const upper = tariff.weight_to ?? tariff.weight_from;
-        return rounded >= tariff.weight_from && rounded <= upper;
+        const isFirstRange = tariff.weight_from === 0;
+
+        // Aplicar misma lógica que findTariffForWeight
+        if (isFirstRange) {
+          return rounded >= tariff.weight_from && rounded <= upper;
+        } else {
+          return rounded > tariff.weight_from && rounded <= upper;
+        }
       }) ?? null
   );
 };
@@ -1334,7 +1361,14 @@ const resolvePlanCostDetails = (
 
   let baseTariff = finiteTariffs.find(tariff => {
     const upperBound = tariff.weight_to ?? tariff.weight_from;
-    return roundedWeight >= tariff.weight_from && roundedWeight <= upperBound;
+    const isFirstRange = tariff.weight_from === 0;
+
+    // Aplicar misma lógica de rangos
+    if (isFirstRange) {
+      return roundedWeight >= tariff.weight_from && roundedWeight <= upperBound;
+    } else {
+      return roundedWeight > tariff.weight_from && roundedWeight <= upperBound;
+    }
   });
 
   if (!baseTariff) {
