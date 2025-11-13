@@ -844,7 +844,19 @@ const resolveTariffCost = (
     if (roundedWeight < lowestPricedRange.from) {
       baseRange = lowestPricedRange;
     } else {
-      baseRange = [...pricedRanges].reverse().find(range => range.from <= roundedWeight) ?? lowestPricedRange;
+      // Buscar el último rango que podría contener este peso
+      // Debe buscar rangos donde from < roundedWeight Y to >= roundedWeight
+      baseRange = [...pricedRanges].reverse().find(range => {
+        const upperBound = range.to ?? range.from;
+        const isFirstRange = range.from === 0;
+
+        // Aplicar misma lógica que containingRange
+        if (isFirstRange) {
+          return roundedWeight >= range.from && roundedWeight <= upperBound;
+        } else {
+          return roundedWeight > range.from && roundedWeight <= upperBound;
+        }
+      }) ?? lowestPricedRange;
     }
   }
 

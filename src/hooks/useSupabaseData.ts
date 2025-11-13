@@ -11,13 +11,24 @@ export function useTariffs(clientId?: string, useCustomOverrides: boolean = fals
       try {
         const { data, error } = await supabase
           .from('tariffs')
-          .select('*')
-          .order('service_name', { ascending: true })
-          .order('weight_from', { ascending: true });
+          .select('*');
 
         if (error) throw error;
 
-        let finalTariffs = data || [];
+        // CRÍTICO: Convertir weight_from y weight_to de string (VARCHAR en BD) a number
+        // y ordenar NUMÉRICAMENTE (no alfabéticamente)
+        let finalTariffs = (data || []).map(tariff => ({
+          ...tariff,
+          weight_from: parseFloat(tariff.weight_from as any) || 0,
+          weight_to: tariff.weight_to ? parseFloat(tariff.weight_to as any) : null
+        })).sort((a, b) => {
+          // Primero ordenar por servicio
+          if (a.service_name !== b.service_name) {
+            return a.service_name.localeCompare(b.service_name);
+          }
+          // Luego por peso (ahora numérico)
+          return a.weight_from - b.weight_from;
+        });
 
         if (useCustomOverrides && clientId) {
           try {
