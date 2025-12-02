@@ -1782,6 +1782,12 @@ const TariffCalculator: React.FC = () => {
                 discountPlans={allDiscountPlans}
                 selectedPlanGroup={selectedPlanGroup}
                 linearDiscount={planForSelectedService ? 0 : linearDiscount}
+                spc={spc}
+                variableSurcharge={0}
+                irregularSurcharge={0}
+                increment2026={incr2026}
+                selectedService={selectedService}
+                provincialCostOverride={provincialCostOverride}
                 disabled={!tariffs.length}
               />
 
@@ -2172,6 +2178,12 @@ const TariffCalculator: React.FC = () => {
             discountPlans={allDiscountPlans}
             selectedPlanGroup={selectedPlanGroup}
             linearDiscount={planForSelectedService ? 0 : linearDiscount}
+            spc={spc}
+            variableSurcharge={0}
+            irregularSurcharge={0}
+            increment2026={incr2026}
+            selectedService={selectedService}
+            provincialCostOverride={provincialCostOverride}
             disabled={!tariffs.length}
           />
         }
