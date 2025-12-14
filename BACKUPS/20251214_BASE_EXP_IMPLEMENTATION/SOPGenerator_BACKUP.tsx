@@ -446,7 +446,6 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
     const workbook = new Workbook();
     await workbook.xlsx.load(workbookBuffer.slice(0));
     applyVirtualTableToWorkbook(workbook);
-    applyBaseExpData(workbook);
     applyMetadata(workbook);
     workbook.calcProperties.fullCalcOnLoad = true;
     return workbook;
@@ -565,100 +564,6 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
           value: null
         });
       }
-    });
-  };
-
-  const applyBaseExpData = (workbook: any) => {
-    sopLog('base-exp:start', 'Iniciando escritura en hoja base exp');
-
-    const generalSheet = workbook.getWorksheet('General');
-    if (!generalSheet) {
-      sopLog('base-exp:error', 'La hoja General no está disponible');
-      return;
-    }
-
-    const baseExpSheet = workbook.getWorksheet('base exp');
-    if (!baseExpSheet) {
-      sopLog('base-exp:error', 'La hoja base exp no existe en el workbook');
-      return;
-    }
-
-    let processedCount = 0;
-    let skippedCount = 0;
-
-    generalSheet.eachRow((row: any, rowNumber: number) => {
-      if (rowNumber === 1) return;
-
-      try {
-        const pvpValue = row.getCell('G').value;
-        const targetSheetName = String(row.getCell('J').value ?? '').trim();
-        const targetCellK = String(row.getCell('K').value ?? '').trim();
-        const targetCellL = String(row.getCell('L').value ?? '').trim();
-
-        if (!targetSheetName || targetSheetName.toLowerCase() !== 'base exp') {
-          return;
-        }
-
-        const numericPvp = parseNumber(pvpValue);
-        if (numericPvp === null) {
-          skippedCount++;
-          sopLog('base-exp:skip-row', {
-            row: rowNumber,
-            reason: 'Valor PVP no numérico',
-            pvpValue
-          });
-          return;
-        }
-
-        if (!targetCellK || !targetCellL) {
-          skippedCount++;
-          sopLog('base-exp:skip-row', {
-            row: rowNumber,
-            reason: 'Celdas K o L vacías',
-            cellK: targetCellK,
-            cellL: targetCellL
-          });
-          return;
-        }
-
-        const finalValue = Number(numericPvp.toFixed(2));
-
-        const cellK = baseExpSheet.getCell(targetCellK);
-        const cellL = baseExpSheet.getCell(targetCellL);
-
-        cellK.value = finalValue;
-        cellL.value = finalValue;
-
-        processedCount++;
-
-        const serviceName = String(row.getCell('C').value ?? '').trim();
-        const rangeName = String(row.getCell('D').value ?? '').trim();
-        const weightFrom = row.getCell('A').value;
-        const weightTo = row.getCell('F').value;
-
-        sopLog('base-exp:write-success', {
-          row: rowNumber,
-          service: serviceName,
-          zone: rangeName,
-          weight_from: weightFrom,
-          weight_to: weightTo,
-          pvp: finalValue,
-          cellK: targetCellK,
-          cellL: targetCellL
-        });
-
-      } catch (error) {
-        skippedCount++;
-        sopLog('base-exp:write-error', {
-          row: rowNumber,
-          error: error instanceof Error ? error.message : String(error)
-        });
-      }
-    });
-
-    sopLog('base-exp:complete', {
-      totalProcessed: processedCount,
-      totalSkipped: skippedCount
     });
   };
 
@@ -1017,18 +922,6 @@ if (businessTransit) {
           });
         });
       });
-
-      const generalSheet = workbook.getWorksheet('General');
-      if (generalSheet) {
-        generalSheet.state = 'hidden';
-        sopLog('hide-sheet', 'Hoja General oculta');
-      }
-
-      const baseExpSheet = workbook.getWorksheet('base exp');
-      if (baseExpSheet) {
-        baseExpSheet.state = 'hidden';
-        sopLog('hide-sheet', 'Hoja base exp oculta');
-      }
 
       const buffer = await workbook.xlsx.writeBuffer();
       downloadBuffer(buffer, `SOP_${Date.now()}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
