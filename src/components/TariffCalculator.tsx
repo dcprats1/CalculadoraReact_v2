@@ -29,7 +29,9 @@ import {
   roundUp,
   getEnergyRateForService,
   calculatePlanDiscountForWeight,
-  isParcelShopService
+  isParcelShopService,
+  extractPlusOneCost,
+  calculatePercentualSupplements
 } from '../utils/calculations';
 import PackageManager from './PackageManager';
 import CostBreakdownTable from './CostBreakdownTable';
@@ -649,18 +651,23 @@ const TariffCalculator: React.FC = () => {
         let computedValue = 0;
 
         if (columnKey === 'kg. adc') {
-          const baseBreakdown = buildBreakdownForWeight(15, destination, zoneIncrement, zoneIncrement2025);
-          const extraBreakdown = buildBreakdownForWeight(
-            COMPARATOR_COLUMN_WEIGHTS[columnKey],
+          // Calcular kg. adc usando el valor puro del rango plusOne + conceptos porcentuales
+          // NO restamos breakdowns completos porque los conceptos fijos se cancelarían incorrectamente
+          const plusOneCost = extractPlusOneCost(
+            serviceTariffs,
             destination,
-            zoneIncrement,
-            zoneIncrement2025
+            shippingMode,
+            comparatorServiceSelection
           );
 
-          if (baseBreakdown && extraBreakdown) {
-            computedValue = roundUp(Math.max(0, extraBreakdown.totalCost - baseBreakdown.totalCost));
-          } else if (extraBreakdown) {
-            computedValue = roundUp(extraBreakdown.totalCost);
+          if (plusOneCost !== null && plusOneCost > 0) {
+            const percentualSupps = calculatePercentualSupplements(
+              plusOneCost,
+              comparatorEnergyRate,
+              comparatorIsParcelShop
+            );
+            // kg. adc = coste base + conceptos porcentuales
+            computedValue = roundUp(plusOneCost + percentualSupps.total);
           }
         } else {
           const targetWeight = COMPARATOR_COLUMN_WEIGHTS[columnKey];

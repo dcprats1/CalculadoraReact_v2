@@ -589,13 +589,15 @@ export function calculateCostBreakdown(
     energyRate?: number;
     baseOverride?: number | null;
     serviceName?: string;
+    skipSupplements?: boolean;
   } = {}
 ): CostBreakdown {
   const {
     planDiscountAmount = 0,
     energyRate = 0.0705,
     baseOverride = null,
-    serviceName
+    serviceName,
+    skipSupplements = false
   } = options;
 
   const parcelShopService = serviceName ? isParcelShopService(serviceName) : false;
@@ -617,6 +619,44 @@ export function calculateCostBreakdown(
 
   const totalDiscount = Math.min(safeInitial, linearDiscountAmount + planDiscountRounded);
 
+  let baseAfterDiscount = safeInitial;
+  if (totalDiscount > 0) {
+    baseAfterDiscount = roundUp(Math.max(0, safeInitial - totalDiscount));
+  }
+
+  if (baseOverride !== null && Number.isFinite(baseOverride)) {
+    baseAfterDiscount = roundUp(Math.max(0, baseOverride));
+  }
+
+  // Cuando skipSupplements es true, no aplicamos ningún concepto
+  // Útil para el SOP en rangos plusOne donde solo queremos el coste base con descuentos
+  if (skipSupplements) {
+    return {
+      initialCost: safeInitial,
+      linearDiscount: totalDiscount,
+      climateProtect: 0,
+      canonRed: 0,
+      canonDigital: 0,
+      noVol: 0,
+      amplCobertura: 0,
+      energia: 0,
+      suplementos: 0,
+      irregular: 0,
+      mileageCost: 0,
+      saturdayCost: 0,
+      subtotal: baseAfterDiscount,
+      incr2024: 0,
+      incr2025: 0,
+      incr2026: 0,
+      incr2024Percent: 0,
+      incr2025Percent: 0,
+      incr2026Percent: 0,
+      spc: 0,
+      totalCost: baseAfterDiscount,
+      status: 'calculated'
+    };
+  }
+
   const climateProtect = parcelShopService ? 0 : roundUp(safeInitial * 0.015); // 1.5%
   const canonRed = parcelShopService ? 0 : roundUp(0.27); // Fixed
   const canonDigital = parcelShopService ? 0 : roundUp(0.06); // Fixed
@@ -632,15 +672,6 @@ export function calculateCostBreakdown(
   const safeMileage = mileageCost > 0 ? roundUp(mileageCost) : 0;
   const saturdayCostRounded = saturdayCost > 0 ? roundUp(saturdayCost) : 0;
   const spcRounded = spc > 0 ? roundUp(spc) : 0;
-
-  let baseAfterDiscount = safeInitial;
-  if (totalDiscount > 0) {
-    baseAfterDiscount = roundUp(Math.max(0, safeInitial - totalDiscount));
-  }
-
-  if (baseOverride !== null && Number.isFinite(baseOverride)) {
-    baseAfterDiscount = roundUp(Math.max(0, baseOverride));
-  }
 
   const subtotal = roundUp(
     baseAfterDiscount +
@@ -781,6 +812,86 @@ const isPlusOneRange = (tariff: Tariff): boolean => {
   }
 
   return false;
+};
+
+/**
+ * Extrae el coste puro del rango plusOne (kilo adicional) sin aplicar ningún concepto
+ * @param tariffs - Array de tarifas del servicio
+ * @param zone - Zona de destino
+ * @param mode - Modo de envío (salida, recogida, interciudad)
+ * @param serviceName - Nombre del servicio
+ * @returns El valor puro del kilo adicional o null si no existe
+ */
+export const extractPlusOneCost = (
+  tariffs: Tariff[],
+  zone: DestinationZone,
+  mode: ShippingMode,
+  serviceName: string
+): number | null => {
+  if (!tariffs.length) {
+    return null;
+  }
+
+  const sorted = [...tariffs].sort((a, b) => a.weight_from - b.weight_from);
+  const plusOneTariff = [...sorted].reverse().find(isPlusOneRange);
+
+  if (!plusOneTariff) {
+    return null;
+  }
+
+  const costField = COST_FIELD_MAP[zone]?.[mode];
+  if (!costField) {
+    return null;
+  }
+
+  return getTariffNumericValue(plusOneTariff, costField);
+};
+
+/**
+ * Interfaz para el resultado de calculatePercentualSupplements
+ */
+export interface PercentualSupplements {
+  climateProtect: number;
+  amplCobertura: number;
+  energia: number;
+  total: number;
+}
+
+/**
+ * Calcula SOLO los conceptos porcentuales sobre un importe base
+ * NO incluye conceptos fijos (canon red, digital, noVol)
+ * @param baseAmount - Importe base sobre el que aplicar los porcentajes
+ * @param energyRate - Tasa de energía (por defecto 0.0705 = 7.05%)
+ * @param isParcelShop - Si es servicio ParcelShop (no aplica conceptos)
+ * @returns Objeto con el desglose de conceptos porcentuales y el total
+ */
+export const calculatePercentualSupplements = (
+  baseAmount: number,
+  energyRate: number = 0.0705,
+  isParcelShop: boolean = false
+): PercentualSupplements => {
+  if (isParcelShop || baseAmount <= 0) {
+    return {
+      climateProtect: 0,
+      amplCobertura: 0,
+      energia: 0,
+      total: 0
+    };
+  }
+
+  const safeBase = roundUp(baseAmount);
+  const climateProtect = roundUp(safeBase * 0.015); // 1.5%
+  const amplCobertura = roundUp(safeBase * 0.0195); // 1.95%
+  const energia = energyRate > 0 ? roundUp(safeBase * energyRate) : 0;
+
+  const total = roundUp(climateProtect + amplCobertura + energia);
+
+  return {
+    climateProtect,
+    amplCobertura,
+    energia,
+    total
+  };
 };
 
 const getAdditionalStep = (serviceName: string, zone: DestinationZone): number => {
@@ -1591,6 +1702,10 @@ export function buildVirtualTariffTable(
           ? provincialCostOverride
           : null;
 
+        // Para rangos plusOne en el SOP, solo aplicamos el margen sobre el coste base
+        // Los conceptos porcentuales se mostrarán en columnas separadas del Excel
+        const isPlusOne = isPlusOneRange(tariff);
+
         const breakdown = calculateCostBreakdown(
           referenceValue,
           getZoneIncrement2024(tariff.service_name, zone),
@@ -1605,7 +1720,8 @@ export function buildVirtualTariffTable(
           {
             planDiscountAmount,
             energyRate: getEnergyRateForService(tariff.service_name),
-            baseOverride
+            baseOverride,
+            skipSupplements: isPlusOne
           }
         );
 
@@ -1622,6 +1738,7 @@ export function buildVirtualTariffTable(
           mode,
           weight_from: tariff.weight_from,
           weight_to: tariff.weight_to,
+          isPlusOneRange: isPlusOne,
           baseCost: referenceValue,
           arrValue: arrForLog,
           planWeight: planWeightForLog,
@@ -1645,7 +1762,8 @@ export function buildVirtualTariffTable(
           },
           totalCost: breakdown.totalCost,
           marginPercentage: safeMargin,
-          pvp: roundedPvp
+          pvp: roundedPvp,
+          note: isPlusOne ? 'plusOne range - only margin applied, no supplements' : null
         });
 
         rows.push({
