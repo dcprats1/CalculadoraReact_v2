@@ -116,6 +116,20 @@ export const roundUp = (value: number): number => {
   return Math.ceil(value * CENT_FACTOR - EPSILON) / CENT_FACTOR;
 };
 
+const INTERMEDIATE_FACTOR = 1000000;
+
+export const roundIntermediate = (value: number): number => {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  if (value <= 0) {
+    return 0;
+  }
+
+  return Math.round(value * INTERMEDIATE_FACTOR) / INTERMEDIATE_FACTOR;
+};
+
 export const getEnergyRateForService = (service: string): number => {
   if (service === 'Economy Parcel' || service === 'Marítimo') {
     return 0;
@@ -571,7 +585,16 @@ export function getConversionFactorForService(serviceName: string, zone?: Destin
 /**
  * Calcula el desglose completo de costes aplicando incrementos y cánones.
  * @param initialCost El coste base inicial (antes de descuentos lineales, cánones, etc.)
- * @param params Objeto de parámetros para incrementos, SPC, suplementos, etc.
+ * @param incr2024 Porcentaje de incremento 2024
+ * @param incr2025 Porcentaje de incremento 2025
+ * @param incr2026 Porcentaje de incremento 2026
+ * @param spc Suplemento en euros
+ * @param suplementos Suplementos variables en euros
+ * @param irregular Suplemento irregular en euros
+ * @param linearDiscountPercentage Porcentaje de descuento lineal
+ * @param saturdayCost Coste de entrega en sábado
+ * @param mileageCost Coste de kilometraje
+ * @param options Opciones adicionales
  */
 export function calculateCostBreakdown(
   initialCost: number,
@@ -589,7 +612,9 @@ export function calculateCostBreakdown(
     energyRate?: number;
     baseOverride?: number | null;
     serviceName?: string;
-    skipSupplements?: boolean;
+    isPlusOneRange?: boolean;
+    arrValue?: number | null;
+    useIntermediateRounding?: boolean;
   } = {}
 ): CostBreakdown {
   const {
@@ -597,103 +622,184 @@ export function calculateCostBreakdown(
     energyRate = 0.0705,
     baseOverride = null,
     serviceName,
-    skipSupplements = false
+    isPlusOneRange = false,
+    arrValue = null,
+    useIntermediateRounding = true
   } = options;
 
   const parcelShopService = serviceName ? isParcelShopService(serviceName) : false;
 
-  const safeInitial = roundUp(initialCost);
+  const safeInitial = initialCost > 0 ? initialCost : 0;
 
   const effectiveLinearDiscountPercentage = parcelShopService ? 0 : linearDiscountPercentage;
 
-  let linearDiscountAmount = effectiveLinearDiscountPercentage > 0
-    ? roundUp(safeInitial * (linearDiscountPercentage / 100))
-    : 0;
+  let linearDiscountAmount = 0;
+  let planDiscountProcessed = 0;
+  let totalDiscount = 0;
 
-  let planDiscountRounded = planDiscountAmount > 0 ? roundUp(planDiscountAmount) : 0;
+  if (baseOverride === null || !Number.isFinite(baseOverride)) {
+    const baseForDiscount = (arrValue !== null && arrValue !== undefined && arrValue > 0)
+      ? arrValue
+      : safeInitial;
 
-  if (baseOverride !== null && Number.isFinite(baseOverride)) {
-    linearDiscountAmount = 0;
-    planDiscountRounded = 0;
+    if (effectiveLinearDiscountPercentage > 0) {
+      linearDiscountAmount = useIntermediateRounding
+        ? roundIntermediate(baseForDiscount * (effectiveLinearDiscountPercentage / 100))
+        : roundUp(baseForDiscount * (effectiveLinearDiscountPercentage / 100));
+    }
+
+    if (planDiscountAmount > 0) {
+      planDiscountProcessed = useIntermediateRounding
+        ? roundIntermediate(planDiscountAmount)
+        : roundUp(planDiscountAmount);
+    }
+
+    totalDiscount = Math.min(safeInitial, linearDiscountAmount + planDiscountProcessed);
   }
-
-  const totalDiscount = Math.min(safeInitial, linearDiscountAmount + planDiscountRounded);
 
   let baseAfterDiscount = safeInitial;
   if (totalDiscount > 0) {
-    baseAfterDiscount = roundUp(Math.max(0, safeInitial - totalDiscount));
+    baseAfterDiscount = Math.max(0, safeInitial - totalDiscount);
+    if (useIntermediateRounding) {
+      baseAfterDiscount = roundIntermediate(baseAfterDiscount);
+    }
   }
 
   if (baseOverride !== null && Number.isFinite(baseOverride)) {
-    baseAfterDiscount = roundUp(Math.max(0, baseOverride));
+    baseAfterDiscount = Math.max(0, baseOverride);
+    if (useIntermediateRounding) {
+      baseAfterDiscount = roundIntermediate(baseAfterDiscount);
+    }
+    totalDiscount = 0;
   }
 
-  // Cuando skipSupplements es true, no aplicamos ningún concepto
-  // Útil para el SOP en rangos plusOne donde solo queremos el coste base con descuentos
-  if (skipSupplements) {
-    return {
-      initialCost: safeInitial,
-      linearDiscount: totalDiscount,
-      climateProtect: 0,
-      canonRed: 0,
-      canonDigital: 0,
-      noVol: 0,
-      amplCobertura: 0,
-      energia: 0,
-      suplementos: 0,
-      irregular: 0,
-      mileageCost: 0,
-      saturdayCost: 0,
-      subtotal: baseAfterDiscount,
-      incr2024: 0,
-      incr2025: 0,
-      incr2026: 0,
-      incr2024Percent: 0,
-      incr2025Percent: 0,
-      incr2026Percent: 0,
-      spc: 0,
-      totalCost: baseAfterDiscount,
-      status: 'calculated'
-    };
+  let climateProtect = 0;
+  let canonRed = 0;
+  let canonDigital = 0;
+  let noVol = 0;
+  let amplCobertura = 0;
+  let energia = 0;
+  let incr2024Amount = 0;
+  let incr2025Amount = 0;
+  let incr2026Amount = 0;
+
+  if (isPlusOneRange) {
+    if (!parcelShopService) {
+      climateProtect = useIntermediateRounding
+        ? roundIntermediate(baseAfterDiscount * 0.015)
+        : roundUp(baseAfterDiscount * 0.015);
+
+      amplCobertura = useIntermediateRounding
+        ? roundIntermediate(baseAfterDiscount * 0.0195)
+        : roundUp(baseAfterDiscount * 0.0195);
+
+      if (energyRate > 0) {
+        energia = useIntermediateRounding
+          ? roundIntermediate(baseAfterDiscount * energyRate)
+          : roundUp(baseAfterDiscount * energyRate);
+      }
+
+      if (incr2024 > 0) {
+        incr2024Amount = useIntermediateRounding
+          ? roundIntermediate(baseAfterDiscount * (incr2024 / 100))
+          : roundUp(baseAfterDiscount * (incr2024 / 100));
+      }
+
+      if (incr2025 > 0) {
+        incr2025Amount = useIntermediateRounding
+          ? roundIntermediate(baseAfterDiscount * (incr2025 / 100))
+          : roundUp(baseAfterDiscount * (incr2025 / 100));
+      }
+
+      if (incr2026 > 0) {
+        incr2026Amount = useIntermediateRounding
+          ? roundIntermediate(baseAfterDiscount * (incr2026 / 100))
+          : roundUp(baseAfterDiscount * (incr2026 / 100));
+      }
+    }
+
+    canonRed = 0;
+    canonDigital = 0;
+    noVol = 0;
+  } else {
+    if (!parcelShopService) {
+      climateProtect = useIntermediateRounding
+        ? roundIntermediate(safeInitial * 0.015)
+        : roundUp(safeInitial * 0.015);
+
+      canonRed = roundUp(0.27);
+      canonDigital = roundUp(0.06);
+      noVol = roundUp(0.04);
+
+      amplCobertura = useIntermediateRounding
+        ? roundIntermediate(safeInitial * 0.0195)
+        : roundUp(safeInitial * 0.0195);
+
+      if (energyRate > 0) {
+        energia = useIntermediateRounding
+          ? roundIntermediate(safeInitial * energyRate)
+          : roundUp(safeInitial * energyRate);
+      }
+
+      if (incr2024 > 0) {
+        incr2024Amount = useIntermediateRounding
+          ? roundIntermediate(safeInitial * (incr2024 / 100))
+          : roundUp(safeInitial * (incr2024 / 100));
+      }
+
+      if (incr2025 > 0) {
+        incr2025Amount = useIntermediateRounding
+          ? roundIntermediate(safeInitial * (incr2025 / 100))
+          : roundUp(safeInitial * (incr2025 / 100));
+      }
+
+      if (incr2026 > 0) {
+        incr2026Amount = useIntermediateRounding
+          ? roundIntermediate(safeInitial * (incr2026 / 100))
+          : roundUp(safeInitial * (incr2026 / 100));
+      }
+    }
   }
 
-  const climateProtect = parcelShopService ? 0 : roundUp(safeInitial * 0.015); // 1.5%
-  const canonRed = parcelShopService ? 0 : roundUp(0.27); // Fixed
-  const canonDigital = parcelShopService ? 0 : roundUp(0.06); // Fixed
-  const noVol = parcelShopService ? 0 : roundUp(0.04); // Fixed
-  const amplCobertura = parcelShopService ? 0 : roundUp(safeInitial * 0.0195); // 1.95%
-  const energia = parcelShopService
-    ? 0
-    : energyRate > 0
-    ? roundUp(safeInitial * energyRate)
-    : 0; // Customizable
-  const suplementosRounded = suplementos > 0 ? roundUp(suplementos) : 0;
-  const irregularRounded = irregular > 0 ? roundUp(irregular) : 0;
-  const safeMileage = mileageCost > 0 ? roundUp(mileageCost) : 0;
-  const saturdayCostRounded = saturdayCost > 0 ? roundUp(saturdayCost) : 0;
-  const spcRounded = spc > 0 ? roundUp(spc) : 0;
+  const suplementosRounded = suplementos > 0
+    ? (useIntermediateRounding ? roundIntermediate(suplementos) : roundUp(suplementos))
+    : 0;
 
-  const subtotal = roundUp(
-    baseAfterDiscount +
-      climateProtect +
-      canonRed +
-      canonDigital +
-      noVol +
-      amplCobertura +
-      energia +
-      suplementosRounded +
-      irregularRounded +
-      safeMileage +
-      saturdayCostRounded
-  );
+  const irregularRounded = irregular > 0
+    ? (useIntermediateRounding ? roundIntermediate(irregular) : roundUp(irregular))
+    : 0;
 
-  const incr2024Amount = incr2024 > 0 ? roundUp(safeInitial * (incr2024 / 100)) : 0;
-  const incr2025Amount = incr2025 > 0 ? roundUp(safeInitial * (incr2025 / 100)) : 0;
-  const incr2026Amount = incr2026 > 0 ? roundUp(safeInitial * (incr2026 / 100)) : 0;
+  const safeMileage = mileageCost > 0
+    ? (useIntermediateRounding ? roundIntermediate(mileageCost) : roundUp(mileageCost))
+    : 0;
 
-  const totalCost = roundUp(
-    subtotal + incr2024Amount + incr2025Amount + incr2026Amount + spcRounded
-  );
+  const saturdayCostRounded = saturdayCost > 0
+    ? (useIntermediateRounding ? roundIntermediate(saturdayCost) : roundUp(saturdayCost))
+    : 0;
+
+  const spcRounded = spc > 0
+    ? (useIntermediateRounding ? roundIntermediate(spc) : roundUp(spc))
+    : 0;
+
+  const subtotalBeforeIncrements = baseAfterDiscount +
+    climateProtect +
+    canonRed +
+    canonDigital +
+    noVol +
+    amplCobertura +
+    energia +
+    suplementosRounded +
+    irregularRounded +
+    safeMileage +
+    saturdayCostRounded;
+
+  const subtotal = useIntermediateRounding
+    ? roundIntermediate(subtotalBeforeIncrements)
+    : roundUp(subtotalBeforeIncrements);
+
+  const totalCostBeforeRounding = subtotal + incr2024Amount + incr2025Amount + incr2026Amount + spcRounded;
+
+  const totalCost = roundUp(totalCostBeforeRounding);
 
   return {
     initialCost: safeInitial,
@@ -1088,9 +1194,9 @@ export function calculatePackageCost(
     }
   }
 
-  // Apply margin to get final selling price (sobre el coste final)
-  const marginAmount = (finalCost * marginPercentage) / 100;
-  const finalSellingPrice = finalCost + marginAmount;
+  // Apply margin to get final selling price using correct formula: PVP = Cost / (1 - Margin%/100)
+  const marginFactor = 1 - (marginPercentage / 100);
+  const finalSellingPrice = marginFactor > 0 ? finalCost / marginFactor : finalCost;
 
   return {
     serviceName: tariff.service_name,
@@ -1702,9 +1808,8 @@ export function buildVirtualTariffTable(
           ? provincialCostOverride
           : null;
 
-        // Para rangos plusOne en el SOP, solo aplicamos el margen sobre el coste base
-        // Los conceptos porcentuales se mostrarán en columnas separadas del Excel
         const isPlusOne = isPlusOneRange(tariff);
+        const arrValue = getZoneArrFromTariff(tariff, zone);
 
         const breakdown = calculateCostBreakdown(
           referenceValue,
@@ -1721,7 +1826,10 @@ export function buildVirtualTariffTable(
             planDiscountAmount,
             energyRate: getEnergyRateForService(tariff.service_name),
             baseOverride,
-            skipSupplements: isPlusOne
+            isPlusOneRange: isPlusOne,
+            arrValue: arrValue,
+            useIntermediateRounding: true,
+            serviceName: tariff.service_name
           }
         );
 
@@ -1730,7 +1838,7 @@ export function buildVirtualTariffTable(
         const roundedPvp = roundUp(pvpRaw);
         const zoneKey = `${getZoneKey(zone)}_${SHIPPING_MODE_SUFFIX[mode]}`;
 
-        const arrForLog = getZoneArrFromTariff(tariff, zone);
+        const discountCalculatedOn = (arrValue !== null && arrValue !== undefined && arrValue > 0) ? 'ARR' : 'COST';
 
         sopLog('virtual-row', {
           service: tariff.service_name,
@@ -1740,7 +1848,8 @@ export function buildVirtualTariffTable(
           weight_to: tariff.weight_to,
           isPlusOneRange: isPlusOne,
           baseCost: referenceValue,
-          arrValue: arrForLog,
+          arrValue: arrValue,
+          discountCalculatedOn,
           planWeight: planWeightForLog,
           planApplied: planForService?.plan_name ?? null,
           planDiscountAmount,
@@ -1763,7 +1872,9 @@ export function buildVirtualTariffTable(
           totalCost: breakdown.totalCost,
           marginPercentage: safeMargin,
           pvp: roundedPvp,
-          note: isPlusOne ? 'plusOne range - only margin applied, no supplements' : null
+          note: isPlusOne
+            ? 'plusOne: discounts on ARR (fallback COST), percentual supplements on discounted cost, no fixed supplements'
+            : 'full shipment: discounts on ARR (fallback COST), all supplements on original cost, fixed supplements applied'
         });
 
         rows.push({
