@@ -1803,27 +1803,13 @@ export function buildVirtualTariffTable(
   for (const tariff of tariffs) {
     for (const zone of DESTINATION_ZONES) {
       for (const mode of SHIPPING_MODES) {
-        const costField = COST_FIELD_MAP[zone]?.[mode];
-        if (!costField) {
+        const baseCost = getZoneCostFromTariff(tariff, zone, mode);
+        // Ya no existe getZonePriceFromTariff, solo usamos baseCost
+        const referenceValue = baseCost;
+
+        if (referenceValue === null) {
           continue;
         }
-
-        const serviceTariffsForZone = tariffsByService.get(tariff.service_name) ?? [tariff];
-        const weightForCostCalculation = tariff.weight_from;
-
-        const baseCostRaw = resolveTariffCost(
-          serviceTariffsForZone,
-          costField,
-          weightForCostCalculation,
-          tariff.service_name,
-          zone
-        );
-
-        if (baseCostRaw === null) {
-          continue;
-        }
-
-        const roundedBaseCost = roundUp(baseCostRaw);
 
         const planForService = normalizedPlanGroup
           ? findPlanForServiceGroup(discountPlans, normalizedPlanGroup, tariff.service_name)
@@ -1840,14 +1826,15 @@ export function buildVirtualTariffTable(
         let planWeightForLog: number | null = null;
 
         if (planForService) {
+          const serviceTariffsForPlan = tariffsByService.get(tariff.service_name) ?? [tariff];
           const resolvedPlanWeight = resolvePlanWeightForTariffRow(
-            serviceTariffsForZone,
+            serviceTariffsForPlan,
             tariff,
             zone
           );
 
           planDiscountAmount = calculatePlanDiscountForWeight(
-            serviceTariffsForZone,
+            serviceTariffsForPlan,
             tariff.service_name,
             zone,
             planForService,
@@ -1864,7 +1851,7 @@ export function buildVirtualTariffTable(
         const arrValue = getZoneArrFromTariff(tariff, zone);
 
         const breakdown = calculateCostBreakdown(
-          roundedBaseCost,
+          referenceValue,
           getZoneIncrement2024(tariff.service_name, zone),
           getZoneIncrement2025(tariff.service_name, zone),
           increment2026,
@@ -1880,6 +1867,7 @@ export function buildVirtualTariffTable(
             baseOverride,
             isPlusOneRange: isPlusOne,
             arrValue: arrValue,
+            useIntermediateRounding: true,
             serviceName: tariff.service_name
           }
         );
@@ -1898,9 +1886,7 @@ export function buildVirtualTariffTable(
           weight_from: tariff.weight_from,
           weight_to: tariff.weight_to,
           isPlusOneRange: isPlusOne,
-          weightUsedForCalculation: weightForCostCalculation,
-          baseCostRaw: baseCostRaw,
-          baseCostRounded: roundedBaseCost,
+          baseCost: referenceValue,
           arrValue: arrValue,
           discountCalculatedOn,
           planWeight: planWeightForLog,
