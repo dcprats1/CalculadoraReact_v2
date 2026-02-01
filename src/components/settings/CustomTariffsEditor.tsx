@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Save, RotateCcw, Trash2, X, FileUp } from 'lucide-react';
+import { Save, RotateCcw, Trash2, X, AlertTriangle } from 'lucide-react';
 import { supabase, CustomTariff } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCustomTariffs, useCustomTariffsActive, useTariffs } from '../../hooks/useSupabaseData';
 import { STATIC_SERVICES } from '../../utils/calculations';
-import { TariffPdfUploader } from './TariffPdfUploader';
 
 const WEIGHT_RANGES = [
   { from: '0', to: '1', label: '0-1kg' },
@@ -148,7 +147,7 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const [showPdfUploader, setShowPdfUploader] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   const isActive = useMemo(() => {
     return activeStates.some(state => state.service_name === selectedService && state.is_active);
@@ -570,6 +569,51 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
     }
   };
 
+  const handleClearAll = async () => {
+    const confirmMessage =
+      '¡ATENCIÓN! Esta acción eliminará TODAS las tarifas personalizadas de TODOS los servicios.\n\n' +
+      'Esta operación NO afecta a la tabla de costes oficial, solo a tus personalizaciones.\n\n' +
+      '¿Estás seguro de que deseas continuar?';
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    if (!userData) return;
+
+    setIsClearing(true);
+    setSaveMessage(null);
+
+    try {
+      const { error: tariffError } = await supabase
+        .from('custom_tariffs')
+        .delete()
+        .eq('user_id', userData.id);
+
+      if (tariffError) throw tariffError;
+
+      const { error: activeError } = await supabase
+        .from('custom_tariffs_active')
+        .delete()
+        .eq('user_id', userData.id);
+
+      if (activeError) throw activeError;
+
+      await refetchCustomTariffs();
+      await refetchActiveStates();
+      loadServiceData();
+
+      setSaveMessage('Todas las tarifas personalizadas han sido eliminadas correctamente');
+      setTimeout(() => setSaveMessage(null), 4000);
+    } catch (error) {
+      console.error('Error clearing all custom tariffs:', error);
+      setSaveMessage('Error al eliminar las tarifas personalizadas');
+      setTimeout(() => setSaveMessage(null), 5000);
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
   const handleToggleActive = async () => {
     if (!userData) return;
 
@@ -645,25 +689,7 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
                 </select>
               </div>
 
-              <button
-                onClick={() => setShowPdfUploader(!showPdfUploader)}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
-              >
-                <FileUp className="w-4 h-4" />
-                {showPdfUploader ? 'Ocultar Importador PDF' : 'Importar desde PDF'}
-              </button>
             </div>
-
-            {showPdfUploader && (
-              <div className="mt-4">
-                <TariffPdfUploader
-                  onDataImported={() => {
-                    refetchCustomTariffs();
-                    loadServiceData();
-                  }}
-                />
-              </div>
-            )}
 
             {saveMessage && (
               <div className={`rounded-lg p-3 text-sm font-medium ${
@@ -756,7 +782,16 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
             >
               <Trash2 className="h-4 w-4" />
-              Limpiar
+              Limpiar Servicio
+            </button>
+
+            <button
+              onClick={handleClearAll}
+              disabled={isClearing}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <AlertTriangle className="h-4 w-4" />
+              {isClearing ? 'Eliminando...' : 'LIMPIAR TOTAL'}
             </button>
           </div>
 
