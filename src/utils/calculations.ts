@@ -697,10 +697,9 @@ export function calculateCostBreakdown(
   // CASO 3: PATRÓN 1 - DESCUENTO LINEAL (descuento al final)
   // =============================================================================
   else if (hasLinearDiscount) {
-    // El descuento lineal se calcula sobre ARR (si existe) o sobre la base bruta
-    const baseForDiscount = (arrValue !== null && arrValue !== undefined && arrValue > 0)
-      ? arrValue
-      : safeInitial;
+    // El descuento lineal SIEMPRE se calcula sobre el coste base completo (safeInitial)
+    // NO sobre el ARR - el ARR solo se usa cuando hay PLAN DE DESCUENTO (CASO 2)
+    const baseForDiscount = safeInitial;
 
     const linearDiscountAmount = useIntermediateRounding
       ? roundIntermediate(baseForDiscount * (effectiveLinearDiscountPercentage / 100))
