@@ -6,10 +6,7 @@ import {
   normalizePlanGroupKey
 } from './customPlans';
 
-const SOP_DEBUG_ENABLED =
-  typeof import.meta !== 'undefined' &&
-  typeof import.meta.env !== 'undefined' &&
-  Boolean(import.meta.env.DEV);
+const SOP_DEBUG_ENABLED = true;
 
 const sopLog = (...args: unknown[]) => {
   if (SOP_DEBUG_ENABLED) {
@@ -1849,10 +1846,13 @@ export function buildVirtualTariffTable(
         const isPlusOne = isPlusOneRange(tariff);
         const arrValue = getZoneArrFromTariff(tariff, zone);
 
+        const incr2024Pct = getZoneIncrement2024(tariff.service_name, zone);
+        const incr2025Pct = getZoneIncrement2025(tariff.service_name, zone);
+
         const breakdown = calculateCostBreakdown(
           referenceValue,
-          getZoneIncrement2024(tariff.service_name, zone),
-          getZoneIncrement2025(tariff.service_name, zone),
+          incr2024Pct,
+          incr2025Pct,
           increment2026,
           spc,
           variableSurcharge,
@@ -1878,6 +1878,19 @@ export function buildVirtualTariffTable(
 
         const discountCalculatedOn = (arrValue !== null && arrValue !== undefined && arrValue > 0) ? 'ARR' : 'COST';
 
+        if (isPlusOne && zone === 'Provincial' && mode === 'salida' &&
+            (tariff.service_name === 'Urg10H Courier' || tariff.service_name === 'Urg19H Courier')) {
+          console.log(`[SOP-DIAG] ${tariff.service_name} Provincial plusOne:`, {
+            baseCost: referenceValue,
+            incr2024Pct,
+            incr2025Pct,
+            incr2024Amount: breakdown.incr2024,
+            incr2025Amount: breakdown.incr2025,
+            totalCost: breakdown.totalCost,
+            pvp: roundedPvp
+          });
+        }
+
         sopLog('virtual-row', {
           service: tariff.service_name,
           zone,
@@ -1888,6 +1901,8 @@ export function buildVirtualTariffTable(
           baseCost: referenceValue,
           arrValue: arrValue,
           discountCalculatedOn,
+          incr2024Pct,
+          incr2025Pct,
           planWeight: planWeightForLog,
           planApplied: planForService?.plan_name ?? null,
           planDiscountAmount,
