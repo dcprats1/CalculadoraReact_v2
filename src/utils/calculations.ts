@@ -793,7 +793,7 @@ export function calculateCostBreakdown(
     ? (useIntermediateRounding ? roundIntermediate(saturdayCost) : roundUp(saturdayCost))
     : 0;
 
-  const spcRounded = spc > 0
+  const spcRounded = (!isPlusOneRange && spc > 0)
     ? (useIntermediateRounding ? roundIntermediate(spc) : roundUp(spc))
     : 0;
 
