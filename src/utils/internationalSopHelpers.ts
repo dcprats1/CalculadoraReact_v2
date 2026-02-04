@@ -124,18 +124,26 @@ export function normalizeInternationalDestination(rangeName: string): string | n
   return directMatch ?? null;
 }
 
-export function calculateInternationalPvp(cost: number, marginPercentage: number): number {
+export function calculateInternationalPvp(
+  cost: number,
+  marginPercentage: number,
+  climateProtectPercent: number = 1.5,
+  spc: number = 0
+): number {
   if (cost <= 0) {
     return 0;
   }
 
+  const climateProtect = roundUp(cost * (climateProtectPercent / 100));
+  const totalCost = roundUp(cost + climateProtect + spc);
+
   const marginFactor = marginPercentage < 100 ? 1 - marginPercentage / 100 : 0;
 
   if (marginFactor <= 0) {
-    return roundUp(cost);
+    return roundUp(totalCost);
   }
 
-  const pvp = cost / marginFactor;
+  const pvp = totalCost / marginFactor;
   return roundUp(pvp);
 }
 
@@ -162,6 +170,8 @@ export function createInternationalMapKey(
 
 export interface BuildInternationalValueMapOptions {
   marginPercentage: number;
+  climateProtectPercent?: number;
+  spc?: number;
 }
 
 export function buildInternationalValueMap(
@@ -174,10 +184,10 @@ export function buildInternationalValueMap(
     return valueMap;
   }
 
-  const { marginPercentage } = options;
+  const { marginPercentage, climateProtectPercent = 1.5, spc = 0 } = options;
 
   for (const tariff of tariffs) {
-    const pvp = calculateInternationalPvp(tariff.cost, marginPercentage);
+    const pvp = calculateInternationalPvp(tariff.cost, marginPercentage, climateProtectPercent, spc);
 
     const mapKey = createInternationalMapKey(
       tariff.service_name,
