@@ -66,6 +66,14 @@ const buildEmptyBreakdowns = (): Record<string, CostBreakdown> => {
   return breakdowns;
 };
 
+const buildEmptyInternationalBreakdowns = (): Record<string, CostBreakdown> => {
+  const breakdowns: Record<string, CostBreakdown> = {};
+  EUROPE_DESTINATIONS.forEach(country => {
+    breakdowns[country] = createEmptyCostBreakdown();
+  });
+  return breakdowns;
+};
+
 const createDefaultPackage = (): PackageData => ({
   id: `pkg-${Date.now().toString(36)}`,
   weight: 1.0,
@@ -1618,7 +1626,7 @@ const TariffCalculator: React.FC = () => {
     }
 
     if (isInternationalService) {
-      const breakdowns = buildEmptyBreakdowns();
+      const breakdowns = buildEmptyInternationalBreakdowns();
       let totalWeight = 0;
       packages.forEach(pkg => {
         const quantity = Math.max(1, Math.round(pkg.quantity ?? 1));
@@ -1626,37 +1634,32 @@ const TariffCalculator: React.FC = () => {
         totalWeight += effectiveWeight * quantity;
       });
 
-      const intlCost = calculateInternationalEuropeCost(
-        internationalEuropeTariffs,
-        selectedEuropeCountry,
-        totalWeight
-      );
+      const countriesWithMissingTariffs: string[] = [];
 
-      if (intlCost === null) {
-        DESTINATION_ZONES.forEach(zoneName => {
-          breakdowns[zoneName] = createEmptyCostBreakdown('not_available');
-        });
-        setCostBreakdowns(breakdowns);
-        setMissingZones([selectedEuropeCountry]);
-        setRestrictedZones([]);
-        return;
-      }
+      EUROPE_DESTINATIONS.forEach(country => {
+        const intlCost = calculateInternationalEuropeCost(
+          internationalEuropeTariffs,
+          country,
+          totalWeight
+        );
 
-      const intlBreakdown = calculateInternationalEuropeCostBreakdown(
-        intlCost,
-        spc,
-        suplementos,
-        irregular,
-        linearDiscount
-      );
+        if (intlCost === null) {
+          breakdowns[country] = createEmptyCostBreakdown('not_available');
+          countriesWithMissingTariffs.push(country);
+          return;
+        }
 
-      breakdowns['Provincial'] = intlBreakdown;
-      DESTINATION_ZONES.filter(z => z !== 'Provincial').forEach(zoneName => {
-        breakdowns[zoneName] = createEmptyCostBreakdown('not_available');
+        breakdowns[country] = calculateInternationalEuropeCostBreakdown(
+          intlCost,
+          spc,
+          suplementos,
+          irregular,
+          linearDiscount
+        );
       });
 
       setCostBreakdowns(breakdowns);
-      setMissingZones([]);
+      setMissingZones(countriesWithMissingTariffs);
       setRestrictedZones([]);
       return;
     }
@@ -2236,6 +2239,8 @@ const TariffCalculator: React.FC = () => {
             planSelected={Boolean(selectedPlanGroup) || Boolean(selectedCustomPlan)}
             discountSummaryValue={discountSummary.value}
             discountSummaryDescription={discountSummary.description}
+            highlightedZone={isInternationalService ? selectedEuropeCountry : undefined}
+            isInternationalService={isInternationalService}
           />
         </div>
       </div>

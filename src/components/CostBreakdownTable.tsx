@@ -30,6 +30,8 @@ interface CostBreakdownTableProps {
   planSelected?: boolean;
   discountSummaryValue?: React.ReactNode;
   discountSummaryDescription?: React.ReactNode;
+  highlightedZone?: string;
+  isInternationalService?: boolean;
 }
 
 interface AnalysisRow {
@@ -71,7 +73,9 @@ export default function CostBreakdownTable({
   onMarginChange,
   planSelected = false,
   discountSummaryValue,
-  discountSummaryDescription
+  discountSummaryDescription,
+  highlightedZone,
+  isInternationalService = false
 }: CostBreakdownTableProps) {
   const safePackages = Array.isArray(packages) ? packages : [];
 
@@ -93,7 +97,6 @@ export default function CostBreakdownTable({
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
 
   const analysisRows = useMemo<AnalysisRow[]>(() => {
-      // 💡 LÍNEA DE CORRECCIÓN CLAVE
     if (!costBreakdowns) {
       return [];
     }
@@ -101,7 +104,7 @@ export default function CostBreakdownTable({
     const canCalculatePvp = marginFactor > 0;
     const vatMultiplier = applyVat ? 1 + vatRate / 100 : 1;
 
-    return Object.entries(costBreakdowns).map(([zone, breakdown]) => {
+    const rows = Object.entries(costBreakdowns).map(([zone, breakdown]) => {
       const isCalculated = breakdown.status === 'calculated';
       const basePvpRaw = isCalculated && canCalculatePvp ? breakdown.totalCost / marginFactor : 0;
       const basePvp = isCalculated ? roundUp(basePvpRaw) : 0;
@@ -134,6 +137,18 @@ export default function CostBreakdownTable({
         marginAmount: Number.isFinite(marginAmount) ? marginAmount : 0
       };
     });
+
+    if (isInternationalService) {
+      rows.sort((a, b) => {
+        if (highlightedZone) {
+          if (a.zone === highlightedZone) return -1;
+          if (b.zone === highlightedZone) return 1;
+        }
+        return a.zone.localeCompare(b.zone, 'es');
+      });
+    }
+
+    return rows;
   }, [
     costBreakdowns,
     marginPercentage,
@@ -144,7 +159,9 @@ export default function CostBreakdownTable({
     vatRate,
     additionalPvp,
     saturdayActive,
-    saturdayPvp
+    saturdayPvp,
+    isInternationalService,
+    highlightedZone
   ]);
 
   const showSaturdayCostColumn = saturdayActive || analysisRows.some(
@@ -392,19 +409,19 @@ export default function CostBreakdownTable({
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-lg font-semibold text-gray-900">
-                Desglose de Costes por Zona de Destino
+                {isInternationalService ? 'Desglose de Costes por Pais de Destino' : 'Desglose de Costes por Zona de Destino'}
               </h3>
               <span className="inline-flex items-center px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700 bg-blue-50 border border-blue-200 rounded-full">
                 Modo: {SHIPPING_MODE_LABELS[shippingMode]}
               </span>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className={`overflow-x-auto ${isInternationalService ? 'max-h-96 overflow-y-auto' : ''}`}>
               <table className="min-w-full table-auto text-sm">
-                <thead className="bg-gray-50">
+                <thead className={`bg-gray-50 ${isInternationalService ? 'sticky top-0 z-20' : ''}`}>
                   <tr>
                     <th className="px-3 py-2 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-tight leading-snug sticky left-0 bg-gray-50 z-10">
-                      Zona de Destino
+                      {isInternationalService ? 'Pais de Destino' : 'Zona de Destino'}
                     </th>
                     <th className="px-3 py-2 text-right text-[11px] font-semibold text-gray-500 uppercase tracking-tight leading-snug">
                       Coste Inicial<br />calculado en base al peso y medidas indicadas
@@ -467,9 +484,23 @@ export default function CostBreakdownTable({
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {analysisRows.map(row => (
-                    <tr key={row.zone} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-3 py-3 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 bg-white z-10">
+                  {analysisRows.map(row => {
+                    const isHighlighted = isInternationalService && highlightedZone === row.zone;
+                    return (
+                    <tr
+                      key={row.zone}
+                      className={`transition-colors ${
+                        isHighlighted
+                          ? 'bg-blue-50 hover:bg-blue-100'
+                          : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <td className={`px-3 py-3 whitespace-nowrap text-sm font-medium sticky left-0 z-10 ${
+                        isHighlighted
+                          ? 'bg-blue-50 text-blue-900 font-bold'
+                          : 'bg-white text-gray-900'
+                      }`}>
+                        {isHighlighted && <span className="mr-1">*</span>}
                         {row.zone}
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
@@ -543,7 +574,8 @@ export default function CostBreakdownTable({
                         {renderAmountCell(row.breakdown.totalCost, row.breakdown)}
                       </td>
                     </tr>
-                  ))}
+                  );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -717,12 +749,12 @@ export default function CostBreakdownTable({
                 </div>
               </div>
             </div>
-            <div className="overflow-x-auto">
+            <div className={`overflow-x-auto ${isInternationalService ? 'max-h-96 overflow-y-auto' : ''}`}>
               <table className="min-w-full table-auto text-sm">
-                <thead className="bg-gray-50">
+                <thead className={`bg-gray-50 ${isInternationalService ? 'sticky top-0 z-20' : ''}`}>
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Zona de Destino
+                      {isInternationalService ? 'Pais de Destino' : 'Zona de Destino'}
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Total Coste
@@ -731,7 +763,7 @@ export default function CostBreakdownTable({
                       PVP base
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Sup. energía ({formatPercentage(energySurchargePct)})
+                      Sup. energia ({formatPercentage(energySurchargePct)})
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Climate Protect ({formatPercentage(climateProtectPct)})
@@ -741,7 +773,7 @@ export default function CostBreakdownTable({
                     </th>
                     {showSaturdayCostColumn && (
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ent. Sáb
+                        Ent. Sab
                       </th>
                     )}
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -753,10 +785,18 @@ export default function CostBreakdownTable({
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {analysisRows.map(row => (
+                  {analysisRows.map(row => {
+                    const isHighlighted = isInternationalService && highlightedZone === row.zone;
+                    return (
                     <tr
                       key={`${row.zone}-analysis`}
-                      className={`${selectedZone === row.zone ? 'bg-green-50' : ''} hover:bg-gray-50 transition-colors cursor-pointer`}
+                      className={`transition-colors cursor-pointer ${
+                        isHighlighted
+                          ? 'bg-blue-50 hover:bg-blue-100'
+                          : selectedZone === row.zone
+                            ? 'bg-green-50 hover:bg-green-100'
+                            : 'hover:bg-gray-50'
+                      }`}
                       role="button"
                       tabIndex={0}
                       onClick={() => setSelectedZone(row.zone)}
@@ -767,7 +807,10 @@ export default function CostBreakdownTable({
                         }
                       }}
                     >
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${
+                          isHighlighted ? 'text-blue-900 font-bold' : 'text-gray-900'
+                        }`}>
+                          {isHighlighted && <span className="mr-1">*</span>}
                           {row.zone}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 text-right">
@@ -801,7 +844,8 @@ export default function CostBreakdownTable({
                           {renderAmountCell(row.pvpConIva, row.breakdown)}
                         </td>
                       </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
