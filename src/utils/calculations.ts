@@ -872,23 +872,17 @@ export function calculateInternationalEuropeCostBreakdown(
   initialCost: number,
   spc: number = 0,
   suplementos: number = 0,
-  irregular: number = 0,
-  planDiscountPercentage: number = 0
+  irregular: number = 0
 ): CostBreakdown {
   const safeInitial = initialCost > 0 ? initialCost : 0;
 
-  const planDiscountAmount = planDiscountPercentage > 0
-    ? roundUp(safeInitial * (planDiscountPercentage / 100))
-    : 0;
-
-  const baseAfterDiscount = Math.max(0, safeInitial - planDiscountAmount);
-  const climateProtect = roundUp(baseAfterDiscount * 0.015);
+  const climateProtect = roundUp(safeInitial * 0.015);
   const spcRounded = spc > 0 ? roundUp(spc) : 0;
   const suplementosRounded = suplementos > 0 ? roundUp(suplementos) : 0;
   const irregularRounded = irregular > 0 ? roundUp(irregular) : 0;
 
   const totalCost = roundUp(
-    baseAfterDiscount +
+    safeInitial +
     climateProtect +
     spcRounded +
     suplementosRounded +
@@ -897,7 +891,7 @@ export function calculateInternationalEuropeCostBreakdown(
 
   return {
     initialCost: safeInitial,
-    linearDiscount: planDiscountAmount,
+    linearDiscount: 0,
     climateProtect,
     canonRed: 0,
     canonDigital: 0,

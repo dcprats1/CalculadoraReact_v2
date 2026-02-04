@@ -1653,8 +1653,7 @@ const TariffCalculator: React.FC = () => {
           intlCost,
           spc,
           suplementos,
-          irregular,
-          linearDiscount
+          irregular
         );
       });
 
