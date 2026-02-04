@@ -10,6 +10,7 @@ import {
   formatWeight,
   roundUp
 } from '../utils/calculations';
+import { EUROPE_ZONE_DATA, EUROPE_ZONE_COLORS, sortEuropeDestinationsByZone } from '../lib/supabase';
 
 type ZoneCostMap = Record<string, CostBreakdown>;
 
@@ -139,13 +140,8 @@ export default function CostBreakdownTable({
     });
 
     if (isInternationalService) {
-      rows.sort((a, b) => {
-        if (highlightedZone) {
-          if (a.zone === highlightedZone) return -1;
-          if (b.zone === highlightedZone) return 1;
-        }
-        return a.zone.localeCompare(b.zone, 'es');
-      });
+      const sortedZones = sortEuropeDestinationsByZone(rows.map(r => r.zone), highlightedZone);
+      rows.sort((a, b) => sortedZones.indexOf(a.zone) - sortedZones.indexOf(b.zone));
     }
 
     return rows;
@@ -500,8 +496,19 @@ export default function CostBreakdownTable({
                           ? 'bg-blue-50 text-blue-900 font-bold'
                           : 'bg-white text-gray-900'
                       }`}>
-                        {isHighlighted && <span className="mr-1">*</span>}
-                        {row.zone}
+                        <span className="flex items-center gap-1.5">
+                          {isInternationalService && EUROPE_ZONE_DATA[row.zone] && (
+                            <span
+                              className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: EUROPE_ZONE_COLORS[EUROPE_ZONE_DATA[row.zone].zone] }}
+                              title={`Zona ${EUROPE_ZONE_DATA[row.zone].zone}`}
+                            />
+                          )}
+                          {isHighlighted && <span className="mr-0.5">*</span>}
+                          {isInternationalService && EUROPE_ZONE_DATA[row.zone]?.displayName
+                            ? EUROPE_ZONE_DATA[row.zone].displayName
+                            : row.zone}
+                        </span>
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
                         {renderInitialCostCell(row)}
@@ -810,8 +817,19 @@ export default function CostBreakdownTable({
                         <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${
                           isHighlighted ? 'text-blue-900 font-bold' : 'text-gray-900'
                         }`}>
-                          {isHighlighted && <span className="mr-1">*</span>}
-                          {row.zone}
+                          <span className="flex items-center gap-1.5">
+                            {isInternationalService && EUROPE_ZONE_DATA[row.zone] && (
+                              <span
+                                className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
+                                style={{ backgroundColor: EUROPE_ZONE_COLORS[EUROPE_ZONE_DATA[row.zone].zone] }}
+                                title={`Zona ${EUROPE_ZONE_DATA[row.zone].zone}`}
+                              />
+                            )}
+                            {isHighlighted && <span className="mr-0.5">*</span>}
+                            {isInternationalService && EUROPE_ZONE_DATA[row.zone]?.displayName
+                              ? EUROPE_ZONE_DATA[row.zone].displayName
+                              : row.zone}
+                          </span>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 text-right">
                           {renderAmountCell(row.breakdown.totalCost, row.breakdown)}
