@@ -1,9 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Download, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { Workbook } from 'exceljs';
-import { Tariff, DiscountPlan } from '../../lib/supabase';
+import { Tariff, DiscountPlan, supabase } from '../../lib/supabase';
 import { buildVirtualTariffTable } from '../../utils/calculations';
 import { getPlanGroupKey, getCustomPlanMessage } from '../../utils/customPlans';
+import {
+  InternationalTariff,
+  normalizeInternationalDestination,
+  buildInternationalValueMap,
+  createInternationalMapKey
+} from '../../utils/internationalSopHelpers';
 import { usePreferences } from '../../contexts/PreferencesContext';
 import { trackSOPDownload } from '../../utils/tracking';
 import { useAuth } from '../../contexts/AuthContext';
@@ -301,6 +307,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
   const [localPlanGroup, setLocalPlanGroup] = useState<string>(selectedPlanGroup);
   const [planMessage, setPlanMessage] = useState<string | null>(null);
   const [isPreloaded, setIsPreloaded] = useState(false);
+  const [internationalTariffs, setInternationalTariffs] = useState<InternationalTariff[]>([]);
 
   const isReady = !!workbookBuffer;
 
@@ -352,7 +359,30 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
       }
     };
 
+    const fetchInternationalTariffs = async () => {
+      try {
+        const { data, error: fetchError } = await supabase
+          .from('tariffs_international_europe')
+          .select('id, service_name, country, weight_from, weight_to, cost')
+          .order('country', { ascending: true })
+          .order('weight_from', { ascending: true });
+
+        if (fetchError) {
+          sopLog('international-tariffs:error', fetchError.message);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          setInternationalTariffs(data as InternationalTariff[]);
+          sopLog('international-tariffs:loaded', { count: data.length });
+        }
+      } catch (err) {
+        sopLog('international-tariffs:error', err instanceof Error ? err.message : 'Error desconocido');
+      }
+    };
+
     void fetchWorkbook();
+    void fetchInternationalTariffs();
   }, [isOpen]);
 
   const handleOpen = () => {
@@ -393,6 +423,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
     setLocalPlanGroup(selectedPlanGroup);
     setPlanMessage(null);
     setIsPreloaded(false);
+    setInternationalTariffs([]);
   };
 
   useEffect(() => {
@@ -490,10 +521,54 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
       valueMap.set(mapKey, row.pvp);
     });
 
+    const internationalValueMap = buildInternationalValueMap(internationalTariffs, {
+      marginPercentage
+    });
+    sopLog('international-map:built', { entries: internationalValueMap.size });
+
     const sheet = workbook.getWorksheet('General');
     if (!sheet) {
       throw new Error("La hoja 'General' no está disponible en la plantilla descargada.");
     }
+
+    const writeValueToTargets = (
+      row: any,
+      finalValue: number,
+      serviceName: string,
+      zoneOrCountry: string,
+      weightFrom: number | null,
+      weightTo: number | null
+    ) => {
+      row.getCell('G').value = finalValue;
+
+      const targetSheetName = String(row.getCell('H').value ?? '').trim();
+      const targetCellRef = String(row.getCell('I').value ?? '').trim();
+
+      if (targetSheetName && targetCellRef) {
+        const targetSheet = workbook.getWorksheet(targetSheetName);
+        if (targetSheet) {
+          const targetCell = targetSheet.getCell(targetCellRef);
+          targetCell.value = finalValue;
+          sopLog('write-target', {
+            service: serviceName,
+            zone: zoneOrCountry,
+            weight_from: weightFrom,
+            weight_to: weightTo,
+            sheet: targetSheetName,
+            cell: targetCellRef,
+            value: finalValue
+          });
+        }
+      }
+
+      sopLog('write-row', {
+        service: serviceName,
+        zone: zoneOrCountry,
+        weight_from: weightFrom,
+        weight_to: weightTo,
+        value: finalValue
+      });
+    };
 
     sheet.eachRow((row: any, rowNumber: number) => {
       if (rowNumber === 1) return;
@@ -511,7 +586,25 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
       }
 
       const zoneKey = normalizeRangeName(rangeName);
+
       if (!zoneKey) {
+        const internationalCountry = normalizeInternationalDestination(rangeName);
+        if (internationalCountry && internationalValueMap.size > 0) {
+          const intlMapKey = createInternationalMapKey(
+            serviceName,
+            internationalCountry,
+            weightFrom,
+            weightTo
+          );
+          const intlValue = internationalValueMap.get(intlMapKey);
+
+          if (typeof intlValue === 'number') {
+            const finalValue = Number(intlValue.toFixed(2));
+            writeValueToTargets(row, finalValue, serviceName, internationalCountry, weightFrom, weightTo);
+            return;
+          }
+        }
+
         row.getCell('G').value = null;
         return;
       }
@@ -526,35 +619,7 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
       const value = valueMap.get(mapKey);
       if (typeof value === 'number') {
         const finalValue = Number(value.toFixed(2));
-        row.getCell('G').value = finalValue;
-
-        const targetSheetName = String(row.getCell('H').value ?? '').trim();
-        const targetCellRef = String(row.getCell('I').value ?? '').trim();
-
-        if (targetSheetName && targetCellRef) {
-          const targetSheet = workbook.getWorksheet(targetSheetName);
-          if (targetSheet) {
-            const targetCell = targetSheet.getCell(targetCellRef);
-            targetCell.value = finalValue;
-            sopLog('write-target', {
-              service: serviceName,
-              zone: zoneKey,
-              weight_from: weightFrom,
-              weight_to: weightTo,
-              sheet: targetSheetName,
-              cell: targetCellRef,
-              value: finalValue
-            });
-          }
-        }
-
-        sopLog('write-row', {
-          service: serviceName,
-          zone: zoneKey,
-          weight_from: weightFrom,
-          weight_to: weightTo,
-          value: finalValue
-        });
+        writeValueToTargets(row, finalValue, serviceName, zoneKey, weightFrom, weightTo);
       } else {
         row.getCell('G').value = null;
         sopLog('write-row', {
