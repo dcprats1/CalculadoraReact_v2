@@ -39,7 +39,7 @@ import {
   extractPlusOneCost,
   calculatePercentualSupplements
 } from '../utils/calculations';
-import PackageManager from './PackageManager';
+import PackageManager, { PackageValidationError } from './PackageManager';
 import CostBreakdownTable from './CostBreakdownTable';
 import SOPGenerator from './sop/SOPGenerator';
 import MiniSOPLauncher from './sop/MiniSOPLauncher';
@@ -380,6 +380,7 @@ const TariffCalculator: React.FC = () => {
   const [costBreakdowns, setCostBreakdowns] = useState<Record<string, CostBreakdown>>(() => buildEmptyBreakdowns());
   const [missingZones, setMissingZones] = useState<string[]>([]);
   const [restrictedZones, setRestrictedZones] = useState<string[]>([]);
+  const [intlPackageErrors, setIntlPackageErrors] = useState<PackageValidationError[]>([]);
   const [showCosts, setShowCosts] = useState<boolean>(false);
   const [showPvp, setShowPvp] = useState<boolean>(false);
   const [isComparatorOpen, setIsComparatorOpen] = useState<boolean>(false);
@@ -1629,56 +1630,74 @@ const TariffCalculator: React.FC = () => {
 
     if (isInternationalService) {
       const breakdowns = buildEmptyInternationalBreakdowns();
-      let totalWeight = 0;
-      let maxWidth = 0;
-      let maxHeight = 0;
-      let maxLength = 0;
-
-      packages.forEach(pkg => {
-        const quantity = Math.max(1, Math.round(pkg.quantity ?? 1));
-        const effectiveWeight = pkg.finalWeight ?? pkg.weight ?? 0;
-        totalWeight += effectiveWeight * quantity;
-        maxWidth = Math.max(maxWidth, pkg.width ?? 0);
-        maxHeight = Math.max(maxHeight, pkg.height ?? 0);
-        maxLength = Math.max(maxLength, pkg.length ?? 0);
-      });
-
       const countriesWithMissingTariffs: string[] = [];
       const countriesWithRestrictions: string[] = [];
+      const packageErrors: PackageValidationError[] = [];
+
+      const selectedCountryForValidation = selectedEuropeCountry;
+      packages.forEach((pkg, index) => {
+        const dim1 = pkg.dimensions?.height ?? 0;
+        const dim2 = pkg.dimensions?.width ?? 0;
+        const dim3 = pkg.dimensions?.length ?? 0;
+        const effectiveWeight = pkg.finalWeight ?? pkg.weight ?? 0;
+        const validation = validateInternationalEuropePackage(dim1, dim2, dim3, effectiveWeight, selectedCountryForValidation);
+        if (!validation.valid) {
+          packageErrors.push({
+            packageId: pkg.id,
+            errors: validation.errors.map(e => `Bulto ${index + 1}: ${e}`)
+          });
+        }
+      });
+      setIntlPackageErrors(packageErrors);
 
       EUROPE_DESTINATIONS.forEach(country => {
-        const validation = validateInternationalEuropePackage(
-          maxWidth,
-          maxHeight,
-          maxLength,
-          totalWeight,
-          country
-        );
+        let totalBaseCost = 0;
+        let totalPackageCount = 0;
+        let hasInvalidPackage = false;
+        let hasMissingTariff = false;
 
-        if (!validation.valid) {
+        for (const pkg of packages) {
+          const quantity = Math.max(1, Math.round(pkg.quantity ?? 1));
+          const effectiveWeight = pkg.finalWeight ?? pkg.weight ?? 0;
+          const dim1 = pkg.dimensions?.height ?? 0;
+          const dim2 = pkg.dimensions?.width ?? 0;
+          const dim3 = pkg.dimensions?.length ?? 0;
+
+          const validation = validateInternationalEuropePackage(dim1, dim2, dim3, effectiveWeight, country);
+          if (!validation.valid) {
+            hasInvalidPackage = true;
+            break;
+          }
+
+          const pkgCost = calculateInternationalEuropeCost(internationalEuropeTariffs, country, effectiveWeight);
+          if (pkgCost === null) {
+            hasMissingTariff = true;
+            break;
+          }
+
+          totalBaseCost += pkgCost * quantity;
+          totalPackageCount += quantity;
+        }
+
+        if (hasInvalidPackage) {
           breakdowns[country] = createEmptyCostBreakdown('not_available');
           countriesWithRestrictions.push(country);
           return;
         }
 
-        const intlCost = calculateInternationalEuropeCost(
-          internationalEuropeTariffs,
-          country,
-          totalWeight
-        );
-
-        if (intlCost === null) {
+        if (hasMissingTariff) {
           breakdowns[country] = createEmptyCostBreakdown('not_available');
           countriesWithMissingTariffs.push(country);
           return;
         }
 
         breakdowns[country] = calculateInternationalEuropeCostBreakdown(
-          intlCost,
+          totalBaseCost,
           spc,
           suplementos,
           irregular,
-          shippingMode
+          shippingMode,
+          totalPackageCount
         );
       });
 
@@ -1686,6 +1705,8 @@ const TariffCalculator: React.FC = () => {
       setMissingZones(countriesWithMissingTariffs);
       setRestrictedZones(countriesWithRestrictions);
       return;
+    } else {
+      setIntlPackageErrors([]);
     }
 
     const breakdowns = buildEmptyBreakdowns();
@@ -2071,6 +2092,7 @@ const TariffCalculator: React.FC = () => {
           onChange={handlePackagesChange}
           selectedService={selectedService}
           onClearPackages={handleClearPackages}
+          validationErrors={isInternationalService ? intlPackageErrors : undefined}
         />
 
         {showMileageBanner && (
@@ -2243,7 +2265,7 @@ const TariffCalculator: React.FC = () => {
               </p>
               {isInternationalService && (
                 <p className="mt-2 text-xs">
-                  <span className="font-semibold">Limites Internacional Europa:</span> Ancho max {INTERNATIONAL_EUROPE_LIMITS.maxWidth}cm, Alto max {INTERNATIONAL_EUROPE_LIMITS.maxHeight}cm, Largo max {INTERNATIONAL_EUROPE_LIMITS.maxLength}cm, Perimetro max {INTERNATIONAL_EUROPE_LIMITS.maxPerimeter}cm (2xAlto + 2xAncho + Largo), Peso max {INTERNATIONAL_EUROPE_LIMITS.maxWeight}kg ({INTERNATIONAL_EUROPE_LIMITS.maxWeightGB}kg a GB).
+                  <span className="font-semibold">Limites Internacional Europa (por bulto):</span> Las 3 dimensiones deben encajar en los limites {INTERNATIONAL_EUROPE_LIMITS.dimensionLimits.join('cm, ')}cm (asignacion dinamica). Perimetro max {INTERNATIONAL_EUROPE_LIMITS.maxPerimeter}cm (2xdim1 + 2xdim2 + dim mayor). Peso max {INTERNATIONAL_EUROPE_LIMITS.maxWeight}kg ({INTERNATIONAL_EUROPE_LIMITS.maxWeightGB}kg a GB).
                 </p>
               )}
             </div>

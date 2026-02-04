@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Minus, Package, Ruler } from 'lucide-react';
+import { Plus, Minus, Package, Ruler, AlertTriangle } from 'lucide-react';
 import { PackageData } from '../utils/calculations';
 import {
   calculateVolumetricWeight,
@@ -9,19 +9,30 @@ import {
   formatVolume
 } from '../utils/calculations';
 
+export interface PackageValidationError {
+  packageId: string;
+  errors: string[];
+}
+
 interface PackageManagerProps {
   packages: PackageData[];
   onChange: (packages: PackageData[]) => void;
   selectedService?: string;
   onClearPackages: () => void;
+  validationErrors?: PackageValidationError[];
 }
 
 export default function PackageManager({
   packages,
   onChange,
   selectedService,
-  onClearPackages
+  onClearPackages,
+  validationErrors = []
 }: PackageManagerProps) {
+  const getPackageErrors = (pkgId: string): string[] => {
+    const found = validationErrors.find(e => e.packageId === pkgId);
+    return found?.errors ?? [];
+  };
   const emitChange = React.useCallback(
     (nextPackages: PackageData[]) => {
       if (typeof onChange !== 'function') {
@@ -185,9 +196,11 @@ export default function PackageManager({
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {packages.map((pkg, index) => {
             const quantity = Math.max(1, Math.round(pkg.quantity ?? 1));
+            const pkgErrors = getPackageErrors(pkg.id);
+            const hasErrors = pkgErrors.length > 0;
 
             return (
-              <div key={pkg.id} className="border border-gray-200 rounded-lg p-4 flex flex-col h-full">
+              <div key={pkg.id} className={`border rounded-lg p-4 flex flex-col h-full ${hasErrors ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}>
                 <div className="flex items-center justify-between mb-3">
                   <button
                     type="button"
@@ -209,7 +222,10 @@ export default function PackageManager({
                       {quantity > 1 && (
                         <span className="ml-2 text-xs font-semibold text-blue-600">×{quantity}</span>
                       )}
-                      {packages.length > 1 && (
+                      {hasErrors && (
+                        <AlertTriangle className="ml-2 h-4 w-4 text-red-500" />
+                      )}
+                      {packages.length > 1 && !hasErrors && (
                         <span className="ml-2 text-[11px] font-normal text-red-500">(pulsa para eliminar)</span>
                       )}
                     </span>
@@ -228,6 +244,14 @@ export default function PackageManager({
                     </button>
                   )}
                 </div>
+
+                {hasErrors && (
+                  <div className="mb-3 p-2 bg-red-100 border border-red-300 rounded text-xs text-red-800">
+                    {pkgErrors.map((err, i) => (
+                      <div key={i}>{err}</div>
+                    ))}
+                  </div>
+                )}
 
                 <div className="space-y-4 flex-1">
                   <div className="flex flex-wrap items-end gap-3">
@@ -278,13 +302,13 @@ export default function PackageManager({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-2 flex items-center">
-                      <Ruler className="h-4 w-4 mr-1 text-blue-600" />
+                    <label className={`block text-xs font-medium mb-2 flex items-center ${hasErrors ? 'text-red-700' : 'text-gray-700'}`}>
+                      <Ruler className={`h-4 w-4 mr-1 ${hasErrors ? 'text-red-500' : 'text-blue-600'}`} />
                       Medidas (cm)
                     </label>
                     <div className="space-y-2">
                       <div className="flex items-center gap-3">
-                        <span className="w-16 text-xs font-medium text-gray-600">Alto</span>
+                        <span className={`w-16 text-xs font-medium ${hasErrors ? 'text-red-600' : 'text-gray-600'}`}>Alto</span>
                         <input
                           type="number"
                           value={pkg.dimensions?.height || 10}
@@ -298,12 +322,12 @@ export default function PackageManager({
                           min="1"
                           max="99999"
                           step="0.1"
-                          className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                          className={`w-20 px-2 py-1 text-sm border rounded focus:ring-1 focus:border-transparent ${hasErrors ? 'border-red-400 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                           placeholder="Alto"
                         />
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="w-16 text-xs font-medium text-gray-600">Ancho</span>
+                        <span className={`w-16 text-xs font-medium ${hasErrors ? 'text-red-600' : 'text-gray-600'}`}>Ancho</span>
                         <input
                           type="number"
                           value={pkg.dimensions?.width || 10}
@@ -317,12 +341,12 @@ export default function PackageManager({
                           min="1"
                           max="99999"
                           step="0.1"
-                          className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                          className={`w-20 px-2 py-1 text-sm border rounded focus:ring-1 focus:border-transparent ${hasErrors ? 'border-red-400 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                           placeholder="Ancho"
                         />
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="w-16 text-xs font-medium text-gray-600">Largo</span>
+                        <span className={`w-16 text-xs font-medium ${hasErrors ? 'text-red-600' : 'text-gray-600'}`}>Largo</span>
                         <input
                           type="number"
                           value={pkg.dimensions?.length || 10}
@@ -336,7 +360,7 @@ export default function PackageManager({
                           min="1"
                           max="99999"
                           step="0.1"
-                          className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                          className={`w-20 px-2 py-1 text-sm border rounded focus:ring-1 focus:border-transparent ${hasErrors ? 'border-red-400 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                           placeholder="Largo"
                         />
                       </div>

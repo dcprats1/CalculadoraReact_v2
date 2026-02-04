@@ -869,18 +869,14 @@ export function calculateCostBreakdown(
 }
 
 export interface InternationalEuropeLimits {
-  maxWidth: number;
-  maxHeight: number;
-  maxLength: number;
+  dimensionLimits: [number, number, number];
   maxPerimeter: number;
   maxWeight: number;
   maxWeightGB: number;
 }
 
 export const INTERNATIONAL_EUROPE_LIMITS: InternationalEuropeLimits = {
-  maxWidth: 80,
-  maxHeight: 60,
-  maxLength: 200,
+  dimensionLimits: [60, 80, 200],
   maxPerimeter: 300,
   maxWeight: 40,
   maxWeightGB: 30
@@ -889,31 +885,59 @@ export const INTERNATIONAL_EUROPE_LIMITS: InternationalEuropeLimits = {
 export interface InternationalEuropeValidation {
   valid: boolean;
   errors: string[];
+  failedDimensions?: number[];
+}
+
+function assignDimensionsToLimits(dims: number[]): { valid: boolean; failedIndex: number | null; failedValue: number | null; availableLimit: number | null } {
+  const sorted = [...dims].sort((a, b) => a - b);
+  const limits = [...INTERNATIONAL_EUROPE_LIMITS.dimensionLimits].sort((a, b) => a - b);
+  const usedLimits = [false, false, false];
+
+  for (let i = 0; i < sorted.length; i++) {
+    const dim = sorted[i];
+    let assigned = false;
+
+    for (let j = 0; j < limits.length; j++) {
+      if (!usedLimits[j] && dim <= limits[j]) {
+        usedLimits[j] = true;
+        assigned = true;
+        break;
+      }
+    }
+
+    if (!assigned) {
+      const availableLimits = limits.filter((_, idx) => !usedLimits[idx]);
+      const maxAvailable = availableLimits.length > 0 ? Math.max(...availableLimits) : limits[limits.length - 1];
+      return { valid: false, failedIndex: i, failedValue: dim, availableLimit: maxAvailable };
+    }
+  }
+
+  return { valid: true, failedIndex: null, failedValue: null, availableLimit: null };
 }
 
 export function validateInternationalEuropePackage(
-  width: number,
-  height: number,
-  length: number,
+  dim1: number,
+  dim2: number,
+  dim3: number,
   weight: number,
   country: string
 ): InternationalEuropeValidation {
   const errors: string[] = [];
   const limits = INTERNATIONAL_EUROPE_LIMITS;
+  const dims = [dim1, dim2, dim3].filter(d => d > 0);
 
-  if (width > limits.maxWidth) {
-    errors.push(`Ancho ${width}cm > max ${limits.maxWidth}cm`);
-  }
-  if (height > limits.maxHeight) {
-    errors.push(`Alto ${height}cm > max ${limits.maxHeight}cm`);
-  }
-  if (length > limits.maxLength) {
-    errors.push(`Largo ${length}cm > max ${limits.maxLength}cm`);
-  }
+  if (dims.length === 3) {
+    const assignment = assignDimensionsToLimits(dims);
+    if (!assignment.valid && assignment.failedValue !== null) {
+      errors.push(`Dimension ${assignment.failedValue}cm excede limite disponible ${assignment.availableLimit}cm`);
+    }
 
-  const perimeter = 2 * height + 2 * width + length;
-  if (perimeter > limits.maxPerimeter) {
-    errors.push(`Perimetro ${perimeter}cm > max ${limits.maxPerimeter}cm`);
+    const sorted = [...dims].sort((a, b) => a - b);
+    const largest = sorted[2];
+    const perimeter = 2 * sorted[0] + 2 * sorted[1] + largest;
+    if (perimeter > limits.maxPerimeter) {
+      errors.push(`Perimetro ${perimeter}cm > max ${limits.maxPerimeter}cm`);
+    }
   }
 
   const isGB = country.toLowerCase().includes('reino unido') ||
@@ -932,38 +956,43 @@ export function validateInternationalEuropePackage(
   };
 }
 
-const INTL_EUROPE_MODE_SURCHARGE: Record<ShippingMode, number> = {
+export const INTL_EUROPE_MODE_SURCHARGE: Record<ShippingMode, number> = {
   salida: 0,
   recogida: 5.00,
   interciudad: 3.00
 };
 
 export function calculateInternationalEuropeCostBreakdown(
-  initialCost: number,
-  spc: number = 0,
-  suplementos: number = 0,
-  irregular: number = 0,
-  shippingMode: ShippingMode = 'salida'
+  baseCostsSum: number,
+  spcPerPackage: number = 0,
+  suplementosPerPackage: number = 0,
+  irregularPerPackage: number = 0,
+  shippingMode: ShippingMode = 'salida',
+  packageCount: number = 1
 ): CostBreakdown {
-  const modeSurcharge = INTL_EUROPE_MODE_SURCHARGE[shippingMode] ?? 0;
-  const safeInitial = initialCost > 0 ? initialCost + modeSurcharge : 0;
+  const count = Math.max(1, Math.round(packageCount));
+  const modeSurchargePerPkg = INTL_EUROPE_MODE_SURCHARGE[shippingMode] ?? 0;
+  const totalModeSurcharge = roundUp(modeSurchargePerPkg * count);
 
-  const climateProtect = roundUp(safeInitial * 0.015);
-  const spcRounded = spc > 0 ? roundUp(spc) : 0;
-  const suplementosRounded = suplementos > 0 ? roundUp(suplementos) : 0;
-  const irregularRounded = irregular > 0 ? roundUp(irregular) : 0;
+  const safeBaseCosts = baseCostsSum > 0 ? baseCostsSum : 0;
+  const initialCostWithSurcharge = safeBaseCosts + totalModeSurcharge;
+
+  const climateProtect = roundUp(initialCostWithSurcharge * 0.015);
+  const spcTotal = spcPerPackage > 0 ? roundUp(spcPerPackage * count) : 0;
+  const suplementosTotal = suplementosPerPackage > 0 ? roundUp(suplementosPerPackage * count) : 0;
+  const irregularTotal = irregularPerPackage > 0 ? roundUp(irregularPerPackage * count) : 0;
 
   const subtotal = roundUp(
-    safeInitial +
+    initialCostWithSurcharge +
     climateProtect +
-    suplementosRounded +
-    irregularRounded
+    suplementosTotal +
+    irregularTotal
   );
 
-  const totalCost = roundUp(subtotal + spcRounded);
+  const totalCost = roundUp(subtotal + spcTotal);
 
   return {
-    initialCost: safeInitial,
+    initialCost: initialCostWithSurcharge,
     linearDiscount: 0,
     climateProtect,
     canonRed: 0,
@@ -971,8 +1000,8 @@ export function calculateInternationalEuropeCostBreakdown(
     noVol: 0,
     amplCobertura: 0,
     energia: 0,
-    suplementos: suplementosRounded,
-    irregular: irregularRounded,
+    suplementos: suplementosTotal,
+    irregular: irregularTotal,
     mileageCost: 0,
     saturdayCost: 0,
     subtotal,
@@ -982,7 +1011,7 @@ export function calculateInternationalEuropeCostBreakdown(
     incr2024Percent: 0,
     incr2025Percent: 0,
     incr2026Percent: 0,
-    spc: spcRounded,
+    spc: spcTotal,
     totalCost,
     status: 'calculated'
   };
