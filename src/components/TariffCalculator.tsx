@@ -12,7 +12,7 @@ import { useCommercialPlans } from '../hooks/useCommercialPlans';
 import { CommercialPlan } from '../types/commercialPlans';
 import { calculateCustomPlanDiscount, getCustomPlanDisplayInfo } from '../utils/customCommercialPlans';
 import { useTariffs, useDiscountPlans, useCustomTariffsActive, useInternationalEuropeTariffs, calculateInternationalEuropeCost } from '../hooks/useSupabaseData';
-import { EUROPE_DESTINATIONS } from '../lib/supabase';
+import { EUROPE_DESTINATIONS, EUROPE_ZONE_DATA, EUROPE_ZONE_COLORS, getEuropeDestinationsByZone, EuropeZone } from '../lib/supabase';
 import {
   PackageData,
   DESTINATION_ZONES,
@@ -948,11 +948,19 @@ const TariffCalculator: React.FC = () => {
                     onChange={(e) => setSelectedEuropeCountry(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    {EUROPE_DESTINATIONS.map(country => (
-                      <option key={country} value={country}>
-                        {country}
-                      </option>
-                    ))}
+                    {(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as EuropeZone[]).map(zone => {
+                      const countriesInZone = getEuropeDestinationsByZone()[zone];
+                      if (countriesInZone.length === 0) return null;
+                      return (
+                        <optgroup key={zone} label={`Zona ${zone}`}>
+                          {countriesInZone.sort((a, b) => a.localeCompare(b, 'es')).map(country => (
+                            <option key={country} value={country}>
+                              {EUROPE_ZONE_DATA[country]?.displayName || country}
+                            </option>
+                          ))}
+                        </optgroup>
+                      );
+                    })}
                   </select>
                 </div>
               )}

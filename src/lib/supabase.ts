@@ -232,12 +232,99 @@ export interface TariffInternationalEurope {
 }
 
 export const EUROPE_DESTINATIONS = [
-  'Alemania', 'Austria', 'Belgica', 'Bulgaria', 'Chipre', 'Croacia',
+  'Alemania', 'Austria', 'Belgica', 'Bulgaria', 'Chipre', 'Corcega', 'Croacia',
   'Dinamarca', 'Eslovaquia', 'Eslovenia', 'Estonia', 'Finlandia', 'Francia',
   'Grecia', 'Hungria', 'Irlanda', 'Italia', 'Letonia', 'Liechtenstein',
   'Lituania', 'Luxemburgo', 'Malta', 'Monaco', 'Noruega', 'Paises Bajos',
-  'Polonia', 'Reino Unido', 'Republica Checa', 'Rumania', 'Serbia', 'Suecia',
-  'Suiza'
+  'Polonia', 'Reino Unido Z1', 'Reino Unido Z2', 'Republica Checa', 'Rumania',
+  'San Marino', 'Serbia', 'Suecia', 'Suiza', 'Vaticano'
 ] as const;
 
 export type EuropeDestination = typeof EUROPE_DESTINATIONS[number];
+
+export type EuropeZone = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H';
+
+export interface EuropeCountryData {
+  name: string;
+  iso: string;
+  zone: EuropeZone;
+  ttr: string;
+  displayName?: string;
+}
+
+export const EUROPE_ZONE_COLORS: Record<EuropeZone, string> = {
+  A: '#22c55e',
+  B: '#3b82f6',
+  C: '#f97316',
+  D: '#ec4899',
+  E: '#9ca3af',
+  F: '#6b7280',
+  G: '#eab308',
+  H: '#06b6d4',
+};
+
+export const EUROPE_ZONE_DATA: Record<string, EuropeCountryData> = {
+  'Alemania':       { name: 'Alemania', iso: 'DE', zone: 'A', ttr: '2-3' },
+  'Austria':        { name: 'Austria', iso: 'AT', zone: 'C', ttr: '3-4' },
+  'Belgica':        { name: 'Belgica', iso: 'BE', zone: 'A', ttr: '2-3' },
+  'Bulgaria':       { name: 'Bulgaria', iso: 'BG', zone: 'F', ttr: '4-5' },
+  'Chipre':         { name: 'Chipre', iso: 'CY', zone: 'H', ttr: '5-6' },
+  'Corcega':        { name: 'Corcega', iso: 'FR2', zone: 'G', ttr: '2-3', displayName: 'Corcega (Francia)' },
+  'Croacia':        { name: 'Croacia', iso: 'HR', zone: 'D', ttr: '3-4' },
+  'Dinamarca':      { name: 'Dinamarca', iso: 'DK', zone: 'D', ttr: '3-4' },
+  'Eslovaquia':     { name: 'Eslovaquia', iso: 'SK', zone: 'D', ttr: '2-3' },
+  'Eslovenia':      { name: 'Eslovenia', iso: 'SI', zone: 'D', ttr: '3-4' },
+  'Estonia':        { name: 'Estonia', iso: 'EE', zone: 'F', ttr: '4-5' },
+  'Finlandia':      { name: 'Finlandia', iso: 'FI', zone: 'G', ttr: '5-7' },
+  'Francia':        { name: 'Francia', iso: 'FR', zone: 'B', ttr: '1-2' },
+  'Grecia':         { name: 'Grecia', iso: 'GR', zone: 'F', ttr: '6-8' },
+  'Hungria':        { name: 'Hungria', iso: 'HU', zone: 'D', ttr: '2-3' },
+  'Irlanda':        { name: 'Irlanda', iso: 'IE', zone: 'G', ttr: '4-5' },
+  'Italia':         { name: 'Italia', iso: 'IT', zone: 'B', ttr: '2-3' },
+  'Letonia':        { name: 'Letonia', iso: 'LV', zone: 'E', ttr: '5-7' },
+  'Liechtenstein':  { name: 'Liechtenstein', iso: 'LI', zone: 'E', ttr: '2-3' },
+  'Lituania':       { name: 'Lituania', iso: 'LT', zone: 'D', ttr: '4-5' },
+  'Luxemburgo':     { name: 'Luxemburgo', iso: 'LU', zone: 'C', ttr: '2-3' },
+  'Malta':          { name: 'Malta', iso: 'MT', zone: 'H', ttr: '4-5' },
+  'Monaco':         { name: 'Monaco', iso: 'MC', zone: 'E', ttr: '1-2' },
+  'Noruega':        { name: 'Noruega', iso: 'NO', zone: 'G', ttr: '4-6' },
+  'Paises Bajos':   { name: 'Paises Bajos', iso: 'NL', zone: 'A', ttr: '2-3' },
+  'Polonia':        { name: 'Polonia', iso: 'PL', zone: 'A', ttr: '3-4' },
+  'Reino Unido Z1': { name: 'Reino Unido Z1', iso: 'GB1', zone: 'E', ttr: '3-4', displayName: 'Reino Unido (Gales, Inglaterra)' },
+  'Reino Unido Z2': { name: 'Reino Unido Z2', iso: 'GB2', zone: 'E', ttr: '4-5', displayName: 'Reino Unido (Escocia, Irlanda N., Islas)' },
+  'Republica Checa':{ name: 'Republica Checa', iso: 'CZ', zone: 'C', ttr: '2-3' },
+  'Rumania':        { name: 'Rumania', iso: 'RO', zone: 'D', ttr: '4-5' },
+  'San Marino':     { name: 'San Marino', iso: 'SM', zone: 'E', ttr: '2-3' },
+  'Serbia':         { name: 'Serbia', iso: 'RS', zone: 'H', ttr: '4-5' },
+  'Suecia':         { name: 'Suecia', iso: 'SE', zone: 'G', ttr: '4-6' },
+  'Suiza':          { name: 'Suiza', iso: 'CH', zone: 'E', ttr: '3-4' },
+  'Vaticano':       { name: 'Vaticano', iso: 'VA', zone: 'E', ttr: '4-5' },
+};
+
+export function getEuropeDestinationsByZone(): Record<EuropeZone, string[]> {
+  const byZone: Record<EuropeZone, string[]> = { A: [], B: [], C: [], D: [], E: [], F: [], G: [], H: [] };
+  for (const [country, data] of Object.entries(EUROPE_ZONE_DATA)) {
+    byZone[data.zone].push(country);
+  }
+  return byZone;
+}
+
+export function sortEuropeDestinationsByZone(destinations: string[], highlightedCountry?: string): string[] {
+  return [...destinations].sort((a, b) => {
+    if (highlightedCountry) {
+      if (a === highlightedCountry) return -1;
+      if (b === highlightedCountry) return 1;
+      const zoneA = EUROPE_ZONE_DATA[a]?.zone || 'Z';
+      const zoneB = EUROPE_ZONE_DATA[b]?.zone || 'Z';
+      const highlightedZone = EUROPE_ZONE_DATA[highlightedCountry]?.zone;
+      if (highlightedZone) {
+        if (zoneA === highlightedZone && zoneB !== highlightedZone) return -1;
+        if (zoneB === highlightedZone && zoneA !== highlightedZone) return 1;
+      }
+    }
+    const zoneA = EUROPE_ZONE_DATA[a]?.zone || 'Z';
+    const zoneB = EUROPE_ZONE_DATA[b]?.zone || 'Z';
+    if (zoneA !== zoneB) return zoneA.localeCompare(zoneB);
+    return a.localeCompare(b, 'es');
+  });
+}
