@@ -804,7 +804,8 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
       { sheet: '_EconomyParcel', cell: 'H9' },
       { sheet: '_EconomyParcel (martitimo)', cell: 'H9' },
       { sheet: 'EconomyParcel (maritimo)', cell: 'H9' },
-      { sheet: 'ShopDeliveryService & ShopRetun', cell: 'H6' }
+      { sheet: 'ShopDeliveryService & ShopRetun', cell: 'H6' },
+      { sheet: 'EuroBusinessParcel', cell: 'P4' }
     ];
     writeValue(clientTargets, form.clientName || '');
 
@@ -818,7 +819,8 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
       { sheet: '_EconomyParcel', cell: 'D9' },
       { sheet: '_EconomyParcel (martitimo)', cell: 'D9' },
       { sheet: 'EconomyParcel (maritimo)', cell: 'D9' },
-      { sheet: 'ShopDeliveryService & ShopRetun', cell: 'C6' }
+      { sheet: 'ShopDeliveryService & ShopRetun', cell: 'C6' },
+      { sheet: 'EuroBusinessParcel', cell: 'F4' }
     ];
     writeValue(agencyTargets, form.agencyNameNumber || '');
 
@@ -832,7 +834,8 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
       { sheet: '_EconomyParcel', cell: 'D10' },
       { sheet: '_EconomyParcel (martitimo)', cell: 'D10' },
       { sheet: 'EconomyParcel (maritimo)', cell: 'D10' },
-      { sheet: 'ShopDeliveryService & ShopRetun', cell: 'C7' }
+      { sheet: 'ShopDeliveryService & ShopRetun', cell: 'C7' },
+      { sheet: 'EuroBusinessParcel', cell: 'F5' }
     ];
     writeValue(validFromTargets, validFromValue);
 
@@ -846,7 +849,8 @@ const SOPGenerator: React.FC<SOPGeneratorProps> = ({
       { sheet: '_EconomyParcel', cell: 'H10' },
       { sheet: '_EconomyParcel (martitimo)', cell: 'H10' },
       { sheet: 'EconomyParcel (maritimo)', cell: 'H10' },
-      { sheet: 'ShopDeliveryService & ShopRetun', cell: 'H7' }
+      { sheet: 'ShopDeliveryService & ShopRetun', cell: 'H7' },
+      { sheet: 'EuroBusinessParcel', cell: 'P5' }
     ];
     writeValue(validToTargets, validToValue);
 
