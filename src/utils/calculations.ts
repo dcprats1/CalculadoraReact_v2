@@ -896,13 +896,8 @@ export function validateInternationalEuropePackage(
   height: number,
   length: number,
   weight: number,
-  country: string,
-  shippingMode: ShippingMode
+  country: string
 ): InternationalEuropeValidation {
-  if (shippingMode === 'salida') {
-    return { valid: true, errors: [] };
-  }
-
   const errors: string[] = [];
   const limits = INTERNATIONAL_EUROPE_LIMITS;
 

@@ -1647,21 +1647,18 @@ const TariffCalculator: React.FC = () => {
       const countriesWithRestrictions: string[] = [];
 
       EUROPE_DESTINATIONS.forEach(country => {
-        if (shippingMode !== 'salida') {
-          const validation = validateInternationalEuropePackage(
-            maxWidth,
-            maxHeight,
-            maxLength,
-            totalWeight,
-            country,
-            shippingMode
-          );
+        const validation = validateInternationalEuropePackage(
+          maxWidth,
+          maxHeight,
+          maxLength,
+          totalWeight,
+          country
+        );
 
-          if (!validation.valid) {
-            breakdowns[country] = createEmptyCostBreakdown('not_available');
-            countriesWithRestrictions.push(country);
-            return;
-          }
+        if (!validation.valid) {
+          breakdowns[country] = createEmptyCostBreakdown('not_available');
+          countriesWithRestrictions.push(country);
+          return;
         }
 
         const intlCost = calculateInternationalEuropeCost(
@@ -2244,9 +2241,9 @@ const TariffCalculator: React.FC = () => {
                 El servicio <span className="font-semibold">{selectedService}</span> marca como "NO" las zonas
                 <span className="font-semibold"> {restrictedZones.join(', ')}</span> para los bultos introducidos.
               </p>
-              {isInternationalService && shippingMode !== 'salida' && (
+              {isInternationalService && (
                 <p className="mt-2 text-xs">
-                  <span className="font-semibold">Limites {SHIPPING_MODE_LABELS[shippingMode]}:</span> Ancho max {INTERNATIONAL_EUROPE_LIMITS.maxWidth}cm, Alto max {INTERNATIONAL_EUROPE_LIMITS.maxHeight}cm, Largo max {INTERNATIONAL_EUROPE_LIMITS.maxLength}cm, Perimetro max {INTERNATIONAL_EUROPE_LIMITS.maxPerimeter}cm (2xAlto + 2xAncho + Largo), Peso max {INTERNATIONAL_EUROPE_LIMITS.maxWeight}kg ({INTERNATIONAL_EUROPE_LIMITS.maxWeightGB}kg a GB).
+                  <span className="font-semibold">Limites Internacional Europa:</span> Ancho max {INTERNATIONAL_EUROPE_LIMITS.maxWidth}cm, Alto max {INTERNATIONAL_EUROPE_LIMITS.maxHeight}cm, Largo max {INTERNATIONAL_EUROPE_LIMITS.maxLength}cm, Perimetro max {INTERNATIONAL_EUROPE_LIMITS.maxPerimeter}cm (2xAlto + 2xAncho + Largo), Peso max {INTERNATIONAL_EUROPE_LIMITS.maxWeight}kg ({INTERNATIONAL_EUROPE_LIMITS.maxWeightGB}kg a GB).
                 </p>
               )}
             </div>
