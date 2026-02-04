@@ -11,13 +11,17 @@ import CommercialPlansManager from './settings/CommercialPlansManager';
 import { useCommercialPlans } from '../hooks/useCommercialPlans';
 import { CommercialPlan } from '../types/commercialPlans';
 import { calculateCustomPlanDiscount, getCustomPlanDisplayInfo } from '../utils/customCommercialPlans';
-import { useTariffs, useDiscountPlans, useCustomTariffsActive } from '../hooks/useSupabaseData';
+import { useTariffs, useDiscountPlans, useCustomTariffsActive, useInternationalEuropeTariffs, calculateInternationalEuropeCost } from '../hooks/useSupabaseData';
+import { EUROPE_DESTINATIONS } from '../lib/supabase';
 import {
   PackageData,
   DESTINATION_ZONES,
   calculateCostBreakdown,
+  calculateInternationalEuropeCostBreakdown,
   CostBreakdown,
   STATIC_SERVICES,
+  INTERNATIONAL_EUROPE_SERVICE,
+  isInternationalEuropeService,
   createEmptyCostBreakdown,
   SHIPPING_MODES,
   ShippingMode,
@@ -329,9 +333,16 @@ const TariffCalculator: React.FC = () => {
   // Esto garantiza que solo se cargan los estados de activación del usuario autenticado
   const { activeStates: customTariffsActiveStates = [], refetch: refetchActiveStates } = useCustomTariffsActive(userData?.id) ?? {};
 
+  const {
+    tariffs: internationalEuropeTariffs = [],
+    loading: intlTariffsLoading = false
+  } = useInternationalEuropeTariffs() ?? {};
+
   const { preferences } = usePreferences();
 
   const [selectedService, setSelectedService] = useState<string>(STATIC_SERVICES[0]);
+  const [selectedEuropeCountry, setSelectedEuropeCountry] = useState<string>(EUROPE_DESTINATIONS[0]);
+  const isInternationalService = isInternationalEuropeService(selectedService);
 
   const isCustomTariffActive = useMemo(() => {
     return customTariffsActiveStates.some(s => s.service_name === selectedService && s.is_active);
@@ -915,6 +926,25 @@ const TariffCalculator: React.FC = () => {
                   ))}
                 </select>
               </div>
+
+              {isInternationalService && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Pais de Destino (Europa)
+                  </label>
+                  <select
+                    value={selectedEuropeCountry}
+                    onChange={(e) => setSelectedEuropeCountry(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    {EUROPE_DESTINATIONS.map(country => (
+                      <option key={country} value={country}>
+                        {country}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {showSaturdayOption && (
                 <div className="flex flex-col gap-2 rounded-md border border-blue-100 bg-blue-50 px-3 py-2">
@@ -1559,7 +1589,7 @@ const TariffCalculator: React.FC = () => {
   }, [dismissedMileageServices, saturdayDelivery, selectedService, showMileageBanner]);
 
   useEffect(() => {
-    if (tariffsLoading) {
+    if (tariffsLoading || (isInternationalService && intlTariffsLoading)) {
       setCostBreakdowns(buildEmptyBreakdowns());
       setMissingZones([]);
       setRestrictedZones([]);
@@ -1582,6 +1612,50 @@ const TariffCalculator: React.FC = () => {
 
     if (!hasPositiveWeight) {
       setCostBreakdowns(buildEmptyBreakdowns());
+      setMissingZones([]);
+      setRestrictedZones([]);
+      return;
+    }
+
+    if (isInternationalService) {
+      const breakdowns = buildEmptyBreakdowns();
+      let totalWeight = 0;
+      packages.forEach(pkg => {
+        const quantity = Math.max(1, Math.round(pkg.quantity ?? 1));
+        const effectiveWeight = pkg.finalWeight ?? pkg.weight ?? 0;
+        totalWeight += effectiveWeight * quantity;
+      });
+
+      const intlCost = calculateInternationalEuropeCost(
+        internationalEuropeTariffs,
+        selectedEuropeCountry,
+        totalWeight
+      );
+
+      if (intlCost === null) {
+        DESTINATION_ZONES.forEach(zoneName => {
+          breakdowns[zoneName] = createEmptyCostBreakdown('not_available');
+        });
+        setCostBreakdowns(breakdowns);
+        setMissingZones([selectedEuropeCountry]);
+        setRestrictedZones([]);
+        return;
+      }
+
+      const intlBreakdown = calculateInternationalEuropeCostBreakdown(
+        intlCost,
+        spc,
+        suplementos,
+        irregular,
+        linearDiscount
+      );
+
+      breakdowns['Provincial'] = intlBreakdown;
+      DESTINATION_ZONES.filter(z => z !== 'Provincial').forEach(zoneName => {
+        breakdowns[zoneName] = createEmptyCostBreakdown('not_available');
+      });
+
+      setCostBreakdowns(breakdowns);
       setMissingZones([]);
       setRestrictedZones([]);
       return;
@@ -1736,7 +1810,11 @@ const TariffCalculator: React.FC = () => {
     linearDiscount,
     saturdayDelivery,
     provincialCostOverride,
-    mileageCostTotal
+    mileageCostTotal,
+    isInternationalService,
+    intlTariffsLoading,
+    internationalEuropeTariffs,
+    selectedEuropeCountry
   ]);
 
   // Cargar valores de preferencias al montar el componente o cuando cambien las preferencias

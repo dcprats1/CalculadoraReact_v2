@@ -325,3 +325,114 @@ export function useCustomTariffsActive(userId?: string) {
     }
   }};
 }
+
+export interface TariffInternationalEurope {
+  id: string;
+  service_name: string;
+  weight_from: number;
+  weight_to: number | null;
+  country: string;
+  cost: number;
+}
+
+export function useInternationalEuropeTariffs() {
+  const [tariffs, setTariffs] = useState<TariffInternationalEurope[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchTariffs = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('tariffs_international_europe')
+          .select('id, service_name, weight_from, weight_to, country, cost')
+          .order('country', { ascending: true })
+          .order('weight_from', { ascending: true });
+
+        if (error) throw error;
+        setTariffs(data || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Error fetching international europe tariffs');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTariffs();
+  }, []);
+
+  return { tariffs, loading, error };
+}
+
+export function findInternationalEuropeTariff(
+  tariffs: TariffInternationalEurope[],
+  country: string,
+  weight: number
+): TariffInternationalEurope | null {
+  const roundedWeight = Math.ceil(Math.max(weight, 0));
+  const countryTariffs = tariffs.filter(t => t.country === country);
+
+  if (!countryTariffs.length) return null;
+
+  const sorted = [...countryTariffs].sort((a, b) => a.weight_from - b.weight_from);
+
+  for (const tariff of sorted) {
+    if (tariff.weight_to === null) {
+      if (roundedWeight > tariff.weight_from) return tariff;
+    } else {
+      if (roundedWeight > tariff.weight_from && roundedWeight <= tariff.weight_to) {
+        return tariff;
+      }
+      if (tariff.weight_from === 0 && roundedWeight <= tariff.weight_to) {
+        return tariff;
+      }
+    }
+  }
+
+  return null;
+}
+
+export function calculateInternationalEuropeCost(
+  tariffs: TariffInternationalEurope[],
+  country: string,
+  weight: number
+): number | null {
+  const roundedWeight = Math.ceil(Math.max(weight, 0));
+  if (roundedWeight <= 0) return 0;
+
+  const countryTariffs = tariffs.filter(t => t.country === country);
+  if (!countryTariffs.length) return null;
+
+  const sorted = [...countryTariffs].sort((a, b) => a.weight_from - b.weight_from);
+  const finiteTariffs = sorted.filter(t => t.weight_to !== null);
+  const plusOneTariff = sorted.find(t => t.weight_to === null);
+
+  const lastFinite = finiteTariffs.length > 0
+    ? finiteTariffs[finiteTariffs.length - 1]
+    : null;
+  const maxFiniteWeight = lastFinite?.weight_to ?? 0;
+
+  let baseTariff: TariffInternationalEurope | null = null;
+  for (const tariff of finiteTariffs) {
+    const isFirst = tariff.weight_from === 0;
+    if (isFirst && roundedWeight <= (tariff.weight_to ?? 0)) {
+      baseTariff = tariff;
+      break;
+    }
+    if (!isFirst && roundedWeight > tariff.weight_from && roundedWeight <= (tariff.weight_to ?? 0)) {
+      baseTariff = tariff;
+      break;
+    }
+  }
+
+  if (baseTariff) {
+    return baseTariff.cost;
+  }
+
+  if (roundedWeight > maxFiniteWeight && plusOneTariff && lastFinite) {
+    const extraKg = roundedWeight - maxFiniteWeight;
+    return lastFinite.cost + (extraKg * plusOneTariff.cost);
+  }
+
+  return null;
+}

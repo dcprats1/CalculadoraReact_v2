@@ -219,3 +219,26 @@ export interface CustomTariffActive {
 
 // Legacy type for backward compatibility
 export type DestinationZone = 'provincial' | 'regional' | 'national';
+
+export interface TariffInternationalEurope {
+  id: string;
+  service_name: string;
+  weight_from: number;
+  weight_to: number | null;
+  country: string;
+  cost: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export const EUROPE_DESTINATIONS = [
+  'Alemania', 'Austria', 'Belgica', 'Bulgaria', 'Croacia', 'Dinamarca',
+  'Eslovaquia', 'Eslovenia', 'Estonia', 'Finlandia', 'Francia', 'Grecia',
+  'Hungria', 'Irlanda', 'Italia', 'Letonia', 'Lituania', 'Luxemburgo',
+  'Malta', 'Monaco', 'Paises Bajos', 'Polonia', 'Republica Checa', 'Rumania',
+  'Suecia', 'Chipre', 'Noruega', 'Suiza', 'Reino Unido', 'Liechtenstein',
+  'Albania', 'Bosnia Herzegovina', 'Macedonia del Norte', 'Montenegro',
+  'Serbia', 'Islandia', 'Turquia', 'Ucrania'
+] as const;
+
+export type EuropeDestination = typeof EUROPE_DESTINATIONS[number];

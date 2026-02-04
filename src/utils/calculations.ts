@@ -23,8 +23,14 @@ export const STATIC_SERVICES = [
   'EuroBusiness Parcel',
   'Economy Parcel',
   'Marítimo',
-  'Parcel Shop'
+  'Parcel Shop',
+  'EuroBusiness Parcel Internacional'
 ] as const;
+
+export const INTERNATIONAL_EUROPE_SERVICE = 'EuroBusiness Parcel Internacional';
+
+export const isInternationalEuropeService = (serviceName: string): boolean =>
+  serviceName === INTERNATIONAL_EUROPE_SERVICE;
 
 export const DESTINATION_ZONES = [
   'Provincial',
@@ -856,6 +862,59 @@ export function calculateCostBreakdown(
     incr2024Percent: incr2024,
     incr2025Percent: incr2025,
     incr2026Percent: incr2026,
+    spc: spcRounded,
+    totalCost,
+    status: 'calculated'
+  };
+}
+
+export function calculateInternationalEuropeCostBreakdown(
+  initialCost: number,
+  spc: number = 0,
+  suplementos: number = 0,
+  irregular: number = 0,
+  planDiscountPercentage: number = 0
+): CostBreakdown {
+  const safeInitial = initialCost > 0 ? initialCost : 0;
+
+  const planDiscountAmount = planDiscountPercentage > 0
+    ? roundUp(safeInitial * (planDiscountPercentage / 100))
+    : 0;
+
+  const baseAfterDiscount = Math.max(0, safeInitial - planDiscountAmount);
+  const climateProtect = roundUp(baseAfterDiscount * 0.015);
+  const spcRounded = spc > 0 ? roundUp(spc) : 0;
+  const suplementosRounded = suplementos > 0 ? roundUp(suplementos) : 0;
+  const irregularRounded = irregular > 0 ? roundUp(irregular) : 0;
+
+  const totalCost = roundUp(
+    baseAfterDiscount +
+    climateProtect +
+    spcRounded +
+    suplementosRounded +
+    irregularRounded
+  );
+
+  return {
+    initialCost: safeInitial,
+    linearDiscount: planDiscountAmount,
+    climateProtect,
+    canonRed: 0,
+    canonDigital: 0,
+    noVol: 0,
+    amplCobertura: 0,
+    energia: 0,
+    suplementos: suplementosRounded,
+    irregular: irregularRounded,
+    mileageCost: 0,
+    saturdayCost: 0,
+    subtotal: totalCost,
+    incr2024: 0,
+    incr2025: 0,
+    incr2026: 0,
+    incr2024Percent: 0,
+    incr2025Percent: 0,
+    incr2026Percent: 0,
     spc: spcRounded,
     totalCost,
     status: 'calculated'
