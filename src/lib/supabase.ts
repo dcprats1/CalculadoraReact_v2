@@ -232,13 +232,12 @@ export interface TariffInternationalEurope {
 }
 
 export const EUROPE_DESTINATIONS = [
-  'Alemania', 'Austria', 'Belgica', 'Bulgaria', 'Croacia', 'Dinamarca',
-  'Eslovaquia', 'Eslovenia', 'Estonia', 'Finlandia', 'Francia', 'Grecia',
-  'Hungria', 'Irlanda', 'Italia', 'Letonia', 'Lituania', 'Luxemburgo',
-  'Malta', 'Monaco', 'Paises Bajos', 'Polonia', 'Republica Checa', 'Rumania',
-  'Suecia', 'Chipre', 'Noruega', 'Suiza', 'Reino Unido', 'Liechtenstein',
-  'Albania', 'Bosnia Herzegovina', 'Macedonia del Norte', 'Montenegro',
-  'Serbia', 'Islandia', 'Turquia', 'Ucrania'
+  'Alemania', 'Austria', 'Belgica', 'Bulgaria', 'Chipre', 'Croacia',
+  'Dinamarca', 'Eslovaquia', 'Eslovenia', 'Estonia', 'Finlandia', 'Francia',
+  'Grecia', 'Hungria', 'Irlanda', 'Italia', 'Letonia', 'Liechtenstein',
+  'Lituania', 'Luxemburgo', 'Malta', 'Monaco', 'Noruega', 'Paises Bajos',
+  'Polonia', 'Reino Unido', 'Republica Checa', 'Rumania', 'Serbia', 'Suecia',
+  'Suiza'
 ] as const;
 
 export type EuropeDestination = typeof EUROPE_DESTINATIONS[number];
