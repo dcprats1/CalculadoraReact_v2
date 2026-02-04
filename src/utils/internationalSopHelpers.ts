@@ -139,8 +139,11 @@ export function calculateInternationalPvp(cost: number, marginPercentage: number
   return roundUp(pvp);
 }
 
-const formatWeightKey = (value: number | null): string => {
+const formatWeightKey = (value: number | null, isWeightTo = false): string => {
   if (value === null || value === undefined) {
+    return 'null';
+  }
+  if (isWeightTo && value >= 999) {
     return 'null';
   }
   return Number.isInteger(value) ? String(value) : value.toString();
@@ -154,7 +157,7 @@ export function createInternationalMapKey(
 ): string {
   const serviceKey = normalizeText(serviceName);
   const countryKey = normalizeText(country);
-  return `${serviceKey}|${countryKey}|${formatWeightKey(weightFrom)}|${formatWeightKey(weightTo)}`;
+  return `${serviceKey}|${countryKey}|${formatWeightKey(weightFrom, false)}|${formatWeightKey(weightTo, true)}`;
 }
 
 export interface BuildInternationalValueMapOptions {
