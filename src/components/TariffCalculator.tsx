@@ -18,6 +18,8 @@ import {
   DESTINATION_ZONES,
   calculateCostBreakdown,
   calculateInternationalEuropeCostBreakdown,
+  validateInternationalEuropePackage,
+  INTERNATIONAL_EUROPE_LIMITS,
   CostBreakdown,
   STATIC_SERVICES,
   INTERNATIONAL_EUROPE_SERVICE,
@@ -1628,15 +1630,40 @@ const TariffCalculator: React.FC = () => {
     if (isInternationalService) {
       const breakdowns = buildEmptyInternationalBreakdowns();
       let totalWeight = 0;
+      let maxWidth = 0;
+      let maxHeight = 0;
+      let maxLength = 0;
+
       packages.forEach(pkg => {
         const quantity = Math.max(1, Math.round(pkg.quantity ?? 1));
         const effectiveWeight = pkg.finalWeight ?? pkg.weight ?? 0;
         totalWeight += effectiveWeight * quantity;
+        maxWidth = Math.max(maxWidth, pkg.width ?? 0);
+        maxHeight = Math.max(maxHeight, pkg.height ?? 0);
+        maxLength = Math.max(maxLength, pkg.length ?? 0);
       });
 
       const countriesWithMissingTariffs: string[] = [];
+      const countriesWithRestrictions: string[] = [];
 
       EUROPE_DESTINATIONS.forEach(country => {
+        if (shippingMode !== 'salida') {
+          const validation = validateInternationalEuropePackage(
+            maxWidth,
+            maxHeight,
+            maxLength,
+            totalWeight,
+            country,
+            shippingMode
+          );
+
+          if (!validation.valid) {
+            breakdowns[country] = createEmptyCostBreakdown('not_available');
+            countriesWithRestrictions.push(country);
+            return;
+          }
+        }
+
         const intlCost = calculateInternationalEuropeCost(
           internationalEuropeTariffs,
           country,
@@ -1653,13 +1680,14 @@ const TariffCalculator: React.FC = () => {
           intlCost,
           spc,
           suplementos,
-          irregular
+          irregular,
+          shippingMode
         );
       });
 
       setCostBreakdowns(breakdowns);
       setMissingZones(countriesWithMissingTariffs);
-      setRestrictedZones([]);
+      setRestrictedZones(countriesWithRestrictions);
       return;
     }
 
@@ -2216,6 +2244,11 @@ const TariffCalculator: React.FC = () => {
                 El servicio <span className="font-semibold">{selectedService}</span> marca como "NO" las zonas
                 <span className="font-semibold"> {restrictedZones.join(', ')}</span> para los bultos introducidos.
               </p>
+              {isInternationalService && shippingMode !== 'salida' && (
+                <p className="mt-2 text-xs">
+                  <span className="font-semibold">Limites {SHIPPING_MODE_LABELS[shippingMode]}:</span> Ancho max {INTERNATIONAL_EUROPE_LIMITS.maxWidth}cm, Alto max {INTERNATIONAL_EUROPE_LIMITS.maxHeight}cm, Largo max {INTERNATIONAL_EUROPE_LIMITS.maxLength}cm, Perimetro max {INTERNATIONAL_EUROPE_LIMITS.maxPerimeter}cm (2xAlto + 2xAncho + Largo), Peso max {INTERNATIONAL_EUROPE_LIMITS.maxWeight}kg ({INTERNATIONAL_EUROPE_LIMITS.maxWeightGB}kg a GB).
+                </p>
+              )}
             </div>
           </div>
         )}

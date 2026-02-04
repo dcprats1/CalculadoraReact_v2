@@ -868,13 +868,90 @@ export function calculateCostBreakdown(
   };
 }
 
+export interface InternationalEuropeLimits {
+  maxWidth: number;
+  maxHeight: number;
+  maxLength: number;
+  maxPerimeter: number;
+  maxWeight: number;
+  maxWeightGB: number;
+}
+
+export const INTERNATIONAL_EUROPE_LIMITS: InternationalEuropeLimits = {
+  maxWidth: 80,
+  maxHeight: 60,
+  maxLength: 200,
+  maxPerimeter: 300,
+  maxWeight: 40,
+  maxWeightGB: 30
+};
+
+export interface InternationalEuropeValidation {
+  valid: boolean;
+  errors: string[];
+}
+
+export function validateInternationalEuropePackage(
+  width: number,
+  height: number,
+  length: number,
+  weight: number,
+  country: string,
+  shippingMode: ShippingMode
+): InternationalEuropeValidation {
+  if (shippingMode === 'salida') {
+    return { valid: true, errors: [] };
+  }
+
+  const errors: string[] = [];
+  const limits = INTERNATIONAL_EUROPE_LIMITS;
+
+  if (width > limits.maxWidth) {
+    errors.push(`Ancho ${width}cm > max ${limits.maxWidth}cm`);
+  }
+  if (height > limits.maxHeight) {
+    errors.push(`Alto ${height}cm > max ${limits.maxHeight}cm`);
+  }
+  if (length > limits.maxLength) {
+    errors.push(`Largo ${length}cm > max ${limits.maxLength}cm`);
+  }
+
+  const perimeter = 2 * height + 2 * width + length;
+  if (perimeter > limits.maxPerimeter) {
+    errors.push(`Perimetro ${perimeter}cm > max ${limits.maxPerimeter}cm`);
+  }
+
+  const isGB = country.toLowerCase().includes('reino unido') ||
+               country.toLowerCase().includes('gb') ||
+               country.toLowerCase().includes('uk') ||
+               country.toLowerCase().includes('gran bretaña');
+  const maxWeight = isGB ? limits.maxWeightGB : limits.maxWeight;
+
+  if (weight > maxWeight) {
+    errors.push(`Peso ${weight}kg > max ${maxWeight}kg${isGB ? ' (GB)' : ''}`);
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+const INTL_EUROPE_MODE_SURCHARGE: Record<ShippingMode, number> = {
+  salida: 0,
+  recogida: 5.00,
+  interciudad: 3.00
+};
+
 export function calculateInternationalEuropeCostBreakdown(
   initialCost: number,
   spc: number = 0,
   suplementos: number = 0,
-  irregular: number = 0
+  irregular: number = 0,
+  shippingMode: ShippingMode = 'salida'
 ): CostBreakdown {
-  const safeInitial = initialCost > 0 ? initialCost : 0;
+  const modeSurcharge = INTL_EUROPE_MODE_SURCHARGE[shippingMode] ?? 0;
+  const safeInitial = initialCost > 0 ? initialCost + modeSurcharge : 0;
 
   const climateProtect = roundUp(safeInitial * 0.015);
   const spcRounded = spc > 0 ? roundUp(spc) : 0;
