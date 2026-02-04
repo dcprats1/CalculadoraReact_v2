@@ -881,13 +881,14 @@ export function calculateInternationalEuropeCostBreakdown(
   const suplementosRounded = suplementos > 0 ? roundUp(suplementos) : 0;
   const irregularRounded = irregular > 0 ? roundUp(irregular) : 0;
 
-  const totalCost = roundUp(
+  const subtotal = roundUp(
     safeInitial +
     climateProtect +
-    spcRounded +
     suplementosRounded +
     irregularRounded
   );
+
+  const totalCost = roundUp(subtotal + spcRounded);
 
   return {
     initialCost: safeInitial,
@@ -902,7 +903,7 @@ export function calculateInternationalEuropeCostBreakdown(
     irregular: irregularRounded,
     mileageCost: 0,
     saturdayCost: 0,
-    subtotal: totalCost,
+    subtotal,
     incr2024: 0,
     incr2025: 0,
     incr2026: 0,
