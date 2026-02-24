@@ -1697,6 +1697,14 @@ const resolvePlanWeightForTariffRow = (
 ): number => {
   const lastFinite = getLastFiniteTariff(tariffs);
 
+  if (isPlusOneRange(current)) {
+    const baseThreshold = lastFinite
+      ? lastFinite.weight_to ?? lastFinite.weight_from
+      : current.weight_from;
+    const step = getAdditionalStep(current.service_name, zone);
+    return baseThreshold + step;
+  }
+
   if (current.weight_to !== null && current.weight_to !== undefined) {
     return current.weight_to;
   }
