@@ -1992,13 +1992,36 @@ export function buildVirtualTariffTable(
             zone
           );
 
-          planDiscountAmount = calculatePlanDiscountForWeight(
-            serviceTariffsForPlan,
-            tariff.service_name,
-            zone,
-            planForService,
-            resolvedPlanWeight
-          );
+          if (isPlusOneRange(tariff)) {
+            const lastFinite = getLastFiniteTariff(serviceTariffsForPlan);
+            const baseThreshold = lastFinite
+              ? lastFinite.weight_to ?? lastFinite.weight_from
+              : tariff.weight_from;
+
+            const discountFull = calculatePlanDiscountForWeight(
+              serviceTariffsForPlan,
+              tariff.service_name,
+              zone,
+              planForService,
+              resolvedPlanWeight
+            );
+            const discountBase = calculatePlanDiscountForWeight(
+              serviceTariffsForPlan,
+              tariff.service_name,
+              zone,
+              planForService,
+              baseThreshold
+            );
+            planDiscountAmount = Math.max(0, discountFull - discountBase);
+          } else {
+            planDiscountAmount = calculatePlanDiscountForWeight(
+              serviceTariffsForPlan,
+              tariff.service_name,
+              zone,
+              planForService,
+              resolvedPlanWeight
+            );
+          }
           planWeightForLog = resolvedPlanWeight;
         }
 
