@@ -269,6 +269,7 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           error: `Máximo de dispositivos alcanzado (${currentDeviceCount}/${userProfile.max_devices})`,
+          maxDevicesReached: true,
           active_devices: activeSessions?.map(s => ({
             device_name: s.device_name,
             last_authenticated_at: s.last_authenticated_at,

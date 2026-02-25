@@ -7,6 +7,11 @@ import { Calculator, CheckCircle, X } from 'lucide-react';
 
 type LoginStep = 'email' | 'code' | 'unregistered';
 
+interface ActiveDevice {
+  device_name: string;
+  last_authenticated_at: string;
+}
+
 interface UnregisteredUserData {
   email: string;
 }
@@ -16,13 +21,15 @@ interface LoginContainerProps {
 }
 
 export function LoginContainer({ onShowPricing }: LoginContainerProps = {}) {
-  const { sendLoginCode, verifyCode, sessionExpiredMessage } = useAuth();
+  const { sendLoginCode, verifyCode, forceCloseSessions, sessionExpiredMessage } = useAuth();
   const [currentStep, setCurrentStep] = useState<LoginStep>('email');
   const [email, setEmail] = useState('');
   const [devCode, setDevCode] = useState<string | undefined>();
   const [unregisteredUser, setUnregisteredUser] = useState<UnregisteredUserData | null>(null);
   const [recentlyActivatedEmail, setRecentlyActivatedEmail] = useState<string>('');
   const [showActivationBanner, setShowActivationBanner] = useState(false);
+  const [deviceLimitReached, setDeviceLimitReached] = useState(false);
+  const [activeDevices, setActiveDevices] = useState<ActiveDevice[]>([]);
 
   useEffect(() => {
     const recentlyActivatedStr = localStorage.getItem('recently_activated');
@@ -81,7 +88,29 @@ export function LoginContainer({ onShowPricing }: LoginContainerProps = {}) {
     const result = await verifyCode(email, code);
 
     if (!result.success) {
+      if (result.maxDevicesReached) {
+        setDeviceLimitReached(true);
+        setActiveDevices(result.activeDevices || []);
+        return;
+      }
       throw new Error(result.error || 'Código inválido');
+    }
+  };
+
+  const handleForceClose = async (code: string) => {
+    const closeResult = await forceCloseSessions(email, code);
+
+    if (!closeResult.success) {
+      throw new Error(closeResult.error || 'Error al cerrar sesiones');
+    }
+
+    setDeviceLimitReached(false);
+    setActiveDevices([]);
+
+    const retryResult = await verifyCode(email, code);
+
+    if (!retryResult.success) {
+      throw new Error(retryResult.error || 'Error al iniciar sesión tras cerrar sesiones');
     }
   };
 
@@ -89,6 +118,8 @@ export function LoginContainer({ onShowPricing }: LoginContainerProps = {}) {
     setCurrentStep('email');
     setDevCode(undefined);
     setUnregisteredUser(null);
+    setDeviceLimitReached(false);
+    setActiveDevices([]);
   };
 
   const handleViewPricing = () => {
@@ -166,8 +197,11 @@ export function LoginContainer({ onShowPricing }: LoginContainerProps = {}) {
             <CodeVerificationForm
               email={email}
               onVerify={handleCodeVerify}
+              onForceClose={handleForceClose}
               onBack={handleBack}
               devCode={devCode}
+              deviceLimitReached={deviceLimitReached}
+              activeDevices={activeDevices}
             />
           )}
         </div>

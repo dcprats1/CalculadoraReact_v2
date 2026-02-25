@@ -15,13 +15,26 @@ interface UserData {
   is_admin: boolean;
 }
 
+interface ActiveDevice {
+  device_name: string;
+  last_authenticated_at: string;
+}
+
+interface VerifyCodeResult {
+  success: boolean;
+  error?: string;
+  maxDevicesReached?: boolean;
+  activeDevices?: ActiveDevice[];
+}
+
 interface AuthContextType {
   user: { id: string; email: string } | null;
   userData: UserData | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   sendLoginCode: (email: string) => Promise<{ success: boolean; error?: string; errorCode?: string; email?: string; autoLogin?: boolean }>;
-  verifyCode: (email: string, code: string) => Promise<{ success: boolean; error?: string }>;
+  verifyCode: (email: string, code: string) => Promise<VerifyCodeResult>;
+  forceCloseSessions: (email: string, code: string) => Promise<{ success: boolean; closedSessions?: number; error?: string }>;
   signOut: () => Promise<void>;
   sessionExpiredMessage: string | null;
 }
@@ -198,9 +211,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 }
 
 
- async function verifyCode(email: string, code: string) {
+ async function verifyCode(email: string, code: string): Promise<VerifyCodeResult> {
   try {
-    // Generar device fingerprint simple
     const deviceFingerprint = `${navigator.userAgent}-${screen.width}x${screen.height}`;
     const deviceName = `${navigator.platform} - ${navigator.userAgent.substring(0, 50)}`;
 
@@ -224,6 +236,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = await response.json();
 
     if (!response.ok) {
+      if (data.maxDevicesReached) {
+        return {
+          success: false,
+          error: data.error,
+          maxDevicesReached: true,
+          activeDevices: data.active_devices,
+        };
+      }
       return { success: false, error: data.error || 'Código incorrecto' };
     }
 
@@ -238,7 +258,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser({ id: data.user.id, email: data.user.email });
     setSessionExpiredMessage(null);
 
-    // Cargar perfil completo
     await loadUserProfile(data.user.id);
 
     return { success: true };
@@ -248,6 +267,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 }
 
+
+  async function forceCloseSessions(email: string, code: string) {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/force-close-sessions`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            email: email.toLowerCase().trim(),
+            code,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { success: false, error: data.error || 'Error al cerrar sesiones' };
+      }
+
+      return { success: true, closedSessions: data.closedSessions };
+    } catch (error) {
+      console.error('Error force-closing sessions:', error);
+      return { success: false, error: 'Error de conexión' };
+    }
+  }
 
   async function signOut() {
     localStorage.removeItem('user_session');
@@ -263,6 +312,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading,
     sendLoginCode,
     verifyCode,
+    forceCloseSessions,
     signOut,
     sessionExpiredMessage,
   };
