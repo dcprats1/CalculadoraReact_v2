@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Save, RotateCcw, Trash2, X, AlertTriangle } from 'lucide-react';
-import { supabase, CustomTariff } from '../../lib/supabase';
+import { CustomTariff } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCustomTariffs, useCustomTariffsActive, useTariffs } from '../../hooks/useSupabaseData';
+import { authenticatedQuery } from '../../lib/authenticatedFetch';
 import { STATIC_SERVICES } from '../../utils/calculations';
 
 const WEIGHT_RANGES = [
@@ -320,12 +321,11 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
     setSaveMessage(null);
 
     try {
-      // Paso 1: Cargar TODOS los registros existentes de custom_tariffs para este servicio
-      const { data: existingRecords } = await supabase
-        .from('custom_tariffs')
-        .select('*')
-        .eq('user_id', userData.id)
-        .eq('service_name', selectedService);
+      const existingRecords = await authenticatedQuery({
+        table: 'custom_tariffs',
+        action: 'select',
+        filters: [{ column: 'service_name', op: 'eq', value: selectedService }],
+      });
 
       // Crear mapa de registros existentes por rango de peso
       const existingMap = new Map(
@@ -437,43 +437,29 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
         return;
       }
 
-      // Paso 3: Eliminar registros restaurados a oficial
       if (recordIdsToDelete.length > 0) {
-        const { error: deleteError } = await supabase
-          .from('custom_tariffs')
-          .delete()
-          .in('id', recordIdsToDelete);
-
-        if (deleteError) {
-          console.error('Error deleting restored tariff rows:', deleteError);
-          throw deleteError;
-        }
+        await authenticatedQuery({
+          table: 'custom_tariffs',
+          action: 'delete',
+          filters: [{ column: 'id', op: 'in', value: recordIdsToDelete }],
+        });
       }
 
-      // Paso 4: Guardar registros personalizados (UPDATE o INSERT según corresponda)
       for (const tariff of tariffsToUpsert) {
         if (tariff.id) {
-          // UPDATE: registro ya existe
           const { id, ...updateData } = tariff;
-          const { error: updateError } = await supabase
-            .from('custom_tariffs')
-            .update(updateData)
-            .eq('id', id);
-
-          if (updateError) {
-            console.error('Error updating tariff row:', updateError);
-            throw updateError;
-          }
+          await authenticatedQuery({
+            table: 'custom_tariffs',
+            action: 'update',
+            data: updateData,
+            filters: [{ column: 'id', op: 'eq', value: id }],
+          });
         } else {
-          // INSERT: registro nuevo
-          const { error: insertError } = await supabase
-            .from('custom_tariffs')
-            .insert([tariff]);
-
-          if (insertError) {
-            console.error('Error inserting tariff row:', insertError);
-            throw insertError;
-          }
+          await authenticatedQuery({
+            table: 'custom_tariffs',
+            action: 'insert',
+            data: tariff,
+          });
         }
       }
 
@@ -552,11 +538,11 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
     if (!userData) return;
 
     try {
-      await supabase
-        .from('custom_tariffs')
-        .delete()
-        .eq('user_id', userData.id)
-        .eq('service_name', selectedService);
+      await authenticatedQuery({
+        table: 'custom_tariffs',
+        action: 'delete',
+        filters: [{ column: 'service_name', op: 'eq', value: selectedService }],
+      });
 
       await refetchCustomTariffs();
       loadServiceData();
@@ -585,19 +571,15 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
     setSaveMessage(null);
 
     try {
-      const { error: tariffError } = await supabase
-        .from('custom_tariffs')
-        .delete()
-        .eq('user_id', userData.id);
+      await authenticatedQuery({
+        table: 'custom_tariffs',
+        action: 'delete',
+      });
 
-      if (tariffError) throw tariffError;
-
-      const { error: activeError } = await supabase
-        .from('custom_tariffs_active')
-        .delete()
-        .eq('user_id', userData.id);
-
-      if (activeError) throw activeError;
+      await authenticatedQuery({
+        table: 'custom_tariffs_active',
+        action: 'delete',
+      });
 
       await refetchCustomTariffs();
       await refetchActiveStates();
@@ -621,18 +603,18 @@ export const CustomTariffsEditor: React.FC<CustomTariffsEditorProps> = ({ onClos
       const existingState = activeStates.find(s => s.service_name === selectedService);
 
       if (existingState) {
-        await supabase
-          .from('custom_tariffs_active')
-          .update({ is_active: !existingState.is_active })
-          .eq('id', existingState.id);
+        await authenticatedQuery({
+          table: 'custom_tariffs_active',
+          action: 'update',
+          data: { is_active: !existingState.is_active },
+          filters: [{ column: 'id', op: 'eq', value: existingState.id }],
+        });
       } else {
-        await supabase
-          .from('custom_tariffs_active')
-          .insert([{
-            user_id: userData.id,
-            service_name: selectedService,
-            is_active: true
-          }]);
+        await authenticatedQuery({
+          table: 'custom_tariffs_active',
+          action: 'insert',
+          data: { service_name: selectedService, is_active: true },
+        });
       }
 
       await refetchActiveStates();

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Package, AlertCircle, Calculator, ArrowUp, MapPin, Settings, LogOut, User, Eye, EyeOff, Sliders } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { authenticatedQuery } from '../lib/authenticatedFetch';
 import { useAuth } from '../contexts/AuthContext';
 import { useViewMode } from '../contexts/ViewModeContext';
 import { usePreferences } from '../contexts/PreferencesContext';
@@ -1483,21 +1483,20 @@ const TariffCalculator: React.FC = () => {
     if (!userData) return;
 
     try {
-      // Si intenta activar la tabla personalizada, verificamos que existan datos
       if (!isCustomTariffActive) {
-        // Verificar si existen tarifas personalizadas para este servicio
-        const { data: existingCustomTariffs } = await supabase
-          .from('custom_tariffs')
-          .select('id')
-          .eq('user_id', userData.id)
-          .eq('service_name', selectedService)
-          .limit(1);
+        const existingCustomTariffs = await authenticatedQuery({
+          table: 'custom_tariffs',
+          action: 'select',
+          columns: 'id',
+          filters: [{ column: 'service_name', op: 'eq', value: selectedService }],
+          limit: 1,
+        });
 
         if (!existingCustomTariffs || existingCustomTariffs.length === 0) {
           window.alert(
             'No tienes una tabla de costes personalizada creada para este servicio.\n\n' +
             'Para crear tu tabla personalizada ve a:\n' +
-            'Usuario → Configuración → Tarifas Personalizadas'
+            'Usuario \u2192 Configuracion \u2192 Tarifas Personalizadas'
           );
           return;
         }
@@ -1506,18 +1505,18 @@ const TariffCalculator: React.FC = () => {
       const existingState = customTariffsActiveStates.find(s => s.service_name === selectedService);
 
       if (existingState) {
-        await supabase
-          .from('custom_tariffs_active')
-          .update({ is_active: !existingState.is_active })
-          .eq('id', existingState.id);
+        await authenticatedQuery({
+          table: 'custom_tariffs_active',
+          action: 'update',
+          data: { is_active: !existingState.is_active },
+          filters: [{ column: 'id', op: 'eq', value: existingState.id }],
+        });
       } else {
-        await supabase
-          .from('custom_tariffs_active')
-          .insert([{
-            user_id: userData.id,
-            service_name: selectedService,
-            is_active: true
-          }]);
+        await authenticatedQuery({
+          table: 'custom_tariffs_active',
+          action: 'insert',
+          data: { service_name: selectedService, is_active: true },
+        });
       }
 
       await refetchActiveStates();

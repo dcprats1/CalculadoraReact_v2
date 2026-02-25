@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
 import { UserPlus, Gift, Users, Mail, Calendar, CreditCard, AlertCircle } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { authenticatedQuery } from '../../lib/authenticatedFetch';
 
 interface UserProfile {
   id: string;
@@ -27,6 +28,7 @@ interface PromoCode {
 }
 
 export function AdminPanel() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'users' | 'create-user' | 'promo-codes'>('users');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
@@ -54,12 +56,11 @@ export function AdminPanel() {
   async function loadUsers() {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      const data = await authenticatedQuery({
+        table: 'user_profiles',
+        action: 'select',
+        orderBy: { column: 'created_at', ascending: false },
+      });
       setUsers(data || []);
     } catch (error: any) {
       showMessage('error', error.message);
@@ -71,12 +72,11 @@ export function AdminPanel() {
   async function loadPromoCodes() {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('promotional_codes')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      const data = await authenticatedQuery({
+        table: 'promotional_codes',
+        action: 'select',
+        orderBy: { column: 'created_at', ascending: false },
+      });
       setPromoCodes(data || []);
     } catch (error: any) {
       showMessage('error', error.message);
@@ -147,20 +147,21 @@ export function AdminPanel() {
 
     setLoading(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error('No autenticado');
+      if (!user) throw new Error('No autenticado');
 
-      const { error } = await supabase.from('promotional_codes').insert({
-        code: newPromoCode.toUpperCase().trim(),
-        description: newPromoDescription,
-        tier: newPromoTier,
-        duration_days: newPromoDays,
-        max_uses: newPromoMaxUses,
-        is_active: true,
-        created_by: userData.user.id,
+      await authenticatedQuery({
+        table: 'promotional_codes',
+        action: 'insert',
+        data: {
+          code: newPromoCode.toUpperCase().trim(),
+          description: newPromoDescription,
+          tier: newPromoTier,
+          duration_days: newPromoDays,
+          max_uses: newPromoMaxUses,
+          is_active: true,
+          created_by: user.id,
+        },
       });
-
-      if (error) throw error;
 
       showMessage('success', `Código promocional ${newPromoCode} creado`);
       setNewPromoCode('');
@@ -179,12 +180,12 @@ export function AdminPanel() {
   async function togglePromoCodeStatus(id: string, currentStatus: boolean) {
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('promotional_codes')
-        .update({ is_active: !currentStatus })
-        .eq('id', id);
-
-      if (error) throw error;
+      await authenticatedQuery({
+        table: 'promotional_codes',
+        action: 'update',
+        data: { is_active: !currentStatus },
+        filters: [{ column: 'id', op: 'eq', value: id }],
+      });
 
       showMessage('success', `Código ${!currentStatus ? 'activado' : 'desactivado'}`);
       loadPromoCodes();

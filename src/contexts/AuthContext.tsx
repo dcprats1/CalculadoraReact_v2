@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
 import { isAllowedEmail, INVALID_EMAIL_ERROR } from '../config/allowedEmails';
+import { fetchUserProfile } from '../lib/authenticatedFetch';
 
 interface UserData {
   id: string;
@@ -93,13 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function loadUserProfile(userId: string) {
     try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (error) throw error;
+      const data = await fetchUserProfile(userId);
 
       if (data) {
         const fullName = data.email.split('@')[0]

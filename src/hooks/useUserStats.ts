@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { authenticatedQuery, authenticatedRpc } from '../lib/authenticatedFetch';
 
 export interface UserActivityStats {
   total_sop: number;
@@ -27,6 +27,16 @@ interface UseUserStatsReturn {
   refreshStats: () => Promise<void>;
 }
 
+const EMPTY_STATS: UserActivityStats = {
+  total_sop: 0,
+  total_minisop: 0,
+  total_calculations: 0,
+  days_active: 0,
+  average_calculations_per_day: 0,
+  first_activity: null,
+  last_activity: null,
+};
+
 export function useUserStats(): UseUserStatsReturn {
   const { user, isAuthenticated } = useAuth();
   const [stats, setStats] = useState<UserActivityStats | null>(null);
@@ -50,56 +60,43 @@ export function useUserStats(): UseUserStatsReturn {
     setError(null);
 
     try {
-      const { data, error: rpcError } = await supabase
-        .rpc('get_user_activity_summary', { p_user_id: user.id })
-        .maybeSingle();
+      const rpcData = await authenticatedRpc({
+        rpcName: 'get_user_activity_summary',
+        rpcParams: { p_user_id: user.id },
+      });
 
-      if (rpcError) throw rpcError;
-
-      if (data) {
-        setStats({
-          total_sop: data.total_sop || 0,
-          total_minisop: data.total_minisop || 0,
-          total_calculations: data.total_calculations || 0,
-          days_active: data.days_active || 0,
-          average_calculations_per_day: data.average_calculations_per_day || 0,
-          first_activity: data.first_activity,
-          last_activity: data.last_activity,
-        });
+      if (rpcData) {
+        const row = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+        if (row) {
+          setStats({
+            total_sop: row.total_sop || 0,
+            total_minisop: row.total_minisop || 0,
+            total_calculations: row.total_calculations || 0,
+            days_active: row.days_active || 0,
+            average_calculations_per_day: row.average_calculations_per_day || 0,
+            first_activity: row.first_activity,
+            last_activity: row.last_activity,
+          });
+        } else {
+          setStats({ ...EMPTY_STATS });
+        }
       } else {
-        setStats({
-          total_sop: 0,
-          total_minisop: 0,
-          total_calculations: 0,
-          days_active: 0,
-          average_calculations_per_day: 0,
-          first_activity: null,
-          last_activity: null,
-        });
+        setStats({ ...EMPTY_STATS });
       }
 
-      const { data: dailyData, error: dailyError } = await supabase
-        .from('user_daily_activity')
-        .select('activity_date, calculation_count, sop_count, minisop_count')
-        .eq('user_id', user.id)
-        .order('activity_date', { ascending: false })
-        .limit(7);
-
-      if (dailyError) throw dailyError;
+      const dailyData = await authenticatedQuery({
+        table: 'user_daily_activity',
+        action: 'select',
+        columns: 'activity_date, calculation_count, sop_count, minisop_count',
+        orderBy: { column: 'activity_date', ascending: false },
+        limit: 7,
+      });
 
       setDailyActivity(dailyData || []);
     } catch (err) {
       console.error('Error loading user stats:', err);
-      setError(err instanceof Error ? err.message : 'Error al cargar estadísticas');
-      setStats({
-        total_sop: 0,
-        total_minisop: 0,
-        total_calculations: 0,
-        days_active: 0,
-        average_calculations_per_day: 0,
-        first_activity: null,
-        last_activity: null,
-      });
+      setError(err instanceof Error ? err.message : 'Error al cargar estadisticas');
+      setStats({ ...EMPTY_STATS });
     } finally {
       setIsLoading(false);
     }

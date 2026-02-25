@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
-import { supabase } from '../lib/supabase';
+import { fetchUserPreferences, updateUserPreferences } from '../lib/authenticatedFetch';
 
 interface UserPreferences {
   id: string;
@@ -43,32 +43,8 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('user_preferences')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (error) throw error;
-
-      if (data) {
-        setPreferences(data);
-      } else {
-        const { data: newPrefs, error: insertError } = await supabase
-          .from('user_preferences')
-          .insert({
-            user_id: user.id,
-            fixed_spc_value: null,
-            fixed_discount_percentage: null,
-            default_service_packages: [],
-            ui_theme: 'light',
-          })
-          .select()
-          .single();
-
-        if (insertError) throw insertError;
-        setPreferences(newPrefs);
-      }
+      const data = await fetchUserPreferences(user.id);
+      setPreferences(data);
     } catch (error) {
       console.error('Error loading preferences:', error);
     } finally {
@@ -80,20 +56,11 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     if (!user?.id) return false;
 
     try {
-      const { data, error } = await supabase
-        .from('user_preferences')
-        .update(updates)
-        .eq('user_id', user.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-
+      const data = await updateUserPreferences(user.id, updates);
       if (data) {
         setPreferences(data);
         return true;
       }
-
       return false;
     } catch (error) {
       console.error('Error updating preferences:', error);

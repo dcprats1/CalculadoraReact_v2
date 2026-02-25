@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, XCircle, ArrowRight, Loader2, AlertTriangle } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { authenticatedQuery } from '../../lib/authenticatedFetch';
 
 interface TariffRow {
   id: string;
@@ -85,18 +85,19 @@ export function TariffPdfPreview({ parsedData, onConfirm, onCancel, onDataImport
   const loadTariffsPdf = async (): Promise<number> => {
     try {
       setLoading(true);
-      const { data, error, count } = await supabase
-        .from('tariffspdf')
-        .select('*', { count: 'exact' })
-        .order('service_name', { ascending: true })
-        .order('weight_from', { ascending: true });
+      const data = await authenticatedQuery({
+        table: 'tariffspdf',
+        action: 'select',
+        orderBy: [
+          { column: 'service_name', ascending: true },
+          { column: 'weight_from', ascending: true },
+        ],
+      });
 
-      if (error) throw error;
-
-      console.log(`[TariffPdfPreview] Datos cargados: ${data?.length || 0} registros (count: ${count})`);
+      console.log(`[TariffPdfPreview] Datos cargados: ${data?.length || 0} registros`);
 
       setTariffs(data || []);
-      setSelectedIds(new Set(data?.map(t => t.id) || []));
+      setSelectedIds(new Set(data?.map((t: any) => t.id) || []));
 
       return data?.length || 0;
     } catch (err: any) {
@@ -149,47 +150,34 @@ export function TariffPdfPreview({ parsedData, onConfirm, onCancel, onDataImport
         try {
           const { id, created_at, updated_at, ...tariffData } = tariff as any;
 
-          const { data: existingTariff, error: searchError } = await supabase
-            .from('custom_tariffs')
-            .select('id')
-            .eq('user_id', userData.id)
-            .eq('service_name', tariff.service_name)
-            .eq('weight_from', tariff.weight_from)
-            .eq('weight_to', tariff.weight_to)
-            .maybeSingle();
+          const existingResults = await authenticatedQuery({
+            table: 'custom_tariffs',
+            action: 'select',
+            columns: 'id',
+            filters: [
+              { column: 'service_name', op: 'eq', value: tariff.service_name },
+              { column: 'weight_from', op: 'eq', value: tariff.weight_from },
+              { column: 'weight_to', op: 'eq', value: tariff.weight_to },
+            ],
+          });
 
-          if (searchError) {
-            console.error(`Error buscando tarifa existente:`, searchError);
-            errorCount++;
-            continue;
-          }
+          const existingTariff = existingResults?.[0];
 
           if (existingTariff) {
-            const { error: updateError } = await supabase
-              .from('custom_tariffs')
-              .update(tariffData)
-              .eq('id', existingTariff.id);
-
-            if (updateError) {
-              console.error(`Error actualizando tarifa:`, updateError);
-              errorCount++;
-            } else {
-              successCount++;
-            }
+            await authenticatedQuery({
+              table: 'custom_tariffs',
+              action: 'update',
+              data: tariffData,
+              filters: [{ column: 'id', op: 'eq', value: existingTariff.id }],
+            });
+            successCount++;
           } else {
-            const { error: insertError } = await supabase
-              .from('custom_tariffs')
-              .insert([{
-                ...tariffData,
-                user_id: userData.id
-              }]);
-
-            if (insertError) {
-              console.error(`Error insertando tarifa:`, insertError);
-              errorCount++;
-            } else {
-              successCount++;
-            }
+            await authenticatedQuery({
+              table: 'custom_tariffs',
+              action: 'insert',
+              data: tariffData,
+            });
+            successCount++;
           }
         } catch (itemError: any) {
           console.error('Error procesando tarifa individual:', itemError);
@@ -197,20 +185,20 @@ export function TariffPdfPreview({ parsedData, onConfirm, onCancel, onDataImport
         }
       }
 
-      console.log(`[TariffPdfPreview] Transferéncia completada: ${successCount} exitosas, ${errorCount} errores`);
+      console.log(`[TariffPdfPreview] Transferencia completada: ${successCount} exitosas, ${errorCount} errores`);
 
       if (errorCount > 0 && successCount === 0) {
-        setError(`No se pudo importar ninguna tarifa. Verifica los permisos e inténtalo de nuevo.`);
+        setError(`No se pudo importar ninguna tarifa. Verifica los permisos e intentalo de nuevo.`);
         return;
       }
 
-      const { error: deleteError } = await supabase
-        .from('tariffspdf')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000');
-
-      if (deleteError) {
-        console.warn('[TariffPdfPreview] Advertencia al limpiar tabla temporal:', deleteError);
+      try {
+        await authenticatedQuery({
+          table: 'tariffspdf',
+          action: 'delete',
+        });
+      } catch (deleteErr) {
+        console.warn('[TariffPdfPreview] Advertencia al limpiar tabla temporal:', deleteErr);
       }
 
       if (onDataImported) {

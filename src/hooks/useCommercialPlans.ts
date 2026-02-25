@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
 import { CommercialPlan } from '../types/commercialPlans';
 import { useAuth } from '../contexts/AuthContext';
+import { authenticatedQuery } from '../lib/authenticatedFetch';
 
 export function useCommercialPlans() {
   const { user } = useAuth();
@@ -19,13 +19,11 @@ export function useCommercialPlans() {
     setError(null);
 
     try {
-      const { data, error: fetchError } = await supabase
-        .from('custom_commercial_plans')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (fetchError) throw fetchError;
+      const data = await authenticatedQuery({
+        table: 'custom_commercial_plans',
+        action: 'select',
+        orderBy: { column: 'created_at', ascending: false },
+      });
 
       setPlans(data || []);
     } catch (err) {
@@ -49,20 +47,14 @@ export function useCommercialPlans() {
     setError(null);
 
     try {
-      const { data, error: insertError } = await supabase
-        .from('custom_commercial_plans')
-        .insert({
-          user_id: user.id,
-          plan_name: planName,
-          discounts,
-        })
-        .select()
-        .single();
-
-      if (insertError) throw insertError;
+      const data = await authenticatedQuery({
+        table: 'custom_commercial_plans',
+        action: 'insert',
+        data: { plan_name: planName, discounts },
+      });
 
       await loadPlans();
-      return data;
+      return data?.[0];
     } catch (err) {
       console.error('Error creating commercial plan:', err);
       const errorMessage = err instanceof Error ? err.message : 'Error al crear plan comercial';
@@ -82,21 +74,15 @@ export function useCommercialPlans() {
     setError(null);
 
     try {
-      const { data, error: updateError } = await supabase
-        .from('custom_commercial_plans')
-        .update({
-          plan_name: planName,
-          discounts,
-        })
-        .eq('id', planId)
-        .eq('user_id', user.id)
-        .select()
-        .single();
-
-      if (updateError) throw updateError;
+      const data = await authenticatedQuery({
+        table: 'custom_commercial_plans',
+        action: 'update',
+        data: { plan_name: planName, discounts },
+        filters: [{ column: 'id', op: 'eq', value: planId }],
+      });
 
       await loadPlans();
-      return data;
+      return data?.[0];
     } catch (err) {
       console.error('Error updating commercial plan:', err);
       const errorMessage = err instanceof Error ? err.message : 'Error al actualizar plan comercial';
@@ -116,13 +102,11 @@ export function useCommercialPlans() {
     setError(null);
 
     try {
-      const { error: deleteError } = await supabase
-        .from('custom_commercial_plans')
-        .delete()
-        .eq('id', planId)
-        .eq('user_id', user.id);
-
-      if (deleteError) throw deleteError;
+      await authenticatedQuery({
+        table: 'custom_commercial_plans',
+        action: 'delete',
+        filters: [{ column: 'id', op: 'eq', value: planId }],
+      });
 
       await loadPlans();
     } catch (err) {

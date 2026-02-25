@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase, Tariff, DiscountPlan, ConstantByService, CustomTariff, CustomTariffActive } from '../lib/supabase';
+import { authenticatedQuery } from '../lib/authenticatedFetch';
 
 export function useTariffs(clientId?: string, useCustomOverrides: boolean = false, applyUserCustomTariffs: boolean = false, refetchTrigger?: number) {
   const [tariffs, setTariffs] = useState<Tariff[]>([]);
@@ -32,11 +33,11 @@ export function useTariffs(clientId?: string, useCustomOverrides: boolean = fals
 
         if (useCustomOverrides && clientId) {
           try {
-            const { data: overrides } = await supabase
-              .from('custom_cost_overrides')
-              .select('*')
-              .eq('client_id', clientId)
-              .eq('is_active', true);
+            const overrides = await authenticatedQuery({
+              table: 'custom_cost_overrides',
+              action: 'select',
+              filters: [{ column: 'is_active', op: 'eq', value: true }],
+            });
 
             if (overrides && overrides.length > 0) {
               finalTariffs = applyCustomOverrides(finalTariffs, overrides);
@@ -48,17 +49,19 @@ export function useTariffs(clientId?: string, useCustomOverrides: boolean = fals
 
         if (applyUserCustomTariffs) {
           try {
-            const { data: customTariffs } = await supabase
-              .from('custom_tariffs')
-              .select('*');
+            const customTariffs = await authenticatedQuery({
+              table: 'custom_tariffs',
+              action: 'select',
+            });
 
-            const { data: activeStates } = await supabase
-              .from('custom_tariffs_active')
-              .select('*')
-              .eq('is_active', true);
+            const activeStates = await authenticatedQuery({
+              table: 'custom_tariffs_active',
+              action: 'select',
+              filters: [{ column: 'is_active', op: 'eq', value: true }],
+            });
 
             if (customTariffs && activeStates && activeStates.length > 0) {
-              const activeServices = new Set(activeStates.map(s => s.service_name));
+              const activeServices = new Set(activeStates.map((s: any) => s.service_name));
               finalTariffs = mergeCustomTariffs(finalTariffs, customTariffs, activeServices);
             }
           } catch (customError) {
@@ -209,53 +212,16 @@ export function useCustomTariffs(userId?: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchCustomTariffs = async () => {
-      try {
-        // IMPORTANTE: Filtrado explícito por user_id para seguridad
-        // Las políticas RLS también protegen, pero este filtro explícito
-        // asegura que solo se carguen datos del usuario actual
-        let query = supabase
-          .from('custom_tariffs')
-          .select('*');
-
-        if (userId) {
-          query = query.eq('user_id', userId);
-        }
-
-        const { data, error } = await query
-          .order('service_name', { ascending: true })
-          .order('weight_from', { ascending: true });
-
-        if (error) throw error;
-        setCustomTariffs(data || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error fetching custom tariffs');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCustomTariffs();
-  }, [userId]);
-
-  return { customTariffs, loading, error, refetch: async () => {
-    setLoading(true);
+  const fetchData = async () => {
     try {
-      // IMPORTANTE: Mismo filtro de seguridad en refetch
-      let query = supabase
-        .from('custom_tariffs')
-        .select('*');
-
-      if (userId) {
-        query = query.eq('user_id', userId);
-      }
-
-      const { data, error } = await query
-        .order('service_name', { ascending: true })
-        .order('weight_from', { ascending: true });
-
-      if (error) throw error;
+      const data = await authenticatedQuery({
+        table: 'custom_tariffs',
+        action: 'select',
+        orderBy: [
+          { column: 'service_name', ascending: true },
+          { column: 'weight_from', ascending: true },
+        ],
+      });
       setCustomTariffs(data || []);
       setError(null);
     } catch (err) {
@@ -263,6 +229,15 @@ export function useCustomTariffs(userId?: string) {
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [userId]);
+
+  return { customTariffs, loading, error, refetch: async () => {
+    setLoading(true);
+    await fetchData();
   }};
 }
 
@@ -271,51 +246,13 @@ export function useCustomTariffsActive(userId?: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchActiveStates = async () => {
-      try {
-        // IMPORTANTE: Filtrado explícito por user_id para seguridad
-        // Las políticas RLS también protegen, pero este filtro explícito
-        // asegura que solo se carguen datos del usuario actual
-        let query = supabase
-          .from('custom_tariffs_active')
-          .select('*');
-
-        if (userId) {
-          query = query.eq('user_id', userId);
-        }
-
-        const { data, error } = await query
-          .order('service_name', { ascending: true });
-
-        if (error) throw error;
-        setActiveStates(data || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error fetching custom tariffs active states');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchActiveStates();
-  }, [userId]);
-
-  return { activeStates, loading, error, refetch: async () => {
-    setLoading(true);
+  const fetchData = async () => {
     try {
-      // IMPORTANTE: Mismo filtro de seguridad en refetch
-      let query = supabase
-        .from('custom_tariffs_active')
-        .select('*');
-
-      if (userId) {
-        query = query.eq('user_id', userId);
-      }
-
-      const { data, error } = await query
-        .order('service_name', { ascending: true });
-
-      if (error) throw error;
+      const data = await authenticatedQuery({
+        table: 'custom_tariffs_active',
+        action: 'select',
+        orderBy: { column: 'service_name', ascending: true },
+      });
       setActiveStates(data || []);
       setError(null);
     } catch (err) {
@@ -323,6 +260,15 @@ export function useCustomTariffsActive(userId?: string) {
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [userId]);
+
+  return { activeStates, loading, error, refetch: async () => {
+    setLoading(true);
+    await fetchData();
   }};
 }
 

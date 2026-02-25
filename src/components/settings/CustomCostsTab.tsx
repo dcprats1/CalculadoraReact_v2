@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
 import { Save, Plus, Trash2, AlertCircle } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { authenticatedQuery } from '../../lib/authenticatedFetch';
+import { fetchUserPreferences, updateUserPreferences } from '../../lib/authenticatedFetch';
 
 interface CostOverride {
   id: string;
@@ -13,6 +15,7 @@ interface CostOverride {
 }
 
 export function CustomCostsTab() {
+  const { user } = useAuth();
   const [usesCustomTable, setUsesCustomTable] = useState(false);
   const [overrides, setOverrides] = useState<CostOverride[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -22,35 +25,29 @@ export function CustomCostsTab() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user]);
 
   async function loadData() {
+    if (!user) return;
     try {
       setIsLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
 
-      if (!user) return;
-
-      const [prefsResult, overridesResult] = await Promise.all([
-        supabase
-          .from('user_preferences')
-          .select('uses_custom_cost_table')
-          .eq('user_id', user.id)
-          .maybeSingle(),
-        supabase
-          .from('custom_cost_overrides')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('is_active', true)
-          .order('service_name'),
+      const [prefs, overridesData] = await Promise.all([
+        fetchUserPreferences(user.id),
+        authenticatedQuery({
+          table: 'custom_cost_overrides',
+          action: 'select',
+          filters: [{ column: 'is_active', op: 'eq', value: true }],
+          orderBy: { column: 'service_name', ascending: true },
+        }),
       ]);
 
-      if (prefsResult.data) {
-        setUsesCustomTable(prefsResult.data.uses_custom_cost_table || false);
+      if (prefs) {
+        setUsesCustomTable(prefs.uses_custom_cost_table || false);
       }
 
-      if (overridesResult.data) {
-        setOverrides(overridesResult.data);
+      if (overridesData) {
+        setOverrides(overridesData);
       }
     } catch (err) {
       console.error('Error loading custom costs:', err);
@@ -61,27 +58,20 @@ export function CustomCostsTab() {
   }
 
   async function handleToggleCustomTable() {
+    if (!user) return;
     try {
       setIsSaving(true);
-      const { data: { user } } = await supabase.auth.getUser();
 
-      if (!user) return;
-
-      const { error: updateError } = await supabase
-        .from('user_preferences')
-        .upsert({
-          user_id: user.id,
-          uses_custom_cost_table: !usesCustomTable,
-        });
-
-      if (updateError) throw updateError;
+      await updateUserPreferences(user.id, {
+        uses_custom_cost_table: !usesCustomTable,
+      });
 
       setUsesCustomTable(!usesCustomTable);
-      setSuccess('Configuración actualizada');
+      setSuccess('Configuracion actualizada');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error('Error updating preference:', err);
-      setError('Error al actualizar configuración');
+      setError('Error al actualizar configuracion');
     } finally {
       setIsSaving(false);
     }
@@ -111,21 +101,18 @@ export function CustomCostsTab() {
   }
 
   async function handleSaveOverrides() {
+    if (!user) return;
     try {
       setIsSaving(true);
       setError(null);
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No autenticado');
-
-      await supabase
-        .from('custom_cost_overrides')
-        .delete()
-        .eq('user_id', user.id);
+      await authenticatedQuery({
+        table: 'custom_cost_overrides',
+        action: 'delete',
+      });
 
       if (overrides.length > 0) {
         const overridesToInsert = overrides.map(o => ({
-          user_id: user.id,
           service_name: o.service_name,
           weight_from: o.weight_from,
           weight_to: o.weight_to,
@@ -134,11 +121,11 @@ export function CustomCostsTab() {
           is_active: true,
         }));
 
-        const { error: insertError } = await supabase
-          .from('custom_cost_overrides')
-          .insert(overridesToInsert);
-
-        if (insertError) throw insertError;
+        await authenticatedQuery({
+          table: 'custom_cost_overrides',
+          action: 'insert',
+          data: overridesToInsert,
+        });
       }
 
       setSuccess('Tabla personalizada guardada correctamente');
